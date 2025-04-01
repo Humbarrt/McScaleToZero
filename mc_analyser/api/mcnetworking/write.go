@@ -1,7 +1,7 @@
-package networking
+package mcnetworking
 
 import (
-	"mc_proxy/mc_net/packet"
+	"mc_analyser/api/mcnetworking/packet"
 	"net"
 )
 

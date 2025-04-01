@@ -15,6 +15,7 @@ type Config struct {
 	FLY_API_TOKEN    string
 	FLY_APP_NAME     string
 	SIGNING_KEY      []byte
+	MC_PORT          int
 }
 
 type AuthClaims struct {

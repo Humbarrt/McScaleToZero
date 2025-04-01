@@ -58,18 +58,6 @@ func (u *UUID) String() string {
 		u.uuid[10:])
 }
 
-/*
-
-Array of X 	length times size of X 	Zero or more fields of type X 	The length must be known from the context.
-Prefixed Array of X 	size of VarInt + size of X * length 	See #Prefixed Array below 	A length-prefixed array.
-
-#Prefixed Array:
-Represents an array prefixed by its length. If the array is empty the length will still be encoded.
-Field Name 	Field Type
-Length 	VarInt
-Data 	Array of X
-*/
-
 type PrefixedArray struct {
 	Length int
 	Data   []byte
