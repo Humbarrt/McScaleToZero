@@ -1,0 +1,43 @@
+# fly.toml app configuration file generated for partypeoplemc on 2025-03-28T14:52:58+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'partypeoplemc'
+primary_region= "fra"
+organization = "personal"
+
+[build]
+  image = "itzg/minecraft-server:latest"
+
+[[vm]]
+  memory = "4gb"
+  cpus = 1
+  cpu_kind = "performance"
+
+[env]
+  AUTOSTOP_PKILL_USE_SUDO = 'TRUE'
+  AUTOSTOP_TIMEOUT_EST = '120'
+  AUTOSTOP_TIMEOUT_INIT = '120'
+  ENABLE_AUTOSTOP = 'TRUE'
+  EULA = 'TRUE'
+  MEMORY = '3G'
+  JVM_DD_OPTS="java.net.preferIPv6Addresses=true"
+
+[[mounts]]
+  source = 'mc_volume'
+  destination = '/data'
+  initial_size = "15gb"
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = 25565
+  min_machines_running = 0
+  max_machines_running = 1
+  auto_start_machines = false
+  auto_stop_machines = "off"
+
+  [[services.ports]]
+    port = 25565
+
+[[metrics]]

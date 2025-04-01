@@ -1,0 +1,72 @@
+[20:40:49] [ServerMain/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[20:40:54] [ServerMain/INFO]: Loaded 1373 recipes
+[20:40:54] [ServerMain/INFO]: Loaded 1484 advancements
+[20:40:55] [Server thread/INFO]: Starting minecraft server version 1.21.5
+[20:40:55] [Server thread/INFO]: Loading properties
+[20:40:55] [Server thread/INFO]: Default game type: CREATIVE
+[20:40:55] [Server thread/INFO]: Generating keypair
+[20:40:55] [Server thread/INFO]: Starting Minecraft server on *:25565
+[20:40:55] [Server thread/INFO]: Using epoll channel type
+[20:40:55] [Server thread/WARN]: Failed to load white-list: 
+com.google.gson.JsonSyntaxException: Expected entry to be a JsonObject, was "Humbarrt"
+	at azo.m(SourceFile:416) ~[server-1.21.5.jar:?]
+	at awg.f(SourceFile:124) ~[server-1.21.5.jar:?]
+	at aqq.C(SourceFile:109) ~[server-1.21.5.jar:?]
+	at aqq.<init>(SourceFile:29) ~[server-1.21.5.jar:?]
+	at aqr.e(SourceFile:174) ~[server-1.21.5.jar:?]
+	at net.minecraft.server.MinecraftServer.y(SourceFile:671) ~[server-1.21.5.jar:?]
+	at net.minecraft.server.MinecraftServer.a(SourceFile:290) ~[server-1.21.5.jar:?]
+	at java.base/java.lang.Thread.run(Unknown Source) [?:?]
+[20:40:55] [Server thread/INFO]: Preparing level "world"
+[20:40:59] [Server thread/INFO]: Preparing start region for dimension minecraft:overworld
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Worker-Main-1/INFO]: Preparing spawn area: 0%
+[20:41:14] [Server thread/INFO]: Time elapsed: 15198 ms
+[20:41:14] [Server thread/INFO]: Done (18.739s)! For help, type "help"
+[20:41:14] [Server thread/INFO]: Starting remote control listener
+[20:41:14] [Server thread/INFO]: Thread RCON Listener started
+[20:41:14] [Server thread/INFO]: RCON running on 0.0.0.0:25575
+[20:42:14] [Server thread/INFO]: Server empty for 60 seconds, pausing
+[20:43:03] [RCON Listener #1/INFO]: Thread RCON Client /127.0.0.1 started
+[20:43:03] [Server thread/INFO]: [Rcon: Stopping the server]
+[20:43:03] [RCON Client /127.0.0.1 #2/INFO]: Thread RCON Client /127.0.0.1 shutting down
+[20:43:03] [Server thread/INFO]: Stopping server
+[20:43:03] [Server thread/INFO]: Saving players
+[20:43:03] [Server thread/INFO]: Saving worlds
+[20:43:04] [Server thread/INFO]: Saving chunks for level 'ServerLevel[WG Shenanigans]'/minecraft:overworld
+[20:43:04] [Server thread/INFO]: Saving chunks for level 'ServerLevel[WG Shenanigans]'/minecraft:the_nether
+[20:43:04] [Server thread/INFO]: Saving chunks for level 'ServerLevel[WG Shenanigans]'/minecraft:the_end
+[20:43:04] [Server thread/INFO]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[20:43:04] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[20:43:04] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[20:43:04] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[20:43:04] [Server thread/INFO]: Thread RCON Listener stopped
