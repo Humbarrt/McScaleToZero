@@ -44,7 +44,7 @@ func handleServerListPing(clientConn net.Conn, app *model.App) {
 
 			if app.IsMCServerReady() {
 				logging.Info("MC Server is ready, sending status response")
-				status, err := mc.ReadServerStatus("join.insanitycraft.net", 25565) //"91.107.192.240", app.Config.MC_PORT)
+				status, err := mc.ReadServerStatus("91.107.192.240", app.Config.MC_PORT)
 				if err != nil {
 					logging.Error("Error reading server status:", "error", err)
 				} else {

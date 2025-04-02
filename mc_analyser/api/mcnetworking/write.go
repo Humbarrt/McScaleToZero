@@ -2,6 +2,7 @@ package mcnetworking
 
 import (
 	"mc_analyser/api/mcnetworking/packet"
+	"mc_analyser/logging"
 	"net"
 	"unicode/utf16"
 )
@@ -74,6 +75,8 @@ func WriteHandshake(conn net.Conn, protocolVersion int, serverAddress string, se
 	packet.WriteUnsignedShort(&data, uint16(serverPort))
 	packet.WriteVarInt(&data, nextState)
 	p.Data = data
+
+	logging.Info("Handshake packet data: ", "data", p.Data)
 
 	packetBytes := p.ToBytes()
 	_, err := conn.Write(packetBytes)
