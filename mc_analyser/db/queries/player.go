@@ -77,6 +77,21 @@ func GetPlayerById(DB *db.DB, playerId int) (*model.Player, error) {
 	return parsePlayer(result)
 }
 
+func GetPlayerByUUID(DB *db.DB, playerUUID int) (*model.Player, error) {
+	stmt, err := DB.GetQuery("get_player_by_uuid")
+	if err != nil {
+		return nil, err
+	}
+
+	result := stmt.QueryRow(playerUUID)
+	err = result.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return parsePlayer(result)
+}
+
 func GetPlayerByAlias(DB *db.DB, alias string) (*model.Player, error) {
 	stmt, err := DB.GetQuery("get_player_by_alias")
 	if err != nil {

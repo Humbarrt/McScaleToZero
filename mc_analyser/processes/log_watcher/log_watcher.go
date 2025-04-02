@@ -1,4 +1,4 @@
-package logwatch
+package log_watcher
 
 import (
 	"mc_analyser/db/queries"
@@ -8,10 +8,10 @@ import (
 )
 
 func LogWatcher(App *model.App) {
-	lastState := App.IsServerOnline()
+	lastState := App.IsMCServerOnline()
 	for {
 		time.Sleep(1 * time.Second)
-		isOnline := App.IsServerOnline()
+		isOnline := App.IsMCServerOnline()
 
 		hasStarted := isOnline && lastState != isOnline
 		hasStopped := !isOnline && lastState != isOnline

@@ -1,4 +1,4 @@
-package serverwatch
+package server_watcher
 
 import (
 	"mc_analyser/db/queries"
@@ -19,7 +19,7 @@ func ServerWatcher(App *model.App) {
 	if lastEvent != nil {
 		lastState = lastEvent.IsOnline
 	}
-	App.SetServerOnline(lastState)
+	App.SetMCServerOnline(lastState)
 
 	for {
 		time.Sleep(5 * time.Second)
@@ -35,7 +35,7 @@ func ServerWatcher(App *model.App) {
 
 		logging.Info("Server status changed: ", "isOnline", isOnline)
 		lastState = isOnline
-		App.SetServerOnline(isOnline)
+		App.SetMCServerOnline(isOnline)
 
 		queries.AddServerEvent(App.Db, time.Now(), isOnline)
 	}

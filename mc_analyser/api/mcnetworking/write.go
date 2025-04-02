@@ -37,3 +37,55 @@ func WriteTransfer(conn net.Conn, host string, port int) error {
 	_, err := conn.Write(packetBytes)
 	return err
 }
+
+func WritePongResponse(conn net.Conn, Data []byte) error {
+	p := packet.Packet{
+		PacketID: 0x01,
+		Data:     Data,
+	}
+
+	packetBytes := p.ToBytes()
+	_, err := conn.Write(packetBytes)
+	return err
+}
+
+func WriteStatusResponse(conn net.Conn, status string) {
+	p := packet.Packet{
+		PacketID: 0x00,
+		Data:     make([]byte, 0),
+	}
+	data := make([]byte, 0)
+	packet.WriteString(&data, status)
+	p.Data = data
+
+	packetBytes := p.ToBytes()
+	conn.Write(packetBytes)
+}
+
+func WriteHandshake(conn net.Conn, protocolVersion int, serverAddress string, serverPort int, nextState int) error {
+	p := packet.Packet{
+		PacketID: 0x00,
+		Data:     make([]byte, 0),
+	}
+	data := make([]byte, 0)
+	packet.WriteVarInt(&data, protocolVersion)
+	packet.WriteString(&data, serverAddress)
+	packet.WriteUnsignedShort(&data, uint16(serverPort))
+	packet.WriteVarInt(&data, nextState)
+	p.Data = data
+
+	packetBytes := p.ToBytes()
+	_, err := conn.Write(packetBytes)
+	return err
+}
+
+func WriteStatusRequest(conn net.Conn) error {
+	p := packet.Packet{
+		PacketID: 0x00,
+		Data:     make([]byte, 0),
+	}
+
+	packetBytes := p.ToBytes()
+	_, err := conn.Write(packetBytes)
+	return err
+}

@@ -2,7 +2,7 @@ package packet
 
 import (
 	"fmt"
-	"log"
+	"mc_analyser/logging"
 	"net"
 )
 
@@ -11,7 +11,7 @@ func ReadPacket(conn net.Conn) (*Packet, error) {
 	// Read the packet length
 	length, err := readPacketLength(conn)
 	if err != nil {
-		log.Println("Error reading packet length:", "error", err)
+		logging.Error("Error reading packet length:", "error", err)
 		return &Packet{}, err
 	}
 	p.Length = length
@@ -20,14 +20,14 @@ func ReadPacket(conn net.Conn) (*Packet, error) {
 	p.Data = make([]byte, length)
 	_, err = conn.Read(p.Data)
 	if err != nil {
-		log.Println("Error reading packet data:", "error", err)
+		logging.Error("Error reading packet data:", "error", err)
 		return &Packet{}, err
 	}
 
 	// Read the packet ID
 	p.PacketID, err = ConsumeVarInt(&p.Data)
 	if err != nil {
-		log.Println("Error reading packet ID:", "error", err)
+		logging.Error("Error reading packet ID:", "error", err)
 		return &Packet{}, err
 	}
 

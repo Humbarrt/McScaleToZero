@@ -5,11 +5,10 @@ import (
 	"mc_analyser/db"
 	"mc_analyser/logging"
 	"mc_analyser/model"
-	"mc_analyser/web/routes"
 	"time"
 
 	_config "mc_analyser/config"
-	sw "mc_analyser/watchers/server_watch"
+	mpc "mc_analyser/processes/mc_decoy_server"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,12 +32,17 @@ func main() {
 		Timeout: 10 * time.Second,
 	}
 
-	go sw.ServerWatcher(&app)
+	app.SetMCServerReady(true)
+	logging.Info("Starting mc_analyser")
+	//decoyServer
+	mpc.Start(&app)
 
-	err = routes.InitRoutes(&app)
+	//go sw.ServerWatcher(&app)
+
+	/* err = routes.InitRoutes(&app)
 	if err != nil {
 		panic(err)
-	}
+	} */
 	logging.Info("Analyser started")
 }
 

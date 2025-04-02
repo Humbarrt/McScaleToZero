@@ -45,25 +45,36 @@ type ServerEvent struct {
 }
 
 type App struct {
-	Router         *gin.Engine
-	FS             embed.FS
-	Db             *db.DB
-	Config         *Config
-	Timeout        time.Duration
-	lastUpdate     time.Time
-	mu             sync.Mutex
-	isServerOnline bool
+	Router           *gin.Engine
+	FS               embed.FS
+	Db               *db.DB
+	Config           *Config
+	Timeout          time.Duration
+	lastUpdate       time.Time
+	mu               sync.Mutex
+	isMCServerOnline bool
+	isMCServerReady  bool
 }
 
-func (app *App) SetServerOnline(online bool) {
+func (app *App) SetMCServerOnline(online bool) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	app.isServerOnline = online
+	app.isMCServerOnline = online
 }
-func (app *App) IsServerOnline() bool {
+func (app *App) IsMCServerOnline() bool {
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	return app.isServerOnline
+	return app.isMCServerOnline
+}
+func (app *App) SetMCServerReady(ready bool) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	app.isMCServerReady = ready
+}
+func (app *App) IsMCServerReady() bool {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	return app.isMCServerReady
 }
 func (app *App) SetLastUpdate(t time.Time) {
 	app.mu.Lock()

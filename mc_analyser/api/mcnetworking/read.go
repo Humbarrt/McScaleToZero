@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"mc_analyser/api/mcnetworking/packet"
-	"net"
 )
 
 type HandshakePacket struct {
@@ -14,17 +13,12 @@ type HandshakePacket struct {
 	NextState       int
 }
 
-func ReadHandshake(conn net.Conn) (HandshakePacket, error) {
-	p, err := packet.ReadPacket(conn)
-	if err != nil {
-		return HandshakePacket{}, err
-	}
-
+func ParseHandshake(p *packet.Packet) (HandshakePacket, error) {
 	if p.PacketID != 0x00 {
 		log.Println("Invalid packet ID for HandshakePacket:", "expected", 0x00, "got", p.PacketID)
 		return HandshakePacket{}, fmt.Errorf("invalid packet ID: expected 0x00, got %d", p.PacketID)
 	}
-
+	var err error
 	var h HandshakePacket
 	// Read the HandshakePacket data
 	h.ProtocolVersion, err = packet.ConsumeVarInt(&p.Data)
@@ -58,17 +52,13 @@ type LoginStartPacket struct {
 	UUID     *packet.UUID
 }
 
-func ReadLoginStart(conn net.Conn) (LoginStartPacket, error) {
-	p, err := packet.ReadPacket(conn)
-	if err != nil {
-		return LoginStartPacket{}, err
-	}
-
+func ParseLoginStart(p *packet.Packet) (LoginStartPacket, error) {
 	if p.PacketID != 0x00 {
 		log.Println("Invalid packet ID for login start:", "expected", 0x00, "got", p.PacketID)
 		return LoginStartPacket{}, fmt.Errorf("invalid packet ID: expected 0x00, got %d", p.PacketID)
 	}
 
+	var err error
 	var ls LoginStartPacket
 	ls.Username, err = packet.ConsumeString(&p.Data)
 	if err != nil {
@@ -90,14 +80,17 @@ func ReadLoginStart(conn net.Conn) (LoginStartPacket, error) {
 	return ls, nil
 }
 
-func ReadLoginAcknowledged(conn net.Conn) (bool, error) {
-	p, err := packet.ReadPacket(conn)
-	if err != nil {
-		return false, err
-	}
-
-	if p.PacketID != 3 {
+func ParseLoginAcknowledged(p *packet.Packet) (bool, error) {
+	if p.PacketID != 0x03 {
 		return false, fmt.Errorf("invalid packet ID: expected 0x03, got %d", p.PacketID)
 	}
 	return true, nil
+}
+
+func ParseStatusResponse(p *packet.Packet) (string, error) {
+	if p.PacketID != 0x00 {
+		log.Println("Invalid packet ID for StatusResponse:", "expected", 0x00, "got", p.PacketID)
+		return "", fmt.Errorf("invalid packet ID: expected 0x00, got %d", p.PacketID)
+	}
+	return packet.ConsumeString(&p.Data)
 }
