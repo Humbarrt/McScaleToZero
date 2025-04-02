@@ -7,6 +7,7 @@ import (
 	"mc_analyser/logging"
 	"mc_analyser/model"
 	"net"
+	"time"
 )
 
 var defaultResponse string = `
@@ -124,7 +125,20 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 	}
 	logging.Info("Player acknowledged login", "loggedIn", loginAcknowledged, "username", loginStart.Username)
 
-	//TOOD: Stall Player with one /x00 packet every second.
+	for {
+		if app.IsMCServerReady() {
+			break
+		}
+
+		logging.Info("Server not ready, stalling player...")
+		_, err = clientConn.Write([]byte{0x00})
+		if err != nil {
+			logging.Error("Error writing stall packet:", "error", err)
+			clientConn.Close()
+			return
+		}
+		time.Sleep(1 * time.Second)
+	}
 
 	// Send Transfer packet
 	err = mc.WriteTransfer(clientConn, "91.107.192.240", 25565)
