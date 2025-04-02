@@ -27,12 +27,132 @@ var defaultResponse string = `
 }
 `
 
+func handleServerListPing(clientConn net.Conn, app *model.App) {
+	logging.Info("Player is pinging the server", "remoteAddr", clientConn.RemoteAddr().String())
+
+	for {
+		// receive packet
+		packet, err := mcp.ReadPacket(clientConn)
+		if err != nil {
+			logging.Error("Error reading packet:", "error", err)
+			clientConn.Close()
+			return
+		}
+
+		if packet.PacketID == 0x00 {
+			statusResponse := defaultResponse
+
+			if app.IsMCServerReady() {
+				logging.Info("MC Server is ready, sending status response")
+				status, err := mc.ReadServerStatus("join.insanitycraft.net", 25565) //"91.107.192.240", app.Config.MC_PORT)
+				if err != nil {
+					logging.Error("Error reading server status:", "error", err)
+				} else {
+					statusResponse = status
+				}
+			}
+
+			mc.WriteStatusResponse(clientConn, statusResponse)
+		} else if packet.PacketID == 0x01 {
+			mc.WritePongResponse(clientConn, packet.Data)
+
+			clientConn.Close()
+			return
+		}
+	}
+}
+
+func handlePlayerLogin(clientConn net.Conn, app *model.App) {
+	logging.Info("Player is connecting to the server", "remoteAddr", clientConn.RemoteAddr().String())
+
+	//Wait for Login packet
+	packet, err := mcp.ReadPacket(clientConn)
+	if err != nil {
+		logging.Error("Error reading packet:", "error", err)
+		clientConn.Close()
+		return
+	}
+	loginStart, err := mc.ParseLoginStart(packet)
+	if err != nil {
+		logging.Error("Error reading login start:", "error", err)
+		clientConn.Close()
+		return
+	}
+	logging.Info("Player is logging in", "username", loginStart.Username, "uuid", loginStart.UUID)
+
+	uuid := *loginStart.UUID
+	if loginStart.UUID == nil {
+		//TODO: request the uuid from mojang
+		logging.Error("UUID is nil, requesting from mojang")
+	}
+
+	// TODO: Return if the player is not in the whitelist -- no query yet.
+	/* player, err := queries.QueryPlayerByUUID(app, uuid)
+	if err != nil {
+		logging.Error("Error querying player:", "error", err)
+		clientConn.Close()
+		return
+	}
+
+	if !player.IsAllowed {
+		logging.Error("Player is not allowed to connect", "username", loginStart.Username, "uuid", loginStart.UUID)
+		clientConn.Close()
+		return
+	} */
+
+	// Send LoginSuccess packet
+	loginSuccess := mc.WriteLoginSuccess(clientConn, uuid, loginStart.Username)
+	if loginSuccess != nil {
+		logging.Error("Error writing login success:", "error", loginSuccess)
+		clientConn.Close()
+		return
+	}
+	logging.Info("Sent LoginSuccess", "username", loginStart.Username)
+
+	// Wait for LoginAcknowledged packet
+	packet, err = mcp.ReadPacket(clientConn)
+	if err != nil {
+		logging.Error("Error reading packet:", "error", err)
+		clientConn.Close()
+		return
+	}
+	loginAcknowledged, err := mc.ParseLoginAcknowledged(packet)
+	if err != nil {
+		logging.Error("Error reading login acknowledged:", "error", loginAcknowledged)
+		clientConn.Close()
+		return
+	}
+	logging.Info("Player acknowledged login", "loggedIn", loginAcknowledged, "username", loginStart.Username)
+
+	//TOOD: Stall Player with one /x00 packet every second.
+
+	// Send Transfer packet
+	err = mc.WriteTransfer(clientConn, "91.107.192.240", 25565)
+	if err != nil {
+		logging.Error("Error writing transfer:", "error", err)
+		clientConn.Close()
+		return
+	}
+	logging.Info("Sent Transfer packet", "host", "91.107.192.240", "port", 25565)
+}
+
+func handleLegacyPing(clientConn net.Conn, app *model.App) {
+	mc.WriteLegacyStatusResponse(clientConn, "127", "1.21.5", "Disco, Disco! Party, Party! (not started yet)", "0", "10")
+}
+
 // Handle incoming player connections
 func handleConnection(clientConn net.Conn, app *model.App) {
 	logging.Info("Player attempting to connect...", "remoteAddr", clientConn.RemoteAddr().String())
 	packet, err := mcp.ReadPacket(clientConn)
 	if err != nil {
 		logging.Error("Error reading packet:", "error", err)
+		clientConn.Close()
+		return
+	}
+
+	if packet.PacketID == 122 {
+		logging.Info("Legacy ping packet received")
+		handleLegacyPing(clientConn, app)
 		clientConn.Close()
 		return
 	}
@@ -45,112 +165,16 @@ func handleConnection(clientConn net.Conn, app *model.App) {
 	logging.Info("Player handshake received", "handshake", handshake)
 
 	if handshake.NextState == 1 {
-		logging.Info("Player is pinging the server", "remoteAddr", clientConn.RemoteAddr().String())
-
-		for {
-			// receive packet
-			packet, err := mcp.ReadPacket(clientConn)
-			if err != nil {
-				logging.Error("Error reading packet:", "error", err)
-				clientConn.Close()
-				return
-			}
-
-			if packet.PacketID == 0x00 {
-				statusResponse := defaultResponse
-
-				if app.IsMCServerReady() {
-					logging.Info("MC Server is ready, sending status response")
-					status, err := mc.ReadServerStatus("join.insanitycraft.net", 25565) //"91.107.192.240", app.Config.MC_PORT)
-					if err != nil {
-						logging.Error("Error reading server status:", "error", err)
-					} else {
-						statusResponse = status
-					}
-				}
-
-				mc.WriteStatusResponse(clientConn, statusResponse)
-			} else if packet.PacketID == 0x01 {
-				mc.WritePongResponse(clientConn, packet.Data)
-
-				clientConn.Close()
-				return
-			}
-		}
+		handleServerListPing(clientConn, app)
 	} else if handshake.NextState == 2 {
-		logging.Info("Player is connecting to the server", "remoteAddr", clientConn.RemoteAddr().String())
-
-		//Wait for Login packet
-		packet, err := mcp.ReadPacket(clientConn)
-		if err != nil {
-			logging.Error("Error reading packet:", "error", err)
-			clientConn.Close()
-			return
-		}
-		loginStart, err := mc.ParseLoginStart(packet)
-		if err != nil {
-			logging.Error("Error reading login start:", "error", err)
-			clientConn.Close()
-			return
-		}
-		logging.Info("Player is logging in", "username", loginStart.Username, "uuid", loginStart.UUID)
-
-		uuid := *loginStart.UUID
-		if loginStart.UUID == nil {
-			//TODO: request the uuid from mojang
-			logging.Error("UUID is nil, requesting from mojang")
-		}
-
-		// TODO: Return if the player is not in the whitelist -- no query yet.
-		/* player, err := queries.QueryPlayerByUUID(app, uuid)
-		if err != nil {
-			logging.Error("Error querying player:", "error", err)
-			clientConn.Close()
-			return
-		}
-
-		if !player.IsAllowed {
-			logging.Error("Player is not allowed to connect", "username", loginStart.Username, "uuid", loginStart.UUID)
-			clientConn.Close()
-			return
-		} */
-
-		// Send LoginSuccess packet
-		loginSuccess := mc.WriteLoginSuccess(clientConn, uuid, loginStart.Username)
-		if loginSuccess != nil {
-			logging.Error("Error writing login success:", "error", loginSuccess)
-			clientConn.Close()
-			return
-		}
-		logging.Info("Sent LoginSuccess", "username", loginStart.Username)
-
-		// Wait for LoginAcknowledged packet
-		packet, err = mcp.ReadPacket(clientConn)
-		if err != nil {
-			logging.Error("Error reading packet:", "error", err)
-			clientConn.Close()
-			return
-		}
-		loginAcknowledged, err := mc.ParseLoginAcknowledged(packet)
-		if err != nil {
-			logging.Error("Error reading login acknowledged:", "error", loginAcknowledged)
-			clientConn.Close()
-			return
-		}
-		logging.Info("Player acknowledged login", "loggedIn", loginAcknowledged, "username", loginStart.Username)
-
-		//TOOD: Stall Player with one /x00 packet every second.
-
-		// Send Transfer packet
-		err = mc.WriteTransfer(clientConn, "91.107.192.240", 25565)
-		if err != nil {
-			logging.Error("Error writing transfer:", "error", err)
-			clientConn.Close()
-			return
-		}
-		logging.Info("Sent Transfer packet", "host", "91.107.192.240", "port", 25565)
+		handlePlayerLogin(clientConn, app)
+	} else {
+		logging.Error("Unknown handshake state", "state", handshake.NextState)
+		clientConn.Close()
+		return
 	}
 }
+
 func Start(app *model.App) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", app.Config.MC_PORT))
 	if err != nil {
