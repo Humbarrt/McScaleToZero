@@ -57,18 +57,19 @@ func handleConnection(clientConn net.Conn, app *model.App) {
 			}
 
 			if packet.PacketID == 0x00 {
+				statusResponse := defaultResponse
+
 				if app.IsMCServerReady() {
-					status, err := mc.ReadServerStatus("91.107.192.240", app.Config.MC_PORT)
+					logging.Info("MC Server is ready, sending status response")
+					status, err := mc.ReadServerStatus("join.insanitycraft.net", 25565) //"91.107.192.240", app.Config.MC_PORT)
 					if err != nil {
 						logging.Error("Error reading server status:", "error", err)
-						clientConn.Close()
-						return
+					} else {
+						statusResponse = status
 					}
-
-					mc.WriteStatusResponse(clientConn, status)
-				} else {
-					mc.WriteStatusResponse(clientConn, defaultResponse)
 				}
+
+				mc.WriteStatusResponse(clientConn, statusResponse)
 			} else if packet.PacketID == 0x01 {
 				mc.WritePongResponse(clientConn, packet.Data)
 
