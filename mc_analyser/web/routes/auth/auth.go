@@ -72,7 +72,7 @@ func signInHandler(app *model.App) gin.HandlerFunc {
 		}
 
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-		tokenString, err := token.SignedString(app.Config.SIGNING_KEY)
+		tokenString, err := token.SignedString(app.JWTSecret)
 		if err != nil {
 			logging.Error("error", "error", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "general", "message": "Internal Error, please try again"})

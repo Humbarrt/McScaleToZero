@@ -1,14 +1,18 @@
 package main
 
 import (
+	"crypto/rand"
 	"embed"
+	"mc_analyser/api/aws"
 	"mc_analyser/db"
 	"mc_analyser/logging"
 	"mc_analyser/model"
+	"mc_analyser/web/routes"
 	"time"
 
 	_config "mc_analyser/config"
 	mpc "mc_analyser/processes/mc_decoy_server"
+	sw "mc_analyser/processes/server_watcher"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,32 +21,46 @@ import (
 var fs embed.FS
 
 func main() {
+	logging.Info("Starting MC Manager")
 	config := _config.Load()
 	database, err := db.NewDatabase()
 	if err != nil {
-		panic(err)
+		logging.Fatal("Error creating database connection", "error", err)
+	}
+
+	//generate jwt secret
+	secret := make([]byte, 64)
+	_, err = rand.Read(secret)
+	if err != nil {
+		logging.Fatal("Error creating JWTSecret", "error", err)
 	}
 
 	router := gin.Default()
 	app := model.App{
-		Db:      database,
-		Config:  config,
-		Router:  router,
-		FS:      fs,
-		Timeout: 10 * time.Second,
+		Db:        database,
+		Config:    config,
+		Router:    router,
+		FS:        fs,
+		Timeout:   10 * time.Second,
+		JWTSecret: secret,
+		SW:        nil,
 	}
 
-	app.SetMCServerReady(true)
-	logging.Info("Starting mc_analyser")
-	//decoyServer
-	mpc.Start(&app)
+	app.AWS, err = aws.NewAWSAPI(&app)
+	if err != nil {
+		logging.Fatal("Error creating AWS API", "error", err)
+	}
 
-	//go sw.ServerWatcher(&app)
+	app.SW = sw.NewServerWatcher(&app)
+	logging.Info("checking if online", "isOnline", app.SW.IsServerOnline())
 
-	/* err = routes.InitRoutes(&app)
+	go app.SW.StartWatchingServer()
+	go mpc.Start(&app)
+
+	err = routes.InitRoutes(&app)
 	if err != nil {
 		panic(err)
-	} */
+	}
 	logging.Info("Analyser started")
 }
 
@@ -60,4 +78,5 @@ TODO: Record Credit Balance on change
 TODO: Create bill if credit balance has gone down
 TODO: Get player history since last bill. Even if player is currently online
 TODO: is using utc??????
+TODO: LOG to file
 */

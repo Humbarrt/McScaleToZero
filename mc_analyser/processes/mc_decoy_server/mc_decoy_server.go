@@ -59,7 +59,7 @@ func handleConnection(clientConn net.Conn, app *model.App) {
 			if packet.PacketID == 0x00 {
 				statusResponse := defaultResponse
 
-				if app.IsMCServerReady() {
+				if app.SW.IsServerReady() {
 					logging.Info("MC Server is ready, sending status response")
 					status, err := mc.ReadServerStatus("join.insanitycraft.net", 25565) //"91.107.192.240", app.Config.MC_PORT)
 					if err != nil {
