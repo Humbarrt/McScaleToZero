@@ -28,13 +28,6 @@ type InstanceStatus struct {
 	PublicIP   *string
 }
 
-/*
-StartInstance() error
-StopInstance() error
-IsInstanceOnline() (bool, error)
-GetInstanceIP() (string, error)
-*/
-
 func NewAWSAPI(app *model.App) (*awsAPI, error) {
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithAppID("mc_analyser"), config.WithRetryMaxAttempts(2))
 	if err != nil {
@@ -48,7 +41,6 @@ func NewAWSAPI(app *model.App) (*awsAPI, error) {
 		client: client,
 	}
 
-	// Check if the instance exists
 	_, err = aws.getInstanceStatus()
 	if err != nil {
 		logging.Error("Failed to get instance status", "error", err)
@@ -75,7 +67,6 @@ func (aws *awsAPI) getInstanceStatus() (InstanceStatus, error) {
 		PublicIP:   nil,
 	}
 
-	// Call the DescribeInstances API
 	resp, err := aws.client.DescribeInstances(context.Background(), input)
 	if err != nil {
 		logging.Error("Faild to describe the instance", "error", err)
