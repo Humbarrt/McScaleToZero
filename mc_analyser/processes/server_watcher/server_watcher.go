@@ -72,7 +72,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 			logging.Error("Error checking server status: ", "error", err)
 			goto waitAndContinue
 		}
-		logging.Info("Server status: ", "isOnline", isOnline, "wasOnline", wasOnline)
+		logging.Debug("Server status: ", "isOnline", isOnline, "wasOnline", wasOnline)
 
 		if !wasOnline && isOnline {
 			logging.Info("Server started")
@@ -89,7 +89,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 			sw._isOnline = true
 			sw.mutex.Unlock()
 			logging.Info("Server is set to online")
-			logging.Info("Server has IP: ", "IP", ipv4)
+			logging.Debug("Server has IP: ", "IP", ipv4)
 
 			//TODO: get whitelist
 			//TODO: make server backup
@@ -101,19 +101,19 @@ func (sw *serverWatcher) StartWatchingServer() {
 			ipv4, err := sw.App.AWS.GetInstanceIP()
 			if err != nil {
 				logging.Error("Server is online but has no IP: ", "error", err)
-				logging.Info("Trying to recover from state")
+				logging.Warn("Starting IP recovery")
 
 				ipv4, err = sw.App.AWS.GetInstanceIP()
 				if err != nil {
-					logging.Error("Error getting server IP: ", "error", err)
+					logging.Error("IP recovery failed: ", "error", err)
 					goto waitAndContinue
 				}
 				sw.mutex.Lock()
 				sw._ipv4 = &ipv4
 				sw.mutex.Unlock()
 
-				logging.Info("Recovery successful")
-				logging.Info("Server has IP: ", "IP", ipv4)
+				logging.Info("IP recovery successful")
+				logging.Debug("Server has IP: ", "IP", ipv4)
 			}
 
 			status, err := mc.ReadServerStatus(ipv4, sw.App.Config.MC_PORT)

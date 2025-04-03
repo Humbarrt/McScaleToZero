@@ -116,6 +116,26 @@ func (aws *awsAPI) getInstanceStatus() (InstanceStatus, error) {
 	return instanceStatus, nil
 }
 
+func (aws *awsAPI) getInstanceId() (string, error) {
+	aws.mutex.Lock()
+	instanceId := aws._instanceId
+	aws.mutex.Unlock()
+	if instanceId != nil {
+		return *instanceId, nil
+	}
+
+	instanceStatus, err := aws.getInstanceStatus()
+	if err != nil {
+		return "", err
+	}
+
+	if instanceStatus.InstanceId == "" {
+		return "", fmt.Errorf("instance ID is empty")
+	}
+
+	return instanceStatus.InstanceId, nil
+}
+
 func (aws *awsAPI) IsInstanceOnline() (bool, error) {
 	instanceStatus, err := aws.getInstanceStatus()
 	if err != nil {
@@ -139,17 +159,16 @@ func (aws *awsAPI) GetInstanceIP() (string, error) {
 }
 
 func (aws *awsAPI) StartInstance() error {
-	aws.mutex.Lock()
-	if aws._instanceId == nil {
-		return fmt.Errorf("instance ID is nil")
+	instanceId, err := aws.getInstanceId()
+	if err != nil {
+		logging.Error("Failed to get instance ID", "error", err)
 	}
-	aws.mutex.Unlock()
 
 	input := &ec2.StartInstancesInput{
-		InstanceIds: []string{*aws._instanceId},
+		InstanceIds: []string{instanceId},
 	}
 
-	_, err := aws.client.StartInstances(context.Background(), input)
+	_, err = aws.client.StartInstances(context.Background(), input)
 	if err != nil {
 		logging.Error("Failed to start instance", "error", err)
 		return err
@@ -160,17 +179,16 @@ func (aws *awsAPI) StartInstance() error {
 }
 
 func (aws *awsAPI) StopInstance() error {
-	aws.mutex.Lock()
-	if aws._instanceId == nil {
-		return fmt.Errorf("instance ID is nil")
+	instanceId, err := aws.getInstanceId()
+	if err != nil {
+		logging.Error("Failed to get instance ID", "error", err)
 	}
-	aws.mutex.Unlock()
 
 	input := &ec2.StopInstancesInput{
-		InstanceIds: []string{*aws._instanceId},
+		InstanceIds: []string{instanceId},
 	}
 
-	_, err := aws.client.StopInstances(context.Background(), input)
+	_, err = aws.client.StopInstances(context.Background(), input)
 	if err != nil {
 		logging.Error("Failed to stop instance", "error", err)
 		return err
