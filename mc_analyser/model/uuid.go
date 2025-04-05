@@ -42,11 +42,6 @@ func UUIDFromString(s string) (*UUID, error) {
 			return nil, fmt.Errorf("UUID must be 32 characters long")
 		}
 	}
-	//check if the UUID is valid
-	if u.raw[6]&0xf0 != 0x40 {
-		return nil, fmt.Errorf("UUID must be version 4")
-	}
-
 	logging.Debug("UUID", "uuid", u.ShortString())
 	return &u, nil
 }

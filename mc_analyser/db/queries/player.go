@@ -138,20 +138,13 @@ func AddPlayerAlias(DB *db.DB, playerId int64, alias string) error {
 		return err
 	}
 
-	aliases := player.Aliases
-	aliases = append(aliases, alias)
-
-	aliasesMap := make(map[string]bool)
-	for _, alias := range aliases {
-		aliasesMap[alias] = true
+	newAliases := []string{alias}
+	for _, a := range player.Aliases {
+		if a != alias {
+			newAliases = append(newAliases, a)
+		}
 	}
-	aliases = []string{}
-
-	for alias := range aliasesMap {
-		aliases = append([]string{alias}, aliases...)
-	}
-
-	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, aliases, player.SplitwiseId)
+	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, newAliases, player.SplitwiseId)
 }
 
 func SetPlayerSplitwiseId(DB *db.DB, playerId int64, splitwiseId string) error {
