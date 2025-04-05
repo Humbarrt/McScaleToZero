@@ -26,7 +26,8 @@ func IsAuthenticated(app *model.App) gin.HandlerFunc {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-			return app.Config.SIGNING_KEY, nil
+
+			return app.JWTSecret, nil
 		})
 
 		if err != nil {

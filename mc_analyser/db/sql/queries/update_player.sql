@@ -1,5 +1,5 @@
 UPDATE "players"
-SET "mc_id" = ?,
+SET "mc_uuid" = ?,
     "is_allowed" = ?,
     "aliases" = ?,
     "splitwise_id" = ?

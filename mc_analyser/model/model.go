@@ -11,21 +11,21 @@ import (
 )
 
 type Config struct {
-	FLY_API_BASE_URL string
-	FLY_API_TOKEN    string
-	FLY_APP_NAME     string
-	SIGNING_KEY      []byte
-	MC_PORT          int
+	AWS_ACCESS_KEY_ID      string
+	AWS_SECRET_ACCESS_KEY  string
+	AWS_INSTANCE_NAME      string
+	MC_PORT                int
+	SERVER_WATCHER_RETRIES int
 }
 
 type AuthClaims struct {
-	McId string
+	McUUID string
 	jwt.RegisteredClaims
 }
 
 type Player struct {
 	Id          int64    `json:"id"`
-	McId        string   `json:"mc_id"`
+	McUUID      UUID     `json:"mc_uuid"`
 	IsAllowed   bool     `json:"is_active"`
 	Aliases     []string `json:"aliases"`
 	SplitwiseId string   `json:"splitwise_id"`
@@ -45,44 +45,27 @@ type ServerEvent struct {
 }
 
 type App struct {
-	Router           *gin.Engine
-	FS               embed.FS
-	Db               *db.DB
-	Config           *Config
-	Timeout          time.Duration
-	lastUpdate       time.Time
-	mu               sync.Mutex
-	isMCServerOnline bool
-	isMCServerReady  bool
+	Router    *gin.Engine
+	FS        embed.FS
+	Db        *db.DB
+	Config    *Config
+	Timeout   time.Duration
+	SW        ServerWatcher
+	AWS       AWSAPI
+	JWTSecret []byte
+
+	//protected
+	mutex       sync.Mutex
+	_lastUpdate time.Time
 }
 
-func (app *App) SetMCServerOnline(online bool) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	app.isMCServerOnline = online
-}
-func (app *App) IsMCServerOnline() bool {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	return app.isMCServerOnline
-}
-func (app *App) SetMCServerReady(ready bool) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	app.isMCServerReady = ready
-}
-func (app *App) IsMCServerReady() bool {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	return app.isMCServerReady
-}
 func (app *App) SetLastUpdate(t time.Time) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	app.lastUpdate = t
+	app.mutex.Lock()
+	defer app.mutex.Unlock()
+	app._lastUpdate = t
 }
 func (app *App) GetLastUpdate() time.Time {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	return app.lastUpdate
+	app.mutex.Lock()
+	defer app.mutex.Unlock()
+	return app._lastUpdate
 }
