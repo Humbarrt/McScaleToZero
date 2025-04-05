@@ -2,7 +2,9 @@ package mcnetworking
 
 import (
 	"mc_analyser/api/mcnetworking/packet"
+	"mc_analyser/logging"
 	"net"
+	"unicode/utf16"
 )
 
 func WriteLoginSuccess(conn net.Conn, uuid packet.UUID, username string) error {
@@ -74,6 +76,8 @@ func WriteHandshake(conn net.Conn, protocolVersion int, serverAddress string, se
 	packet.WriteVarInt(&data, nextState)
 	p.Data = data
 
+	logging.Info("Handshake packet data: ", "data", p.Data)
+
 	packetBytes := p.ToBytes()
 	_, err := conn.Write(packetBytes)
 	return err
@@ -86,6 +90,47 @@ func WriteStatusRequest(conn net.Conn) error {
 	}
 
 	packetBytes := p.ToBytes()
+	_, err := conn.Write(packetBytes)
+	return err
+}
+
+func stringToBytesUTF16BE(str string) []byte {
+	codes := utf16.Encode([]rune(str))
+	b := make([]byte, len(codes)*2)
+	for i, r := range codes {
+		b[i*2] = byte(r >> 8)
+		b[i*2+1] = byte(r)
+	}
+	return b
+}
+
+func WriteLegacyStatusResponse(conn net.Conn, protocolVersion string, minecraftVersion string, motd string, playerCount string, maxPlayers string) error {
+	data := make([]byte, 0)
+
+	data = append(data, stringToBytesUTF16BE("§1")...)
+	data = append(data, 0x00, 0x00)
+
+	data = append(data, stringToBytesUTF16BE(protocolVersion)...)
+	data = append(data, 0x00, 0x00)
+
+	data = append(data, stringToBytesUTF16BE(minecraftVersion)...)
+	data = append(data, 0x00, 0x00)
+
+	data = append(data, stringToBytesUTF16BE(motd)...)
+	data = append(data, 0x00, 0x00)
+
+	data = append(data, stringToBytesUTF16BE(playerCount)...)
+	data = append(data, 0x00, 0x00)
+
+	data = append(data, stringToBytesUTF16BE(maxPlayers)...)
+
+	length := len(data) / 2
+
+	packetBytes := make([]byte, 0)
+	packetBytes = append(packetBytes, 0xFF)
+	packetBytes = append(packetBytes, byte(length>>8), byte(length))
+	packetBytes = append(packetBytes, data...)
+
 	_, err := conn.Write(packetBytes)
 	return err
 }

@@ -9,11 +9,13 @@ import (
 
 func ReadServerStatus(host string, port int) (string, error) {
 	//connect to mc server via tcp
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+	conn, err := net.Dial("tcp", net.JoinHostPort(host, fmt.Sprintf("%d", port)))
 	if err != nil {
 		return "", err
 	}
 
+	// Send Handshake packet
+	logging.Info("Sending handshake")
 	err = WriteHandshake(conn, 770, host, port, 1)
 	if err != nil {
 		logging.Error("Error writing handshake:", "error", err)
@@ -29,6 +31,7 @@ func ReadServerStatus(host string, port int) (string, error) {
 		return "", err
 	}
 
+	// Read Response packet
 	p, err := mcp.ReadPacket(conn)
 	if err != nil {
 		logging.Error("Error reading status response:", "error", err)

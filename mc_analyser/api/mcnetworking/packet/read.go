@@ -18,7 +18,14 @@ func ReadPacket(conn net.Conn) (*Packet, error) {
 
 	// Read the packet data
 	p.Data = make([]byte, length)
-	_, err = conn.Read(p.Data)
+	totalBytesRead := 0
+	// Read the rest of the packet
+	for totalBytesRead < length {
+		var bytesRead int
+		bytesRead, err = conn.Read(p.Data[totalBytesRead:])
+		totalBytesRead += bytesRead
+	}
+
 	if err != nil {
 		logging.Error("Error reading packet data:", "error", err)
 		return &Packet{}, err

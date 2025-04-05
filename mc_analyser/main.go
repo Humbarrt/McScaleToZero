@@ -32,7 +32,7 @@ func main() {
 		Timeout: 10 * time.Second,
 	}
 
-	app.SetMCServerReady(true)
+	app.SetMCServerReady(false)
 	logging.Info("Starting mc_analyser")
 	//decoyServer
 	mpc.Start(&app)
