@@ -9,11 +9,11 @@ import (
 
 func parsePlayer(row scannable) (*model.Player, error) {
 	var id int64
-	var mcId string
+	var mcUUIDRaw []byte
 	var isAllowed bool
 	var aliasesString string
 	var splitwiseId string
-	err := row.Scan(&id, &mcId, &isAllowed, &aliasesString, &splitwiseId)
+	err := row.Scan(&id, &mcUUIDRaw, &isAllowed, &aliasesString, &splitwiseId)
 	if err != nil {
 		return nil, err
 	}
@@ -30,9 +30,15 @@ func parsePlayer(row scannable) (*model.Player, error) {
 		logging.Error("Player has no aliases", "id", id)
 	}
 
+	// Convert mcUUID to UUID type
+	mcUUID, err := model.UUIDFromBytes(mcUUIDRaw[:])
+	if err != nil {
+		return nil, err
+	}
+
 	return &model.Player{
 		Id:          id,
-		McId:        mcId,
+		McUUID:      *mcUUID,
 		IsAllowed:   isAllowed,
 		Aliases:     aliases,
 		SplitwiseId: splitwiseId,
@@ -107,7 +113,7 @@ func GetPlayerByAlias(DB *db.DB, alias string) (*model.Player, error) {
 	return parsePlayer(result)
 }
 
-func AddPlayer(DB *db.DB, mcId string, isAllowed bool, aliases []string, splitwiseId string) error {
+func AddPlayer(DB *db.DB, mcUUID model.UUID, isAllowed bool, aliases []string, splitwiseId string) error {
 	stmt, err := DB.GetQuery("add_player")
 	if err != nil {
 		return err
@@ -118,7 +124,7 @@ func AddPlayer(DB *db.DB, mcId string, isAllowed bool, aliases []string, splitwi
 		return err
 	}
 
-	_, err = stmt.Exec(mcId, isAllowed, string(aliasesString), splitwiseId)
+	_, err = stmt.Exec(mcUUID.Bytes(), isAllowed, string(aliasesString), splitwiseId)
 	if err != nil {
 		return err
 	}
@@ -145,7 +151,7 @@ func AddPlayerAlias(DB *db.DB, playerId int64, alias string) error {
 		aliases = append([]string{alias}, aliases...)
 	}
 
-	return updatePlayer(DB, playerId, player.McId, player.IsAllowed, aliases, player.SplitwiseId)
+	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, aliases, player.SplitwiseId)
 }
 
 func SetPlayerSplitwiseId(DB *db.DB, playerId int64, splitwiseId string) error {
@@ -154,7 +160,7 @@ func SetPlayerSplitwiseId(DB *db.DB, playerId int64, splitwiseId string) error {
 		return err
 	}
 
-	return updatePlayer(DB, playerId, player.McId, player.IsAllowed, player.Aliases, splitwiseId)
+	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, player.Aliases, splitwiseId)
 }
 
 func SetPlayerIsAllowed(DB *db.DB, playerId int64, isAllowed bool) error {
@@ -163,10 +169,10 @@ func SetPlayerIsAllowed(DB *db.DB, playerId int64, isAllowed bool) error {
 		return err
 	}
 
-	return updatePlayer(DB, playerId, player.McId, isAllowed, player.Aliases, player.SplitwiseId)
+	return updatePlayer(DB, playerId, player.McUUID, isAllowed, player.Aliases, player.SplitwiseId)
 }
 
-func updatePlayer(DB *db.DB, playerId int64, mcId string, isAllowed bool, aliases []string, splitwiseId string) error {
+func updatePlayer(DB *db.DB, playerId int64, mcUUID model.UUID, isAllowed bool, aliases []string, splitwiseId string) error {
 	stmt, err := DB.GetQuery("update_player")
 	if err != nil {
 		return err
@@ -177,7 +183,7 @@ func updatePlayer(DB *db.DB, playerId int64, mcId string, isAllowed bool, aliase
 		return err
 	}
 
-	_, err = stmt.Exec(mcId, isAllowed, string(aliasesString), splitwiseId, playerId)
+	_, err = stmt.Exec(mcUUID.Bytes(), isAllowed, string(aliasesString), splitwiseId, playerId)
 	if err != nil {
 		return err
 	}

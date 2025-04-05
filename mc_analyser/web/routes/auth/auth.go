@@ -63,7 +63,7 @@ func signInHandler(app *model.App) gin.HandlerFunc {
 		}
 
 		claims := model.AuthClaims{
-			McId: fmt.Sprintf("%d", user.Id),
+			McUUID: fmt.Sprintf("%d", user.Id),
 			RegisteredClaims: jwt.RegisteredClaims{
 				ExpiresAt: jwt.NewNumericDate(time.Now().Add(31 * 24 * time.Hour)),
 				IssuedAt:  jwt.NewNumericDate(time.Now()),

@@ -12,4 +12,5 @@ bin
 mc_server/mc-server-key.pem
 mc_server/.terraform.lock.hcl
 *.tfstate
-mc_server/tmp/build-errors.log
+*.tfstate.backup
+tmp

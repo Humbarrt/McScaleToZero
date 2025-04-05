@@ -19,13 +19,13 @@ type Config struct {
 }
 
 type AuthClaims struct {
-	McId string
+	McUUID string
 	jwt.RegisteredClaims
 }
 
 type Player struct {
 	Id          int64    `json:"id"`
-	McId        string   `json:"mc_id"`
+	McUUID      UUID     `json:"mc_uuid"`
 	IsAllowed   bool     `json:"is_active"`
 	Aliases     []string `json:"aliases"`
 	SplitwiseId string   `json:"splitwise_id"`
