@@ -10,11 +10,11 @@ import (
 )
 
 type serverWatcher struct {
-	App     *model.App
-	retries int
+	App *model.App
 
 	//protected
 	mutex       sync.Mutex
+	_retries    int
 	_isWatching bool
 	_isOnline   bool
 	_isReady    bool
@@ -52,20 +52,27 @@ func (sw *serverWatcher) StartWatchingServer() {
 	logging.Info("Trying to start ServerWatcher")
 	sw.mutex.Lock()
 	isWatching := sw._isWatching
+	sw._retries = 0
 	sw.mutex.Unlock()
 	if isWatching {
 		logging.Error("ServerWatcher is already running")
 		return
 	}
 
+	sw.mutex.Lock()
 	sw._isWatching = true
-	sw.retries = 0
+	sw.mutex.Unlock()
+
 	logging.Info("Starting ServerWatcher")
-	for sw.retries <= sw.App.Config.SERVER_WATCHER_RETRIES {
+	for {
 		sw.mutex.Lock()
 		wasOnline := sw._isOnline
 		wasReady := sw._isReady
+		retries := sw._retries
 		sw.mutex.Unlock()
+		if retries > sw.App.Config.SERVER_WATCHER_RETRIES {
+			break
+		}
 
 		isOnline, err := sw.App.AWS.IsInstanceOnline()
 		if err != nil {
@@ -76,8 +83,6 @@ func (sw *serverWatcher) StartWatchingServer() {
 
 		if !wasOnline && isOnline {
 			logging.Info("Server started")
-			sw.retries = 0
-
 			ipv4, err := sw.App.AWS.GetInstanceIP()
 			if err != nil {
 				logging.Error("Error getting server IP: ", "error", err)
@@ -85,6 +90,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 			}
 
 			sw.mutex.Lock()
+			sw._retries = 0
 			sw._ipv4 = &ipv4
 			sw._isOnline = true
 			sw.mutex.Unlock()
@@ -139,8 +145,10 @@ func (sw *serverWatcher) StartWatchingServer() {
 		}
 
 		if !isOnline {
-			logging.Info("Server is offline", "retries", sw.retries)
-			sw.retries += 1
+			logging.Info("Server is offline", "retries left", sw.App.Config.SERVER_WATCHER_RETRIES-retries)
+			sw.mutex.Lock()
+			sw._retries = retries + 1
+			sw.mutex.Unlock()
 		}
 
 	waitAndContinue:
