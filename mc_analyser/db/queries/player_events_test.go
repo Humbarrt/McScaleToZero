@@ -3,6 +3,7 @@ package queries_test
 import (
 	"mc_analyser/db"
 	"mc_analyser/db/queries"
+	"mc_analyser/model"
 	"path"
 	"testing"
 	"time"
@@ -15,12 +16,14 @@ func TestPlayerEvent(t *testing.T) {
 	DB, err := db.InitializeDatabase(filePath)
 	assert.NoError(t, err)
 
-	err = queries.AddPlayer(DB, "test_mc_id", true, []string{"Test"}, "test_splitwise_id")
+	player_uuid, err := model.UUIDFromString("c99efdca-519c-43ea-83fb-ebc7042c8e3f")
+	assert.NoError(t, err)
+	err = queries.AddPlayer(DB, *player_uuid, true, []string{"Test"}, "test_splitwise_id")
 	assert.NoError(t, err)
 
 	player, err := queries.GetPlayerByAlias(DB, "Test")
 	assert.NoError(t, err)
-	assert.Equal(t, player.McId, "test_mc_id")
+	assert.Equal(t, player.McUUID.Bytes(), player_uuid.Bytes())
 
 	//If there is no row, we should not be able to add an offline event
 	err = queries.AddPlayerEvent(DB, time.Now(), player.Id, false)
@@ -74,11 +77,13 @@ func TestPlayerEvent(t *testing.T) {
 	assert.Equal(t, event.Timestamp, time_ref) // There should be no new event
 
 	//Test multiple players online
-	err = queries.AddPlayer(DB, "test_mc_id_2", true, []string{"Test2"}, "test_splitwise_id_2")
+	player2_uuid, err := model.UUIDFromString("210c22ac-1019-495a-ae72-a9707bfef19d")
+	assert.NoError(t, err)
+	err = queries.AddPlayer(DB, *player2_uuid, true, []string{"Test2"}, "test_splitwise_id_2")
 	assert.NoError(t, err)
 	player2, err := queries.GetPlayerByAlias(DB, "Test2")
 	assert.NoError(t, err)
-	assert.Equal(t, player2.McId, "test_mc_id_2")
+	assert.Equal(t, player2.McUUID.Bytes(), player2_uuid.Bytes())
 
 	err = queries.AddPlayerEvent(DB, time.Now(), player.Id, true)
 	assert.NoError(t, err)

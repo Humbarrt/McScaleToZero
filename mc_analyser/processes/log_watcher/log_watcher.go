@@ -8,10 +8,10 @@ import (
 )
 
 func LogWatcher(App *model.App) {
-	lastState := App.IsMCServerOnline()
+	lastState := App.SW.IsServerOnline()
 	for {
 		time.Sleep(1 * time.Second)
-		isOnline := App.IsMCServerOnline()
+		isOnline := App.SW.IsServerOnline()
 
 		hasStarted := isOnline && lastState != isOnline
 		hasStopped := !isOnline && lastState != isOnline

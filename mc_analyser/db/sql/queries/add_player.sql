@@ -1,5 +1,5 @@
 INSERT INTO "players" (
-        "mc_id",
+        "mc_uuid",
         "is_allowed",
         "aliases",
         "splitwise_id"

@@ -45,9 +45,15 @@ func handleServerListPing(clientConn net.Conn, app *model.App) {
 		if packet.PacketID == 0x00 {
 			statusResponse := defaultResponse
 
-			if app.IsMCServerReady() {
+			if app.SW.IsServerReady() {
 				logging.Info("MC Server is ready, sending status response")
-				status, err := mc.ReadServerStatus("91.107.192.240", app.Config.MC_PORT)
+				ipv4, err := app.SW.IPv4()
+				if err != nil {
+					logging.Error("Error getting server IP:", "error", err)
+					clientConn.Close()
+					return
+				}
+				status, err := mc.ReadServerStatus(ipv4, app.Config.MC_PORT) //"91.107.192.240", app.Config.MC_PORT)
 				if err != nil {
 					logging.Error("Error reading server status:", "error", err)
 				} else {
@@ -65,19 +71,23 @@ func handleServerListPing(clientConn net.Conn, app *model.App) {
 	}
 }
 
-func findPlayerUUID(playerName string, app *model.App) (string, error) {
+func findPlayerUUID(playerName string, app *model.App) (*model.UUID, error) {
 	// Check if the player is in the database
 	player, err := queries.GetPlayerByAlias(app.Db, playerName)
-	uuid := player.McId
+	uuid := &player.McUUID
 
 	if err != nil {
 		logging.Info("Player not found in database, requesting UUID from Mojang", "playerName", playerName)
 
 		uuid, err = mojang.GetPlayerUUID(playerName)
+		if err != nil {
+			logging.Error("Error getting player UUID from Mojang:", "error", err)
+			return &model.UUID{}, err
+		}
 
 		if err != nil {
 			logging.Error("Error getting player UUID from Mojang:", "error", err)
-			return "", err
+			return &model.UUID{}, err
 		}
 	}
 
@@ -150,7 +160,7 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 	logging.Info("Player acknowledged login", "loggedIn", loginAcknowledged, "username", loginStart.Username)
 
 	for {
-		if app.IsMCServerReady() {
+		if app.SW.IsServerReady() {
 			break
 		}
 
