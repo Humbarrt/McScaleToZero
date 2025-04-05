@@ -4,6 +4,8 @@ import (
 	"fmt"
 	mc "mc_analyser/api/mcnetworking"
 	mcp "mc_analyser/api/mcnetworking/packet"
+	"mc_analyser/api/mojang"
+	"mc_analyser/db/queries"
 	"mc_analyser/logging"
 	"mc_analyser/model"
 	"net"
@@ -63,6 +65,27 @@ func handleServerListPing(clientConn net.Conn, app *model.App) {
 	}
 }
 
+func findPlayerUUID(playerName string, app *model.App) (string, error) {
+	// Check if the player is in the database
+	player, err := queries.GetPlayerByAlias(app.Db, playerName)
+	uuid := player.McId
+
+	if err != nil {
+		logging.Info("Player not found in database, requesting UUID from Mojang", "playerName", playerName)
+
+		uuid, err = mojang.GetPlayerUUID(playerName)
+
+		if err != nil {
+			logging.Error("Error getting player UUID from Mojang:", "error", err)
+			return "", err
+		}
+	}
+
+	logging.Info("Found UUID:", "uuid", uuid)
+
+	return uuid, nil
+}
+
 func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 	logging.Info("Player is connecting to the server", "remoteAddr", clientConn.RemoteAddr().String())
 
@@ -82,9 +105,10 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 	logging.Info("Player is logging in", "username", loginStart.Username, "uuid", loginStart.UUID)
 
 	uuid := *loginStart.UUID
-	if loginStart.UUID == nil {
-		//TODO: request the uuid from mojang
-		logging.Error("UUID is nil, requesting from mojang")
+	if true || loginStart.UUID == nil {
+		id_found, _ := findPlayerUUID(loginStart.Username, app)
+
+		logging.Info("Player UUID found:", "uuid", id_found)
 	}
 
 	// TODO: Return if the player is not in the whitelist -- no query yet.
