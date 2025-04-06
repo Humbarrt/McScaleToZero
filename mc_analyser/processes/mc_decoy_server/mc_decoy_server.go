@@ -122,7 +122,7 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 	}
 
 	// TODO: Return if the player is not in the whitelist -- no query yet.
-	/* player, err := queries.QueryPlayerByUUID(app, uuid)
+	player, err := queries.GetPlayerByUUID(app.Db, uuid)
 	if err != nil {
 		logging.Error("Error querying player:", "error", err)
 		clientConn.Close()
@@ -133,7 +133,7 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 		logging.Error("Player is not allowed to connect", "username", loginStart.Username, "uuid", loginStart.UUID)
 		clientConn.Close()
 		return
-	} */
+	}
 
 	// Send LoginSuccess packet
 	loginSuccess := mc.WriteLoginSuccess(clientConn, uuid, loginStart.Username)

@@ -3,11 +3,12 @@ package mcnetworking
 import (
 	"mc_analyser/api/mcnetworking/packet"
 	"mc_analyser/logging"
+	"mc_analyser/model"
 	"net"
 	"unicode/utf16"
 )
 
-func WriteLoginSuccess(conn net.Conn, uuid packet.UUID, username string) error {
+func WriteLoginSuccess(conn net.Conn, uuid model.UUID, username string) error {
 	p := packet.Packet{
 		PacketID: 0x02,
 		Data:     make([]byte, 0),
