@@ -10,12 +10,20 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type Config struct {
-	AWS_ACCESS_KEY_ID      string
-	AWS_SECRET_ACCESS_KEY  string
-	AWS_INSTANCE_NAME      string
-	MC_PORT                int
-	SERVER_WATCHER_RETRIES int
+type Config interface {
+	GetAWSAccessKeyId() string
+	GetAWSSecretAccessKey() string
+	GetAWSInstanceName() string
+	GetSplitwiseApiKey() string
+	GetSplitwiseGroupId() string
+	GetMCServerSSHKey() string
+
+	GetMCPort() int
+	SetMCPort(port int) error
+	GetMCOfflineImage() *[]byte
+	SetMCOfflineImage(image *[]byte) error
+	GetMCOfflineMOTD() *string
+	SetMCOfflineMOTD(motd *string) error
 }
 
 type AuthClaims struct {
@@ -24,22 +32,24 @@ type AuthClaims struct {
 }
 
 type Player struct {
-	Id          int64    `json:"id"`
+	Id          int      `json:"id"`
 	McUUID      UUID     `json:"mc_uuid"`
 	IsAllowed   bool     `json:"is_active"`
+	IsAdmin     bool     `json:"is_admin"`
+	LastIPV4    *string  `json:"last_ip"`
 	Aliases     []string `json:"aliases"`
-	SplitwiseId string   `json:"splitwise_id"`
+	SplitwiseId *string  `json:"splitwise_id"`
 }
 
 type PlayerEvent struct {
-	Id        int64     `json:"id"`
-	PlayerId  int64     `json:"player_id"`
+	Id        int       `json:"id"`
+	PlayerId  int       `json:"player_id"`
 	Timestamp time.Time `json:"timestamp"`
 	IsOnline  bool      `json:"is_online"`
 }
 
 type ServerEvent struct {
-	Id        int64     `json:"id"`
+	Id        int       `json:"id"`
 	Timestamp time.Time `json:"timestamp"`
 	IsOnline  bool      `json:"is_online"`
 }
@@ -48,7 +58,7 @@ type App struct {
 	Router     *gin.Engine
 	FS         embed.FS
 	Db         *db.DB
-	Config     *Config
+	Config     Config
 	WebTimeout time.Duration
 	SW         ServerWatcher
 	AWS        AWSAPI

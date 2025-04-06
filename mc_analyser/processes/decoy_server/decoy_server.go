@@ -9,6 +9,7 @@ import (
 	"mc_analyser/logging"
 	"mc_analyser/model"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -53,7 +54,7 @@ func handleServerListPing(clientConn net.Conn, app *model.App) {
 					clientConn.Close()
 					return
 				}
-				status, err := mc.ReadServerStatus(ipv4, app.Config.MC_PORT) //"91.107.192.240", app.Config.MC_PORT)
+				status, err := mc.ReadServerStatus(ipv4, app.Config.GetMCPort()) //"91.107.192.240", app.Config.MC_PORT)
 				if err != nil {
 					logging.Error("Error reading server status:", "error", err)
 				} else {
@@ -87,7 +88,6 @@ func findPlayerUUID(playerName string, app *model.App) (*model.UUID, error) {
 	}
 
 	logging.Info("Found UUID:", "uuid", uuid)
-
 	return uuid, nil
 }
 
@@ -136,13 +136,14 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 		return
 	}
 
-	/*TODO: set player IP
-	err = queries.SetPlayerIP(app.Db, player.Id, clientConn.RemoteAddr().String())
+	newIPV4 := clientConn.RemoteAddr().String()
+	newIPV4 = strings.Split(newIPV4, ":")[0]
+	err = queries.UpdatePlayerLastIPV4(app.Db, player.Id, &newIPV4)
 	if err != nil {
 		logging.Error("Error setting player IP:", "error", err)
 		clientConn.Close()
 		return
-	}*/
+	}
 
 	// Send LoginSuccess packet
 	loginSuccess := mc.WriteLoginSuccess(clientConn, uuid, loginStart.Username)
@@ -240,13 +241,13 @@ func handleConnection(clientConn net.Conn, app *model.App) {
 }
 
 func Start(app *model.App) {
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", app.Config.MC_PORT))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", app.Config.GetMCPort()))
 	if err != nil {
 		logging.Fatal("Failed to start TCP Proxy:", "error", err)
 	}
 	defer listener.Close()
 
-	logging.Info("TCP Proxy listening on port " + fmt.Sprintf("%d", app.Config.MC_PORT) + "...")
+	logging.Info("TCP Proxy listening on port " + fmt.Sprintf("%d", app.Config.GetMCPort()) + "...")
 
 	for {
 		logging.Debug("Waiting for incoming connections...")

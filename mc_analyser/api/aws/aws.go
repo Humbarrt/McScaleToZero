@@ -56,7 +56,7 @@ func (aws *awsAPI) getInstanceStatus() (InstanceStatus, error) {
 		Filters: []ec2Types.Filter{
 			{
 				Name:   &filter1Name,
-				Values: []string{aws.app.Config.AWS_INSTANCE_NAME},
+				Values: []string{aws.app.Config.GetAWSInstanceName()},
 			},
 		},
 	}

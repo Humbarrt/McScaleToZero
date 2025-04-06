@@ -8,9 +8,9 @@ import (
 )
 
 func parsePlayerEvent(row scannable) (*model.PlayerEvent, error) {
-	var id int64
+	var id int
 	var timestamp time.Time
-	var playerId int64
+	var playerId int
 	var isOnline bool
 	err := row.Scan(&id, &timestamp, &playerId, &isOnline)
 	if err != nil {
@@ -25,7 +25,7 @@ func parsePlayerEvent(row scannable) (*model.PlayerEvent, error) {
 	}, nil
 }
 
-func AddPlayerEvent(DB *db.DB, timestamp time.Time, player_id int64, isOnline bool) error {
+func AddPlayerEvent(DB *db.DB, timestamp time.Time, player_id int, isOnline bool) error {
 	lastState, err := GetLastPlayerEvent(DB, player_id)
 	if err == sql.ErrNoRows {
 		lastState = &model.PlayerEvent{
@@ -51,7 +51,7 @@ func AddPlayerEvent(DB *db.DB, timestamp time.Time, player_id int64, isOnline bo
 	return err
 }
 
-func GetLastPlayerEvent(DB *db.DB, playerId int64) (*model.PlayerEvent, error) {
+func GetLastPlayerEvent(DB *db.DB, playerId int) (*model.PlayerEvent, error) {
 	stmt, err := DB.GetQuery("get_last_player_event")
 	if err != nil {
 		return &model.PlayerEvent{}, err

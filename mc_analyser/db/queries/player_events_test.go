@@ -17,8 +17,9 @@ func TestPlayerEvent(t *testing.T) {
 	assert.NoError(t, err)
 
 	player_uuid, err := model.NewUUIDFromString("c99efdca-519c-43ea-83fb-ebc7042c8e3f")
+	splitwise_id := "test_splitwise_id"
 	assert.NoError(t, err)
-	err = queries.AddPlayer(DB, *player_uuid, true, []string{"Test"}, "test_splitwise_id")
+	err = queries.AddPlayer(DB, *player_uuid, true, true, nil, []string{"Test"}, &splitwise_id)
 	assert.NoError(t, err)
 
 	player, err := queries.GetPlayerByAlias(DB, "Test")
@@ -78,8 +79,9 @@ func TestPlayerEvent(t *testing.T) {
 
 	//Test multiple players online
 	player2_uuid, err := model.NewUUIDFromString("210c22ac-1019-495a-ae72-a9707bfef19d")
+	splitwise_id2 := "test_splitwise_id_2"
 	assert.NoError(t, err)
-	err = queries.AddPlayer(DB, *player2_uuid, true, []string{"Test2"}, "test_splitwise_id_2")
+	err = queries.AddPlayer(DB, *player2_uuid, true, false, nil, []string{"Test2"}, &splitwise_id2)
 	assert.NoError(t, err)
 	player2, err := queries.GetPlayerByAlias(DB, "Test2")
 	assert.NoError(t, err)

@@ -8,7 +8,7 @@ import (
 )
 
 func parseServerEvent(row scannable) (*model.ServerEvent, error) {
-	var id int64
+	var id int
 	var timestamp time.Time
 	var isOnline bool
 	err := row.Scan(&id, &timestamp, &isOnline)

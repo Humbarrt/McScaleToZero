@@ -8,12 +8,14 @@ import (
 )
 
 func parsePlayer(row scannable) (*model.Player, error) {
-	var id int64
+	var id int
 	var mcUUIDRaw []byte
 	var isAllowed bool
+	var isAdmin bool
+	var lastIPV4 *string
 	var aliasesString string
-	var splitwiseId string
-	err := row.Scan(&id, &mcUUIDRaw, &isAllowed, &aliasesString, &splitwiseId)
+	var splitwiseId *string
+	err := row.Scan(&id, &mcUUIDRaw, &isAllowed, &isAdmin, &lastIPV4, &aliasesString, &splitwiseId)
 	if err != nil {
 		return nil, err
 	}
@@ -40,6 +42,8 @@ func parsePlayer(row scannable) (*model.Player, error) {
 		Id:          id,
 		McUUID:      *mcUUID,
 		IsAllowed:   isAllowed,
+		IsAdmin:     isAdmin,
+		LastIPV4:    lastIPV4,
 		Aliases:     aliases,
 		SplitwiseId: splitwiseId,
 	}, nil
@@ -113,7 +117,7 @@ func GetPlayerByAlias(DB *db.DB, alias string) (*model.Player, error) {
 	return parsePlayer(result)
 }
 
-func AddPlayer(DB *db.DB, mcUUID model.UUID, isAllowed bool, aliases []string, splitwiseId string) error {
+func AddPlayer(DB *db.DB, mcUUID model.UUID, isAllowed bool, isAdmin bool, lastIPV4 *string, aliases []string, splitwiseId *string) error {
 	stmt, err := DB.GetQuery("add_player")
 	if err != nil {
 		return err
@@ -132,8 +136,8 @@ func AddPlayer(DB *db.DB, mcUUID model.UUID, isAllowed bool, aliases []string, s
 	return nil
 }
 
-func AddPlayerAlias(DB *db.DB, playerId int64, alias string) error {
-	player, err := GetPlayerById(DB, int(playerId))
+func AddPlayerAlias(DB *db.DB, playerId int, alias string) error {
+	player, err := GetPlayerById(DB, playerId)
 	if err != nil {
 		return err
 	}
@@ -144,28 +148,46 @@ func AddPlayerAlias(DB *db.DB, playerId int64, alias string) error {
 			newAliases = append(newAliases, a)
 		}
 	}
-	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, newAliases, player.SplitwiseId)
+	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, player.IsAdmin, player.LastIPV4, newAliases, player.SplitwiseId)
 }
 
-func SetPlayerSplitwiseId(DB *db.DB, playerId int64, splitwiseId string) error {
-	player, err := GetPlayerById(DB, int(playerId))
+func UpdatePlayerSplitwiseId(DB *db.DB, playerId int, splitwiseId *string) error {
+	player, err := GetPlayerById(DB, playerId)
 	if err != nil {
 		return err
 	}
 
-	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, player.Aliases, splitwiseId)
+	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, player.IsAdmin, player.LastIPV4, player.Aliases, splitwiseId)
 }
 
-func SetPlayerIsAllowed(DB *db.DB, playerId int64, isAllowed bool) error {
-	player, err := GetPlayerById(DB, int(playerId))
+func UpdatePlayerIsAllowed(DB *db.DB, playerId int, isAllowed bool) error {
+	player, err := GetPlayerById(DB, playerId)
 	if err != nil {
 		return err
 	}
 
-	return updatePlayer(DB, playerId, player.McUUID, isAllowed, player.Aliases, player.SplitwiseId)
+	return updatePlayer(DB, playerId, player.McUUID, isAllowed, player.IsAdmin, player.LastIPV4, player.Aliases, player.SplitwiseId)
 }
 
-func updatePlayer(DB *db.DB, playerId int64, mcUUID model.UUID, isAllowed bool, aliases []string, splitwiseId string) error {
+func UpdatePlayerIsAdmin(DB *db.DB, playerId int, isAdmin bool) error {
+	player, err := GetPlayerById(DB, playerId)
+	if err != nil {
+		return err
+	}
+
+	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, isAdmin, player.LastIPV4, player.Aliases, player.SplitwiseId)
+}
+
+func UpdatePlayerLastIPV4(DB *db.DB, playerId int, lastIPV4 *string) error {
+	player, err := GetPlayerById(DB, playerId)
+	if err != nil {
+		return err
+	}
+
+	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, player.IsAdmin, lastIPV4, player.Aliases, player.SplitwiseId)
+}
+
+func updatePlayer(DB *db.DB, playerId int, mcUUID model.UUID, isAllowed bool, isAdmin bool, lastIPV4 *string, aliases []string, splitwiseId *string) error {
 	stmt, err := DB.GetQuery("update_player")
 	if err != nil {
 		return err
@@ -176,7 +198,7 @@ func updatePlayer(DB *db.DB, playerId int64, mcUUID model.UUID, isAllowed bool, 
 		return err
 	}
 
-	_, err = stmt.Exec(mcUUID.Bytes(), isAllowed, string(aliasesString), splitwiseId, playerId)
+	_, err = stmt.Exec(mcUUID.Bytes(), isAllowed, isAdmin, lastIPV4, string(aliasesString), splitwiseId, playerId)
 	if err != nil {
 		return err
 	}

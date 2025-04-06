@@ -22,11 +22,11 @@ var fs embed.FS
 
 func main() {
 	logging.Info("Starting MC Manager")
-	config := _config.Load()
 	database, err := db.NewDatabase()
 	if err != nil {
 		logging.Fatal("Error creating database connection", "error", err)
 	}
+	config := _config.Load(database)
 
 	//generate jwt secret
 	secret := make([]byte, 64)
@@ -79,8 +79,10 @@ TODO: Record AWS Invoice
 TODO: Create Splitwise invoice
 TODO: Get player history since last bill. Even if player is currently online
 TODO: On config, LOG to file
+
 TODO: Set IP address of player
 TODO: Set IsAdmin of player
+
 TODO: dont send hardcoded mc status response
 TODO: what if the next minecraft version comes out? - maybe check the version on boot?
 */

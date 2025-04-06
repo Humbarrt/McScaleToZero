@@ -10,7 +10,8 @@ import (
 )
 
 type serverWatcher struct {
-	App *model.App
+	App     *model.App
+	retries int
 
 	//protected
 	mutex       sync.Mutex
@@ -23,7 +24,8 @@ type serverWatcher struct {
 
 func NewServerWatcher(app *model.App) *serverWatcher {
 	return &serverWatcher{
-		App: app,
+		App:     app,
+		retries: 5,
 	}
 }
 
@@ -70,7 +72,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 		wasReady := sw._isReady
 		retries := sw._retries
 		sw.mutex.Unlock()
-		if retries > sw.App.Config.SERVER_WATCHER_RETRIES {
+		if retries > sw.retries {
 			break
 		}
 
@@ -122,7 +124,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 				logging.Debug("Server has IP: ", "IP", ipv4)
 			}
 
-			status, err := mc.ReadServerStatus(ipv4, sw.App.Config.MC_PORT)
+			status, err := mc.ReadServerStatus(ipv4, sw.App.Config.GetMCPort())
 			if err != nil || status == "" {
 				logging.Error("Error reading server status: ", "error", err, "status", status)
 				goto waitAndContinue
@@ -145,7 +147,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 		}
 
 		if !isOnline {
-			logging.Info("Server is offline", "retries left", sw.App.Config.SERVER_WATCHER_RETRIES-retries)
+			logging.Info("Server is offline", "retries left", sw.retries-retries)
 			sw.mutex.Lock()
 			sw._retries = retries + 1
 			sw.mutex.Unlock()
