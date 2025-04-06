@@ -82,4 +82,5 @@ TODO: On config, LOG to file
 TODO: Set IP address of player
 TODO: Set IsAdmin of player
 TODO: dont send hardcoded mc status response
+TODO: what if the next minecraft version comes out? - maybe check the version on boot?
 */

@@ -31,7 +31,7 @@ func parsePlayer(row scannable) (*model.Player, error) {
 	}
 
 	// Convert mcUUID to UUID type
-	mcUUID, err := model.UUIDFromBytes(mcUUIDRaw[:])
+	mcUUID, err := model.NewUUIDFromBytes(mcUUIDRaw[:])
 	if err != nil {
 		return nil, err
 	}

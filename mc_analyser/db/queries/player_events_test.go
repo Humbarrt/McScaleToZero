@@ -16,7 +16,7 @@ func TestPlayerEvent(t *testing.T) {
 	DB, err := db.InitializeDatabase(filePath)
 	assert.NoError(t, err)
 
-	player_uuid, err := model.UUIDFromString("c99efdca-519c-43ea-83fb-ebc7042c8e3f")
+	player_uuid, err := model.NewUUIDFromString("c99efdca-519c-43ea-83fb-ebc7042c8e3f")
 	assert.NoError(t, err)
 	err = queries.AddPlayer(DB, *player_uuid, true, []string{"Test"}, "test_splitwise_id")
 	assert.NoError(t, err)
@@ -77,7 +77,7 @@ func TestPlayerEvent(t *testing.T) {
 	assert.Equal(t, event.Timestamp, time_ref) // There should be no new event
 
 	//Test multiple players online
-	player2_uuid, err := model.UUIDFromString("210c22ac-1019-495a-ae72-a9707bfef19d")
+	player2_uuid, err := model.NewUUIDFromString("210c22ac-1019-495a-ae72-a9707bfef19d")
 	assert.NoError(t, err)
 	err = queries.AddPlayer(DB, *player2_uuid, true, []string{"Test2"}, "test_splitwise_id_2")
 	assert.NoError(t, err)
