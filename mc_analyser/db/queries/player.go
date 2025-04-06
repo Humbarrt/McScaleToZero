@@ -148,7 +148,9 @@ func AddPlayerAlias(DB *db.DB, playerId int, alias string) error {
 			newAliases = append(newAliases, a)
 		}
 	}
-	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, player.IsAdmin, player.LastIPV4, newAliases, player.SplitwiseId)
+
+	player.Aliases = newAliases
+	return updatePlayer(DB, player)
 }
 
 func UpdatePlayerSplitwiseId(DB *db.DB, playerId int, splitwiseId *string) error {
@@ -157,7 +159,8 @@ func UpdatePlayerSplitwiseId(DB *db.DB, playerId int, splitwiseId *string) error
 		return err
 	}
 
-	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, player.IsAdmin, player.LastIPV4, player.Aliases, splitwiseId)
+	player.SplitwiseId = splitwiseId
+	return updatePlayer(DB, player)
 }
 
 func UpdatePlayerIsAllowed(DB *db.DB, playerId int, isAllowed bool) error {
@@ -166,7 +169,8 @@ func UpdatePlayerIsAllowed(DB *db.DB, playerId int, isAllowed bool) error {
 		return err
 	}
 
-	return updatePlayer(DB, playerId, player.McUUID, isAllowed, player.IsAdmin, player.LastIPV4, player.Aliases, player.SplitwiseId)
+	player.IsAllowed = isAllowed
+	return updatePlayer(DB, player)
 }
 
 func UpdatePlayerIsAdmin(DB *db.DB, playerId int, isAdmin bool) error {
@@ -175,7 +179,8 @@ func UpdatePlayerIsAdmin(DB *db.DB, playerId int, isAdmin bool) error {
 		return err
 	}
 
-	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, isAdmin, player.LastIPV4, player.Aliases, player.SplitwiseId)
+	player.IsAdmin = isAdmin
+	return updatePlayer(DB, player)
 }
 
 func UpdatePlayerLastIPV4(DB *db.DB, playerId int, lastIPV4 *string) error {
@@ -184,21 +189,22 @@ func UpdatePlayerLastIPV4(DB *db.DB, playerId int, lastIPV4 *string) error {
 		return err
 	}
 
-	return updatePlayer(DB, playerId, player.McUUID, player.IsAllowed, player.IsAdmin, lastIPV4, player.Aliases, player.SplitwiseId)
+	player.LastIPV4 = lastIPV4
+	return updatePlayer(DB, player)
 }
 
-func updatePlayer(DB *db.DB, playerId int, mcUUID model.UUID, isAllowed bool, isAdmin bool, lastIPV4 *string, aliases []string, splitwiseId *string) error {
+func updatePlayer(DB *db.DB, player *model.Player) error {
 	stmt, err := DB.GetQuery("update_player")
 	if err != nil {
 		return err
 	}
 
-	aliasesString, err := json.Marshal(aliases)
+	aliasesString, err := json.Marshal(player.Aliases)
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(mcUUID.Bytes(), isAllowed, isAdmin, lastIPV4, string(aliasesString), splitwiseId, playerId)
+	_, err = stmt.Exec(player.McUUID.Bytes(), player.IsAllowed, player.IsAdmin, player.LastIPV4, string(aliasesString), player.SplitwiseId, player.Id)
 	if err != nil {
 		return err
 	}

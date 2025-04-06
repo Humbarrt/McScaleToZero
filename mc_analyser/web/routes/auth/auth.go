@@ -62,7 +62,8 @@ func signInHandler(app *model.App) gin.HandlerFunc {
 			return
 		}
 
-		if user.LastIPV4 == nil || *user.LastIPV4 != ctx.ClientIP() {
+		isCheckingIP := app.Config.GetIPCheck()
+		if isCheckingIP && (user.LastIPV4 == nil || *user.LastIPV4 != ctx.ClientIP()) {
 			logging.Error("error, ip address does not match", "ip", ctx.ClientIP(), "user", user)
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "ip", "message": "Please join the MC server from the same IP address"})
 			return

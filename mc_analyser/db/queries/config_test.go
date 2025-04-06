@@ -40,6 +40,20 @@ func TestGetConfig(t *testing.T) {
 	assert.NotNil(t, config)
 	assert.Equal(t, config.OfflineMOTD, &motd)
 
+	err = queries.UpdateIPCheck(DB, false)
+	assert.NoError(t, err)
+	config, err = queries.GetConfig(DB)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, false, config.IPCheck)
+
+	err = queries.UpdateIPCheck(DB, true)
+	assert.NoError(t, err)
+	config, err = queries.GetConfig(DB)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, true, config.IPCheck)
+
 	// Test if length check works
 	longMotd := strings.Repeat("a", 1025)
 	err = queries.UpdateOfflineMOTD(DB, &longMotd)

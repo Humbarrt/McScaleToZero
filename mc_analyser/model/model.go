@@ -24,6 +24,8 @@ type Config interface {
 	SetMCOfflineImage(image *[]byte) error
 	GetMCOfflineMOTD() *string
 	SetMCOfflineMOTD(motd *string) error
+	GetIPCheck() bool
+	SetIPCheck(ipCheck bool) error
 }
 
 type AuthClaims struct {

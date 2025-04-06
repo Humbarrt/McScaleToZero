@@ -3,12 +3,14 @@ package queries
 import (
 	"fmt"
 	"mc_analyser/db"
+	"mc_analyser/logging"
 )
 
 type dynamicConfig struct {
 	OfflineImage *[]byte
 	OfflineMOTD  *string
 	MCServerPort int
+	IPCheck      bool
 }
 
 func GetConfig(DB *db.DB) (*dynamicConfig, error) {
@@ -19,7 +21,7 @@ func GetConfig(DB *db.DB) (*dynamicConfig, error) {
 
 	result := stmt.QueryRow()
 	config := &dynamicConfig{}
-	err = result.Scan(&config.OfflineImage, &config.OfflineMOTD, &config.MCServerPort)
+	err = result.Scan(&config.OfflineImage, &config.OfflineMOTD, &config.MCServerPort, &config.IPCheck)
 	if err != nil {
 		return nil, err
 	}
@@ -31,35 +33,49 @@ func GetConfig(DB *db.DB) (*dynamicConfig, error) {
 }
 
 func UpdateOfflineImage(DB *db.DB, image *[]byte) error {
-	stmt, err := DB.GetQuery("update_offline_image")
+	config, err := GetConfig(DB)
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(image)
-	if err != nil {
-		return err
-	}
-	return nil
+	config.OfflineImage = image
+	return updateConfig(DB, config)
 }
 
 func UpdateOfflineMOTD(DB *db.DB, motd *string) error {
-	stmt, err := DB.GetQuery("update_offline_motd")
+	config, err := GetConfig(DB)
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(motd)
-	if err != nil {
-		return err
-	}
-	return nil
+	config.OfflineMOTD = motd
+	return updateConfig(DB, config)
 }
 
 func UpdateMCServerPort(DB *db.DB, port int) error {
-	stmt, err := DB.GetQuery("update_mc_server_port")
+	config, err := GetConfig(DB)
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(port)
+	config.MCServerPort = port
+	return updateConfig(DB, config)
+}
+
+func UpdateIPCheck(DB *db.DB, ipCheck bool) error {
+	config, err := GetConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.IPCheck = ipCheck
+	logging.Info("IPCheck", "ipCheck", config.IPCheck)
+	return updateConfig(DB, config)
+}
+
+func updateConfig(DB *db.DB, config *dynamicConfig) error {
+	stmt, err := DB.GetQuery("update_config")
+	if err != nil {
+		return err
+	}
+
+	_, err = stmt.Exec(config.OfflineImage, config.OfflineMOTD, config.MCServerPort, config.IPCheck)
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS "config" (
     "offline_image" BLOB,
     "offline_motd" TEXT,
     "mc_port" INTEGER NOT NULL,
+    "ip_check" BOOLEAN NOT NULL,
     CHECK (
         offline_motd IS NULL
         OR (
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS "config" (
 INSERT INTO "config" (
         "offline_image",
         "offline_motd",
-        "mc_port"
+        "mc_port",
+        "ip_check"
     )
-VALUES (NULL, NULL, 25565);
+VALUES (NULL, NULL, 25565, TRUE);

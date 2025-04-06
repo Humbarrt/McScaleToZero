@@ -32,6 +32,7 @@ type config struct {
 	_mcPort         int
 	_mcOfflineImage *[]byte
 	_mcOfflineMOTD  *string
+	_ipCheck        bool
 }
 
 func (c *config) GetAWSAccessKeyId() string {
@@ -150,6 +151,24 @@ func (c *config) SetMCOfflineMOTD(motd *string) error {
 	return nil
 }
 
+func (c *config) GetIPCheck() bool {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._ipCheck
+}
+func (c *config) SetIPCheck(ipCheck bool) error {
+	err := queries.UpdateIPCheck(c.db, ipCheck)
+	if err != nil {
+		logging.Error("Error updating MC server port in database:", err)
+		return err
+	}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._ipCheck = ipCheck
+	return nil
+}
+
 func Load(db *db.DB) *config {
 	logging.Info("Version", "version", version)
 	currentPath, err := os.Executable()
@@ -181,6 +200,8 @@ func Load(db *db.DB) *config {
 		_mcPort:            dynConfig.MCServerPort,
 		_mcOfflineImage:    dynConfig.OfflineImage,
 		_mcOfflineMOTD:     dynConfig.OfflineMOTD,
+		_ipCheck:           dynConfig.IPCheck,
+		version:            version,
 	}
 
 	for _, env := range []string{config.awsAccessKeyId, config.awsSecretAccessKey, config.awsInstanceName, config.splitwiseApiKey, config.splitwiseGroupId, config.mcServerSSHKey} {

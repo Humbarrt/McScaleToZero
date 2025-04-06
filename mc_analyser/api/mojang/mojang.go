@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func requestMojangAPI(route string, method string) (*http.Response, error) {
+func request(route string, method string) (*http.Response, error) {
 	baseUrl := "https://api.mojang.com/"
 	client := &http.Client{}
 	req, err := http.NewRequest(method, baseUrl+route, nil)
@@ -21,24 +21,25 @@ func requestMojangAPI(route string, method string) (*http.Response, error) {
 	resp, err := client.Do(req)
 
 	if err != nil {
-		logging.Warn("Error making request to Mojang API, trying again:", "error", err)
+		logging.Warn("Error making Mojang API request, trying again:", "error", err)
 		resp.Body.Close()
 		resp, err = client.Do(req)
 		if err != nil {
+			logging.Error("Second Mojang API request also failed", "error", err)
 			return nil, err
 		}
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, fmt.Errorf("mojang API request failed: %s", resp.Status)
+		return nil, fmt.Errorf("mojang API request returned status: %s", resp.Status)
 	}
 
 	return resp, nil
 }
 
-func getRequestMojangAPI(route string, responseVal any) error {
-	resp, err := requestMojangAPI(route, "GET")
+func getRequest(route string, responseVal any) error {
+	resp, err := request(route, "GET")
 	if err != nil {
 		return err
 	}
@@ -58,7 +59,7 @@ func GetPlayerUUID(playerName string) (*model.UUID, error) {
 		ID string `json:"id"`
 	}
 
-	err := getRequestMojangAPI(route, &result)
+	err := getRequest(route, &result)
 	if err != nil {
 		return nil, err
 	}
