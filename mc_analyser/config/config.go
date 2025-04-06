@@ -61,9 +61,6 @@ func Load() *model.Config {
 
 	//TODO: splitwise token
 	//TODO: splitwise group id
-	//TODO: PROMETHEUS_URL
-	//TODO: PROMETHEUS_ORG_ID
-	//TODO: MC SERVER IP
 	logging.Debug("Config loaded")
 	return config
 }

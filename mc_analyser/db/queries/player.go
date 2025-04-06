@@ -31,7 +31,7 @@ func parsePlayer(row scannable) (*model.Player, error) {
 	}
 
 	// Convert mcUUID to UUID type
-	mcUUID, err := model.UUIDFromBytes(mcUUIDRaw[:])
+	mcUUID, err := model.NewUUIDFromBytes(mcUUIDRaw[:])
 	if err != nil {
 		return nil, err
 	}
@@ -83,13 +83,13 @@ func GetPlayerById(DB *db.DB, playerId int) (*model.Player, error) {
 	return parsePlayer(result)
 }
 
-func GetPlayerByUUID(DB *db.DB, playerUUID int) (*model.Player, error) {
+func GetPlayerByUUID(DB *db.DB, playerUUID model.UUID) (*model.Player, error) {
 	stmt, err := DB.GetQuery("get_player_by_uuid")
 	if err != nil {
 		return nil, err
 	}
 
-	result := stmt.QueryRow(playerUUID)
+	result := stmt.QueryRow(playerUUID.Bytes())
 	err = result.Err()
 	if err != nil {
 		return nil, err

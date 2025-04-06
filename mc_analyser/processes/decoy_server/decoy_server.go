@@ -1,9 +1,9 @@
-package mc_decoy_server
+package decoy_server
 
 import (
 	"fmt"
-	mc "mc_analyser/api/mcnetworking"
-	mcp "mc_analyser/api/mcnetworking/packet"
+	mc "mc_analyser/api/mc_networking"
+	mcp "mc_analyser/api/mc_networking/packet"
 	"mc_analyser/api/mojang"
 	"mc_analyser/db/queries"
 	"mc_analyser/logging"
@@ -84,11 +84,6 @@ func findPlayerUUID(playerName string, app *model.App) (*model.UUID, error) {
 			logging.Error("Error getting player UUID from Mojang:", "error", err)
 			return &model.UUID{}, err
 		}
-
-		if err != nil {
-			logging.Error("Error getting player UUID from Mojang:", "error", err)
-			return &model.UUID{}, err
-		}
 	}
 
 	logging.Info("Found UUID:", "uuid", uuid)
@@ -121,8 +116,7 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 		logging.Info("Player UUID found:", "uuid", id_found)
 	}
 
-	// TODO: Return if the player is not in the whitelist -- no query yet.
-	/* player, err := queries.QueryPlayerByUUID(app, uuid)
+	player, err := queries.GetPlayerByUUID(app.Db, uuid)
 	if err != nil {
 		logging.Error("Error querying player:", "error", err)
 		clientConn.Close()
@@ -133,7 +127,22 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 		logging.Error("Player is not allowed to connect", "username", loginStart.Username, "uuid", loginStart.UUID)
 		clientConn.Close()
 		return
-	} */
+	}
+
+	err = queries.AddPlayerAlias(app.Db, player.Id, loginStart.Username)
+	if err != nil {
+		logging.Error("Error adding player alias:", "error", err)
+		clientConn.Close()
+		return
+	}
+
+	/*TODO: set player IP
+	err = queries.SetPlayerIP(app.Db, player.Id, clientConn.RemoteAddr().String())
+	if err != nil {
+		logging.Error("Error setting player IP:", "error", err)
+		clientConn.Close()
+		return
+	}*/
 
 	// Send LoginSuccess packet
 	loginSuccess := mc.WriteLoginSuccess(clientConn, uuid, loginStart.Username)
@@ -158,6 +167,13 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 		return
 	}
 	logging.Info("Player acknowledged login", "loggedIn", loginAcknowledged, "username", loginStart.Username)
+
+	err = app.AWS.StartInstance()
+	if err != nil {
+		logging.Error("Error starting AWS instance:", "error", err)
+		clientConn.Close()
+		return
+	}
 
 	for {
 		if app.SW.IsServerReady() {

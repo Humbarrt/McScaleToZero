@@ -45,14 +45,14 @@ type ServerEvent struct {
 }
 
 type App struct {
-	Router    *gin.Engine
-	FS        embed.FS
-	Db        *db.DB
-	Config    *Config
-	Timeout   time.Duration
-	SW        ServerWatcher
-	AWS       AWSAPI
-	JWTSecret []byte
+	Router     *gin.Engine
+	FS         embed.FS
+	Db         *db.DB
+	Config     *Config
+	WebTimeout time.Duration
+	SW         ServerWatcher
+	AWS        AWSAPI
+	JWTSecret  []byte
 
 	//protected
 	mutex       sync.Mutex

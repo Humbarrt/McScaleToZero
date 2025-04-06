@@ -15,17 +15,17 @@ func TestPlayer(t *testing.T) {
 	DB, err := db.InitializeDatabase(filePath)
 	assert.NoError(t, err)
 
-	player_uuid, err := model.UUIDFromString("55724e6b-00fd-4e1a-a9e9-224207a57792")
+	player_uuid, err := model.NewUUIDFromString("55724e6b-00fd-4e1a-a9e9-224207a57792")
 	assert.NoError(t, err)
 	err = queries.AddPlayer(DB, *player_uuid, true, []string{"Test", "TheGoat", "TestDummy"}, "test_splitwise_id1")
 	assert.NoError(t, err)
 
-	player_uuid2, err := model.UUIDFromString("3cd521d2-c736-40f2-aecc-74362310eac8")
+	player_uuid2, err := model.NewUUIDFromString("3cd521d2-c736-40f2-aecc-74362310eac8")
 	assert.NoError(t, err)
 	err = queries.AddPlayer(DB, *player_uuid2, true, []string{"Test1", "Mustermann"}, "test_splitwise_id2")
 	assert.NoError(t, err)
 
-	player_uuid3, err := model.UUIDFromString("a1b34617-d5a8-4f75-a67e-b67bd03bd9e4")
+	player_uuid3, err := model.NewUUIDFromString("a1b34617-d5a8-4f75-a67e-b67bd03bd9e4")
 	assert.NoError(t, err)
 	err = queries.AddPlayer(DB, *player_uuid3, false, []string{"Test2", "Musterfrau"}, "test_splitwise_id3")
 	assert.NoError(t, err)

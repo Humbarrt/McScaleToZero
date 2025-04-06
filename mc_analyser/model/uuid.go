@@ -22,7 +22,7 @@ func (u *UUID) Bytes() []byte {
 	return u.raw[:]
 }
 
-func UUIDFromString(s string) (*UUID, error) {
+func NewUUIDFromString(s string) (*UUID, error) {
 	var u UUID
 	//replace all dashes with empty string
 	s = strings.ReplaceAll(s, "-", "")
@@ -46,7 +46,7 @@ func UUIDFromString(s string) (*UUID, error) {
 	return &u, nil
 }
 
-func UUIDFromBytes(b []byte) (*UUID, error) {
+func NewUUIDFromBytes(b []byte) (*UUID, error) {
 	if len(b) != 16 {
 		return nil, fmt.Errorf("UUID must be 16 bytes long")
 	}

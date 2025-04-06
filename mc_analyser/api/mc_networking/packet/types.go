@@ -1,7 +1,6 @@
 package packet
 
 import (
-	"fmt"
 	"net"
 )
 
@@ -43,19 +42,6 @@ func readPacketLength(conn net.Conn) (int, error) {
 		}
 	}
 	return num, nil
-}
-
-type UUID struct {
-	uuid [16]byte
-}
-
-func (u *UUID) String() string {
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		u.uuid[0:4],
-		u.uuid[4:6],
-		u.uuid[6:8],
-		u.uuid[8:10],
-		u.uuid[10:])
 }
 
 type PrefixedArray struct {
