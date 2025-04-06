@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"mc_analyser/api/mcnetworking/packet"
+	"mc_analyser/model"
 )
 
 type HandshakePacket struct {
@@ -49,7 +50,7 @@ func ParseHandshake(p *packet.Packet) (HandshakePacket, error) {
 
 type LoginStartPacket struct {
 	Username string
-	UUID     *packet.UUID
+	UUID     *model.UUID
 }
 
 func ParseLoginStart(p *packet.Packet) (LoginStartPacket, error) {
@@ -76,7 +77,7 @@ func ParseLoginStart(p *packet.Packet) (LoginStartPacket, error) {
 	}
 	ls.UUID = &uuid
 
-	log.Println("LoginStart UUID:", "uuid", ls.UUID.String())
+	log.Println("LoginStart UUID:", "uuid", ls.UUID.LongString())
 	return ls, nil
 }
 

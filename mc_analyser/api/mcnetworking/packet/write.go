@@ -1,5 +1,7 @@
 package packet
 
+import "mc_analyser/model"
+
 func WriteVarInt(data *[]byte, num int) {
 	for {
 		if (num & ^0x7F) == 0 {
@@ -21,8 +23,8 @@ func WriteString(data *[]byte, str string) {
 	*data = append(*data, str...)
 }
 
-func WriteUUID(data *[]byte, uuid UUID) {
-	*data = append(*data, uuid.uuid[:]...)
+func WriteUUID(data *[]byte, uuid model.UUID) {
+	*data = append(*data, uuid.Bytes()[:]...)
 }
 
 func WritePrefixedArray(data *[]byte, array *PrefixedArray) {

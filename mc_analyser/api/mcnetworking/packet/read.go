@@ -3,6 +3,7 @@ package packet
 import (
 	"fmt"
 	"mc_analyser/logging"
+	"mc_analyser/model"
 	"net"
 )
 
@@ -84,13 +85,13 @@ func ConsumeUnsignedShort(data *[]byte) (uint16, error) {
 	return value, nil
 }
 
-func ConsumeUUID(data *[]byte) (UUID, error) {
+func ConsumeUUID(data *[]byte) (model.UUID, error) {
 	if len(*data) < 16 {
-		return UUID{}, fmt.Errorf("not enough data to read UUID")
+		return model.UUID{}, fmt.Errorf("not enough data to read UUID")
 	}
 
-	var uuid UUID
-	copy(uuid.uuid[:], (*data)[:16])
+	var uuid model.UUID
+	copy(uuid.Bytes()[:], (*data)[:16])
 	*data = (*data)[16:]
 	return uuid, nil
 }

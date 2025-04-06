@@ -27,6 +27,5 @@ func GetPlayerUUID(playerName string) (*model.UUID, error) {
 		return &model.UUID{}, err
 	}
 
-	// convert into 8-4-4-4-12 format
 	return model.UUIDFromString(result.ID)
 }
