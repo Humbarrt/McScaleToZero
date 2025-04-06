@@ -11,7 +11,7 @@ import (
 	"time"
 
 	_config "mc_analyser/config"
-	mpc "mc_analyser/processes/mc_decoy_server"
+	"mc_analyser/processes/decoy_server"
 	sw "mc_analyser/processes/server_watcher"
 
 	"github.com/gin-gonic/gin"
@@ -37,13 +37,13 @@ func main() {
 
 	router := gin.Default()
 	app := model.App{
-		Db:        database,
-		Config:    config,
-		Router:    router,
-		FS:        fs,
-		Timeout:   10 * time.Second,
-		JWTSecret: secret,
-		SW:        nil,
+		Db:         database,
+		Config:     config,
+		Router:     router,
+		FS:         fs,
+		WebTimeout: 10 * time.Second,
+		JWTSecret:  secret,
+		SW:         nil,
 	}
 
 	app.AWS, err = aws.NewAWSAPI(&app)
@@ -55,7 +55,7 @@ func main() {
 	logging.Info("checking if online", "isOnline", app.SW.IsServerOnline())
 
 	go app.SW.StartWatchingServer()
-	go mpc.Start(&app)
+	go decoy_server.Start(&app)
 
 	err = routes.InitRoutes(&app)
 	if err != nil {
@@ -66,17 +66,20 @@ func main() {
 
 /*
 TODO: Listen to server power state
-TODO: Download log files
 TODO: Download whitelist
+TODO: Download admin list
 TODO: Read whitelist and add aliases
-TODO: Read log files
-TODO: Read Prometheus logs
+TODO: Read cloudWatch logs
 TODO: Parse logs and add to database
 TODO: Find last position based on 5 logs
-TODO: Listen to Credit Balance
-TODO: Record Credit Balance on change
-TODO: Create bill if credit balance has gone down
+
+TODO: Check "Month-to-date cost"
+TODO: Check "Total forecasted cost for current month"
+TODO: Record AWS Invoice
+TODO: Create Splitwise invoice
 TODO: Get player history since last bill. Even if player is currently online
-TODO: is using utc??????
-TODO: LOG to file
+TODO: On config, LOG to file
+TODO: Set IP address of player
+TODO: Set IsAdmin of player
+TODO: dont send hardcoded mc status response
 */
