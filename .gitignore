@@ -14,3 +14,4 @@ mc_server/.terraform.lock.hcl
 *.tfstate
 *.tfstate.backup
 tmp
+*.db

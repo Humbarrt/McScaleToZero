@@ -128,7 +128,7 @@ func AddPlayer(DB *db.DB, mcUUID model.UUID, isAllowed bool, isAdmin bool, lastI
 		return err
 	}
 
-	_, err = stmt.Exec(mcUUID.Bytes(), isAllowed, string(aliasesString), splitwiseId)
+	_, err = stmt.Exec(mcUUID.Bytes(), isAllowed, isAdmin, lastIPV4, string(aliasesString), splitwiseId)
 	if err != nil {
 		return err
 	}

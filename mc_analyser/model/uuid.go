@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"mc_analyser/logging"
 	"strings"
 )
 
@@ -30,8 +29,6 @@ func NewUUIDFromString(s string) (*UUID, error) {
 		return nil, fmt.Errorf("UUID must be 32 characters long")
 	}
 
-	logging.Debug("UUID", "uuid", s)
-
 	for i := 0; i < 16; i++ {
 		//parse 2 characters from the string
 		b, err := fmt.Sscanf(s[i*2:i*2+2], "%x", &u.raw[i])
@@ -42,7 +39,6 @@ func NewUUIDFromString(s string) (*UUID, error) {
 			return nil, fmt.Errorf("UUID must be 32 characters long")
 		}
 	}
-	logging.Debug("UUID", "uuid", u.ShortString())
 	return &u, nil
 }
 

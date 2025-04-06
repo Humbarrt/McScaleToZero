@@ -183,7 +183,7 @@ func Load(db *db.DB) *config {
 		_mcOfflineMOTD:     dynConfig.OfflineMOTD,
 	}
 
-	for _, env := range []string{config.awsAccessKeyId, config.awsSecretAccessKey, config.awsInstanceName} {
+	for _, env := range []string{config.awsAccessKeyId, config.awsSecretAccessKey, config.awsInstanceName, config.splitwiseApiKey, config.splitwiseGroupId, config.mcServerSSHKey} {
 		if env == "" {
 			logging.Fatal("Environment variable is not set", "variable", env)
 		}

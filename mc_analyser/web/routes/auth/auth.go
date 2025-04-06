@@ -56,16 +56,22 @@ func signInHandler(app *model.App) gin.HandlerFunc {
 		}
 
 		user, err := queries.GetPlayerByAlias(app.Db, username)
-		if err != nil {
-			logging.Error("error", "error", err)
+		if err != nil || user == nil {
+			logging.Error("error", "error", err, "user", user)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "general", "message": "Internal Error, please try again"})
+			return
+		}
+
+		if user.LastIPV4 == nil || *user.LastIPV4 != ctx.ClientIP() {
+			logging.Error("error, ip address does not match", "ip", ctx.ClientIP(), "user", user)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "ip", "message": "Please join the MC server from the same IP address"})
 			return
 		}
 
 		claims := model.AuthClaims{
 			McUUID: fmt.Sprintf("%d", user.Id),
 			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(31 * 24 * time.Hour)),
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(365 * 24 * time.Hour)),
 				IssuedAt:  jwt.NewNumericDate(time.Now()),
 				NotBefore: jwt.NewNumericDate(time.Now()),
 			},
