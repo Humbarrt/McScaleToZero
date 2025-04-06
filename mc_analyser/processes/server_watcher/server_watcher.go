@@ -2,7 +2,7 @@ package server_watcher
 
 import (
 	"fmt"
-	mc "mc_analyser/api/mcnetworking"
+	mc "mc_analyser/api/mc_networking"
 	"mc_analyser/logging"
 	"mc_analyser/model"
 	"sync"

@@ -27,7 +27,7 @@ func Routes(route *gin.Engine, app *model.App) {
 
 func authPageHandler(app *model.App) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		_, cancel := context.WithTimeout(context.Background(), app.Timeout)
+		_, cancel := context.WithTimeout(context.Background(), app.WebTimeout)
 		defer cancel()
 		utils.Render(ctx, http.StatusOK, auth_view.Index())
 	}
@@ -35,7 +35,7 @@ func authPageHandler(app *model.App) gin.HandlerFunc {
 
 func signInHandler(app *model.App) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		_, cancel := context.WithTimeout(context.Background(), app.Timeout)
+		_, cancel := context.WithTimeout(context.Background(), app.WebTimeout)
 		defer cancel()
 
 		var json struct {

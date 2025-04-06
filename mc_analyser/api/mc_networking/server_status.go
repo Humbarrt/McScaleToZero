@@ -1,8 +1,8 @@
-package mcnetworking
+package mc_networking
 
 import (
 	"fmt"
-	mcp "mc_analyser/api/mcnetworking/packet"
+	mcp "mc_analyser/api/mc_networking/packet"
 	"mc_analyser/logging"
 	"net"
 )
