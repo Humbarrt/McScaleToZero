@@ -62,5 +62,5 @@ func GetPlayerUUID(playerName string) (*model.UUID, error) {
 	if err != nil {
 		return nil, err
 	}
-	return model.UUIDFromString(result.ID)
+	return model.NewUUIDFromString(result.ID)
 }

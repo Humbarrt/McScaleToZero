@@ -10,7 +10,7 @@ import (
 
 func TestGetPlayerUUID(t *testing.T) {
 	playerName := "Notch"
-	expectedUUID, err := model.UUIDFromString("069a79f4-44e9-4726-a5be-fca90e38aaf5")
+	expectedUUID, err := model.NewUUIDFromString("069a79f4-44e9-4726-a5be-fca90e38aaf5")
 	assert.NoError(t, err)
 
 	uuid, err := mojang.GetPlayerUUID(playerName)
