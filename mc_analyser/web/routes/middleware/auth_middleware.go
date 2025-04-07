@@ -45,14 +45,14 @@ func IsAuthenticated(app *model.App) gin.HandlerFunc {
 
 		//claims, ok := token.Claims.(jwt.MapClaims)
 		//TODO: check claims
-		_, ok := token.Claims.(jwt.MapClaims)
+		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
 			logging.Error("Invalid claims")
 			ctx.SetCookie("session", "", 0, "/", "", false, true)
 			return
 		}
 
-		//log.Println(claims)
+		logging.Debug("Authenticated", "claims", claims)
 		ctx.Set("auth", true)
 		ctx.Next()
 	}

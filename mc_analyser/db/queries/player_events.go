@@ -3,6 +3,7 @@ package queries
 import (
 	"database/sql"
 	"mc_analyser/db"
+	"mc_analyser/logging"
 	"mc_analyser/model"
 	"time"
 )
@@ -31,14 +32,14 @@ func AddPlayerEvent(DB *db.DB, timestamp time.Time, player_id int, isOnline bool
 		lastState = &model.PlayerEvent{
 			Id:        0,
 			PlayerId:  player_id,
-			Timestamp: time.Now(),
+			Timestamp: time.Time{},
 			IsOnline:  false,
 		}
 	} else if err != nil {
 		return err
 	}
 
-	if lastState.IsOnline == isOnline {
+	if lastState.IsOnline == isOnline || !lastState.Timestamp.IsZero() && timestamp.Before(lastState.Timestamp) {
 		return nil
 	}
 
@@ -87,4 +88,35 @@ func GetLastPlayerEvents(DB *db.DB) ([]*model.PlayerEvent, error) {
 	}
 
 	return events, nil
+}
+
+func CalculatePlaytime(DB *db.DB, start time.Time, end time.Time) ([]*model.Playtime, error) {
+	testStart := time.Now()
+	stmt, err := DB.GetQuery("calculate_playtime")
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := stmt.Query(start, start, end, start, start, end, end)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPlaytime := []*model.Playtime{}
+	for result.Next() {
+		var playerId int
+		var playtimeInSec int64
+		err := result.Scan(&playerId, &playtimeInSec)
+		if err != nil {
+			return nil, err
+		}
+
+		playtime := time.Duration(playtimeInSec) * time.Second
+		totalPlaytime = append(totalPlaytime, &model.Playtime{
+			PlayerId: int(playerId),
+			Playtime: playtime,
+		})
+	}
+	logging.Debug("Playtime calculation took", "duration", time.Since(testStart))
+	return totalPlaytime, nil
 }

@@ -56,6 +56,11 @@ type ServerEvent struct {
 	IsOnline  bool      `json:"is_online"`
 }
 
+type Playtime struct {
+	PlayerId int           `json:"player_id"`
+	Playtime time.Duration `json:"playtime"`
+}
+
 type App struct {
 	Router     *gin.Engine
 	FS         embed.FS

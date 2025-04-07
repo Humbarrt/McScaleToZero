@@ -28,14 +28,14 @@ func AddServerEvent(DB *db.DB, timestamp time.Time, isOnline bool) error {
 	if err == sql.ErrNoRows {
 		lastState = &model.ServerEvent{
 			Id:        0,
-			Timestamp: time.Now(),
+			Timestamp: time.Time{},
 			IsOnline:  false,
 		}
 	} else if err != nil {
 		return err
 	}
 
-	if lastState.IsOnline == isOnline {
+	if lastState.IsOnline == isOnline || !lastState.Timestamp.IsZero() && timestamp.Before(lastState.Timestamp) {
 		return nil
 	}
 
@@ -84,4 +84,28 @@ func GetServerEvents(DB *db.DB, limit int) ([]*model.ServerEvent, error) {
 	}
 
 	return events, nil
+}
+
+func CalculateServerUptime(DB *db.DB, start time.Time, end time.Time) (time.Duration, error) {
+	stmt, err := DB.GetQuery("calculate_server_uptime")
+	if err != nil {
+		return 0, err
+	}
+
+	result := stmt.QueryRow(start, start, start, end, end)
+	err = result.Err()
+	if err != nil {
+		return 0, err
+	}
+
+	var uptime int
+	err = result.Scan(&uptime)
+	if err != nil {
+		return 0, err
+	}
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+
+	return time.Duration(uptime) * time.Second, nil
 }

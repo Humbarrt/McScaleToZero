@@ -1,8 +1,11 @@
 package queries_test
 
 import (
+	"math"
+	"math/rand"
 	"mc_analyser/db"
 	"mc_analyser/db/queries"
+	"mc_analyser/model"
 	"path"
 	"testing"
 	"time"
@@ -65,4 +68,78 @@ func TestServerEvent(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, event.IsOnline, false)
 	assert.Equal(t, event.Timestamp, time_ref) // There should be no new event
+}
+
+func TestServerUptimeCalculation(t *testing.T) {
+	filePath := path.Join(t.TempDir(), "main.db")
+	DB, err := db.InitializeDatabase(filePath)
+	assert.NoError(t, err)
+
+	//Generate some events
+	startDate := time.Now().Add(-time.Hour * 24 * 365 * 10).UTC()
+	startDate = startDate.Truncate(time.Second)
+	currentDate := startDate
+	controlUptime := time.Duration(0)
+	serverEvents := make([]*model.ServerEvent, 0)
+	for i := range 100 {
+		next_event_duration := time.Second * time.Duration(math.Min(36000, math.Max(60, math.Abs(math.Ceil(rand.NormFloat64()*3600)))))
+		next_event_duration = next_event_duration.Truncate(time.Second)
+		if i%2 == 1 {
+			controlUptime += next_event_duration
+		}
+		currentDate = currentDate.Add(next_event_duration)
+		serverEvents = append(serverEvents, &model.ServerEvent{
+			Timestamp: currentDate,
+			IsOnline:  i%2 == 0,
+		})
+		err = queries.AddServerEvent(DB, currentDate, i%2 == 0)
+		assert.NoError(t, err)
+	}
+
+	//Test if the uptime calculation is correct
+	uptime, err := queries.CalculateServerUptime(DB, startDate.Add(-time.Hour*20000), currentDate.Add(time.Hour*20000))
+	assert.NoError(t, err)
+	assert.Equal(t, controlUptime, uptime)
+
+	//Test if the preOnline calculation is correct (is online since before the startDate)
+	durationOnline := (serverEvents[1].Timestamp.Sub(serverEvents[0].Timestamp) / 2).Truncate(time.Second)
+	startDate = serverEvents[0].Timestamp.Add(durationOnline)
+	precontrolUptime := controlUptime - durationOnline
+
+	uptime, err = queries.CalculateServerUptime(DB, startDate, currentDate.Add(time.Hour*20000))
+	assert.NoError(t, err)
+	assert.Equal(t, precontrolUptime, uptime)
+
+	//Test if the postOnline calculation is correct (still online after the endDate)
+	durationOnline = (serverEvents[len(serverEvents)-1].Timestamp.Sub(serverEvents[len(serverEvents)-2].Timestamp) / 2).Truncate(time.Second)
+	endDate := serverEvents[len(serverEvents)-2].Timestamp.Add(durationOnline)
+	postcontrolUptime := controlUptime - durationOnline
+	uptime, err = queries.CalculateServerUptime(DB, startDate.Add(-time.Hour*20000), endDate)
+	assert.NoError(t, err)
+	assert.LessOrEqual(t, postcontrolUptime-1*time.Second, uptime)
+	assert.GreaterOrEqual(t, postcontrolUptime+1*time.Second, uptime)
+
+	//Test if never online in the given time range (before any events)
+	uptime, err = queries.CalculateServerUptime(DB, startDate.Add(-time.Hour*40000), startDate.Add(-time.Hour*20000))
+	assert.NoError(t, err)
+	assert.Equal(t, time.Duration(0), uptime)
+
+	//Test if never online in the given time range (after all events)
+	uptime, err = queries.CalculateServerUptime(DB, currentDate.Add(time.Hour*20000), currentDate.Add(time.Hour*40000))
+	assert.NoError(t, err)
+	assert.Equal(t, time.Duration(0), uptime)
+
+	//Test if never online in the given time range (between two sessions)
+	testStart := serverEvents[1].Timestamp.Add(time.Second)
+	testEnd := serverEvents[2].Timestamp.Add(-time.Second)
+	uptime, err = queries.CalculateServerUptime(DB, testStart, testEnd)
+	assert.NoError(t, err)
+	assert.Equal(t, time.Duration(0), uptime)
+
+	//Test if is online from before the startDate to after the endDate (during a session)
+	testStart = serverEvents[0].Timestamp.Add(time.Second)
+	testEnd = serverEvents[1].Timestamp.Add(-time.Second)
+	uptime, err = queries.CalculateServerUptime(DB, testStart, testEnd)
+	assert.NoError(t, err)
+	assert.Equal(t, testEnd.Sub(testStart), uptime)
 }

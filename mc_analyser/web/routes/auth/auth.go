@@ -55,6 +55,7 @@ func signInHandler(app *model.App) gin.HandlerFunc {
 			return
 		}
 
+		logging.Debug("Auth request from", "username", username)
 		user, err := queries.GetPlayerByAlias(app.Db, username)
 		if err != nil || user == nil {
 			logging.Error("error", "error", err, "user", user)
@@ -64,7 +65,7 @@ func signInHandler(app *model.App) gin.HandlerFunc {
 
 		isCheckingIP := app.Config.GetIPCheck()
 		if isCheckingIP && (user.LastIPV4 == nil || *user.LastIPV4 != ctx.ClientIP()) {
-			logging.Error("error, ip address does not match", "ip", ctx.ClientIP(), "user", user)
+			logging.Error("error, ip address does not match", "ip", ctx.ClientIP(), "username", user.Aliases[0])
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "ip", "message": "Please join the MC server from the same IP address"})
 			return
 		}
