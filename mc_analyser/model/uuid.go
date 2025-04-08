@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -19,6 +20,23 @@ func (u *UUID) ShortString() string {
 
 func (u *UUID) Bytes() []byte {
 	return u.raw[:]
+}
+
+func (u *UUID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(u.LongString())
+}
+
+func (t *UUID) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	u, err := NewUUIDFromString(s)
+	if err != nil {
+		return err
+	}
+	t.raw = u.raw
+	return nil
 }
 
 func NewUUIDFromString(s string) (*UUID, error) {

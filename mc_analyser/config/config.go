@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"image"
+	"log"
 	"mc_analyser/db"
 	"mc_analyser/db/queries"
 	"mc_analyser/logging"
@@ -23,7 +24,10 @@ type config struct {
 	awsInstanceName    string
 	splitwiseApiKey    string
 	splitwiseGroupId   string
-	mcServerSSHKey     string
+	mcServerSSHUser    string
+	mcServerSSHKeyFile string
+	mcServerSSHKey     []byte
+	dataPath           string
 	version            string
 	db                 *db.DB
 
@@ -50,7 +54,10 @@ func (c *config) GetSplitwiseApiKey() string {
 func (c *config) GetSplitwiseGroupId() string {
 	return c.splitwiseGroupId
 }
-func (c *config) GetMCServerSSHKey() string {
+func (c *config) GetMCServerSSHUser() string {
+	return c.mcServerSSHUser
+}
+func (c *config) GetMCServerSSHKey() []byte {
 	return c.mcServerSSHKey
 }
 func (ch *config) GetVersion() string {
@@ -189,13 +196,35 @@ func Load(db *db.DB) *config {
 		logging.Fatal("Error getting config", "error", err, "config", dynConfig)
 	}
 
+	dataPath := os.Getenv("DATA_PATH")
+	if dataPath == "" {
+		dataPath = path.Join(path.Dir(currentPath), "data")
+	}
+	mcServerSSHUser := os.Getenv("MC_SERVER_SSH_USER")
+	if mcServerSSHUser == "" {
+		mcServerSSHUser = "ec2-user"
+	}
+	mcServerSSHKeyFile := os.Getenv("MC_SERVER_SSH_KEY_FILE")
+	if mcServerSSHKeyFile == "" {
+		mcServerSSHKeyFile = "mc-server-key.pem"
+	}
+	mcServerSSHKey, err := os.ReadFile(path.Join(dataPath, mcServerSSHKeyFile))
+	if err != nil {
+		log.Fatalf("unable to read private key: %v", err)
+	}
+	if len(mcServerSSHKey) == 0 {
+		log.Fatalf("private key is empty")
+	}
+
 	config := &config{
 		awsAccessKeyId:     os.Getenv("AWS_ACCESS_KEY_ID"),
 		awsSecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		awsInstanceName:    os.Getenv("AWS_INSTANCE_NAME"),
 		splitwiseApiKey:    os.Getenv("SPLITWISE_API_KEY"),
 		splitwiseGroupId:   os.Getenv("SPLITWISE_GROUP_ID"),
-		mcServerSSHKey:     os.Getenv("MC_SERVER_SSH_KEY"),
+		mcServerSSHUser:    mcServerSSHUser,
+		mcServerSSHKeyFile: mcServerSSHKeyFile,
+		mcServerSSHKey:     mcServerSSHKey,
 		db:                 db,
 		_mcPort:            dynConfig.MCServerPort,
 		_mcOfflineImage:    dynConfig.OfflineImage,
@@ -204,7 +233,7 @@ func Load(db *db.DB) *config {
 		version:            version,
 	}
 
-	for _, env := range []string{config.awsAccessKeyId, config.awsSecretAccessKey, config.awsInstanceName, config.splitwiseApiKey, config.splitwiseGroupId, config.mcServerSSHKey} {
+	for _, env := range []string{config.awsAccessKeyId, config.awsSecretAccessKey, config.awsInstanceName, config.splitwiseApiKey, config.splitwiseGroupId, config.mcServerSSHUser, config.mcServerSSHKeyFile} {
 		if env == "" {
 			logging.Fatal("Environment variable is not set", "variable", env)
 		}

@@ -16,7 +16,8 @@ type Config interface {
 	GetAWSInstanceName() string
 	GetSplitwiseApiKey() string
 	GetSplitwiseGroupId() string
-	GetMCServerSSHKey() string
+	GetMCServerSSHUser() string
+	GetMCServerSSHKey() []byte
 
 	GetMCPort() int
 	SetMCPort(port int) error

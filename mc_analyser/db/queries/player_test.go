@@ -49,13 +49,30 @@ func TestPlayer(t *testing.T) {
 	assert.Equal(t, player_uuid3.Bytes(), player.McUUID.Bytes())
 
 	//Can add alias to player
-	err = queries.AddPlayerAlias(DB, 3, "AnotherAlias")
+	err = queries.AddPlayerAlias(DB, 3, "Mustermann")
 	assert.NoError(t, err)
 
-	player, err = queries.GetPlayerByAlias(DB, "AnotherAlias")
+	player, err = queries.GetPlayerByAlias(DB, "Mustermann")
 	assert.NoError(t, err)
 	assert.Equal(t, player_uuid3.Bytes(), player.McUUID.Bytes())
-	assert.Equal(t, "AnotherAlias", player.Aliases[0])
+	assert.Equal(t, "Mustermann", player.Aliases[0])
+
+	//Was the alias removed from player 2?
+	player, err = queries.GetPlayerById(DB, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, player_uuid2.Bytes(), player.McUUID.Bytes())
+	assert.Equal(t, 1, len(player.Aliases))
+	assert.Equal(t, "Test1", player.Aliases[0])
+
+	//Can i remove all aliases from player 2
+	err = queries.MakePlayerAliasUnique(DB, 3, "Test1")
+	assert.NoError(t, err)
+	player, err = queries.GetPlayerById(DB, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, player_uuid2.Bytes(), player.McUUID.Bytes())
+	assert.Equal(t, 0, len(player.Aliases))
+	err = queries.AddPlayerAlias(DB, 2, "Test1")
+	assert.NoError(t, err)
 
 	//Can set primary alias
 	err = queries.AddPlayerAlias(DB, 1, "TestDummy")
@@ -138,4 +155,87 @@ func TestPlayer(t *testing.T) {
 	err = queries.AddPlayer(DB, *player_uuid, true, true, nil, []string{"Test", "TheGoat", "TestDummy"}, &splitwise_id)
 	assert.Error(t, err)
 
+	//Bulk update isAllowed for all players that match the ids
+	ids := []int{1, 2}
+	err = queries.UpdatePlayersIsAllowed(DB, ids, true, false)
+	assert.NoError(t, err)
+	expectPlayersIsAllowed(t, DB, map[int]bool{
+		1: false,
+		2: false,
+		3: true,
+	})
+	err = queries.UpdatePlayersIsAllowed(DB, ids, true, true)
+	assert.NoError(t, err)
+	expectPlayersIsAllowed(t, DB, map[int]bool{
+		1: true,
+		2: true,
+		3: true,
+	})
+
+	//Bulk update isAllowed for all players that do not match the ids
+	err = queries.UpdatePlayersIsAllowed(DB, ids, false, false)
+	assert.NoError(t, err)
+	expectPlayersIsAllowed(t, DB, map[int]bool{
+		1: true,
+		2: true,
+		3: false,
+	})
+	ids = []int{3}
+	err = queries.UpdatePlayersIsAllowed(DB, ids, false, false)
+	assert.NoError(t, err)
+	expectPlayersIsAllowed(t, DB, map[int]bool{
+		1: false,
+		2: false,
+		3: false,
+	})
+
+	//Bulk update isAdmin for all players that match the ids
+	ids = []int{1, 2}
+	err = queries.UpdatePlayersIsAdmin(DB, ids, true, false)
+	assert.NoError(t, err)
+	expectPlayersIsAdmin(t, DB, map[int]bool{
+		1: false,
+		2: false,
+		3: false,
+	})
+	err = queries.UpdatePlayersIsAdmin(DB, ids, true, true)
+	assert.NoError(t, err)
+	expectPlayersIsAdmin(t, DB, map[int]bool{
+		1: true,
+		2: true,
+		3: false,
+	})
+
+	//Bulk update isAdmin for all players that do not match the ids
+	err = queries.UpdatePlayersIsAdmin(DB, ids, false, true)
+	assert.NoError(t, err)
+	expectPlayersIsAdmin(t, DB, map[int]bool{
+		1: true,
+		2: true,
+		3: true,
+	})
+	ids = []int{3}
+	err = queries.UpdatePlayersIsAdmin(DB, ids, false, false)
+	assert.NoError(t, err)
+	expectPlayersIsAdmin(t, DB, map[int]bool{
+		1: false,
+		2: false,
+		3: true,
+	})
+}
+
+func expectPlayersIsAllowed(t *testing.T, DB *db.DB, pattern map[int]bool) {
+	for id, isAllowed := range pattern {
+		player, err := queries.GetPlayerById(DB, id)
+		assert.NoError(t, err)
+		assert.Equal(t, isAllowed, player.IsAllowed)
+	}
+}
+
+func expectPlayersIsAdmin(t *testing.T, DB *db.DB, pattern map[int]bool) {
+	for id, isAllowed := range pattern {
+		player, err := queries.GetPlayerById(DB, id)
+		assert.NoError(t, err)
+		assert.Equal(t, isAllowed, player.IsAdmin)
+	}
 }

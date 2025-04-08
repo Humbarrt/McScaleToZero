@@ -6,6 +6,7 @@ import (
 	"mc_analyser/logging"
 	"mc_analyser/model"
 	"net/http"
+	"time"
 )
 
 func request(route string, method string) (*http.Response, error) {
@@ -23,6 +24,7 @@ func request(route string, method string) (*http.Response, error) {
 	if err != nil {
 		logging.Warn("Error making Mojang API request, trying again:", "error", err)
 		resp.Body.Close()
+		time.Sleep(1 * time.Second)
 		resp, err = client.Do(req)
 		if err != nil {
 			logging.Error("Second Mojang API request also failed", "error", err)

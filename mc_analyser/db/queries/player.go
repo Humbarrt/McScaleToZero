@@ -2,6 +2,7 @@ package queries
 
 import (
 	"encoding/json"
+	"fmt"
 	"mc_analyser/db"
 	"mc_analyser/logging"
 	"mc_analyser/model"
@@ -136,7 +137,26 @@ func AddPlayer(DB *db.DB, mcUUID model.UUID, isAllowed bool, isAdmin bool, lastI
 	return nil
 }
 
+func MakePlayerAliasUnique(DB *db.DB, playerId int, alias string) error {
+	stmt, err := DB.GetQuery("make_player_alias_unique")
+	if err != nil {
+		return err
+	}
+
+	_, err = stmt.Exec(alias, playerId, alias)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func AddPlayerAlias(DB *db.DB, playerId int, alias string) error {
+	err := MakePlayerAliasUnique(DB, playerId, alias)
+	if err != nil {
+		return err
+	}
+
 	player, err := GetPlayerById(DB, playerId)
 	if err != nil {
 		return err
@@ -151,6 +171,52 @@ func AddPlayerAlias(DB *db.DB, playerId int, alias string) error {
 
 	player.Aliases = newAliases
 	return updatePlayer(DB, player)
+}
+
+func UpdatePlayersIsAllowed(DB *db.DB, playerIds []int, matchIds bool, isAllowed bool) error {
+	queryName := "update_players_is_allowed_match"
+	if !matchIds {
+		queryName = "update_players_is_allowed_not_match"
+	}
+	stmt, err := DB.GetQuery(queryName)
+	if err != nil {
+		return err
+	}
+
+	playerIdsJson, err := json.Marshal(playerIds)
+	if err != nil {
+		return fmt.Errorf("error marshaling player IDs: %w", err)
+	}
+
+	_, err = stmt.Exec(isAllowed, playerIdsJson)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func UpdatePlayersIsAdmin(DB *db.DB, playerIds []int, matchIds bool, isAdmin bool) error {
+	queryName := "update_players_is_admin_match"
+	if !matchIds {
+		queryName = "update_players_is_admin_not_match"
+	}
+	stmt, err := DB.GetQuery(queryName)
+	if err != nil {
+		return err
+	}
+
+	playerIdsJson, err := json.Marshal(playerIds)
+	if err != nil {
+		return fmt.Errorf("error marshaling player IDs: %w", err)
+	}
+
+	_, err = stmt.Exec(isAdmin, playerIdsJson)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func UpdatePlayerSplitwiseId(DB *db.DB, playerId int, splitwiseId *string) error {

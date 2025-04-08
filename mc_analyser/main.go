@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"embed"
 	"mc_analyser/api/aws"
 	"mc_analyser/db"
@@ -30,10 +29,10 @@ func main() {
 
 	//generate jwt secret
 	secret := make([]byte, 64)
-	_, err = rand.Read(secret)
+	/* _, err = rand.Read(secret)
 	if err != nil {
 		logging.Fatal("Error creating JWTSecret", "error", err)
-	}
+	} */
 
 	router := gin.Default()
 	app := model.App{
@@ -65,8 +64,7 @@ func main() {
 }
 
 /*
-TODO: Listen to server power state
-TODO: Download whitelist
+TODO: Test whitelist
 TODO: Download admin list
 TODO: Read whitelist and add aliases
 TODO: Read cloudWatch logs
@@ -80,7 +78,6 @@ TODO: Create Splitwise invoice
 TODO: Get player history since last bill. Even if player is currently online
 TODO: On config, LOG to file
 
-TODO: Set IP address of player
 TODO: Set IsAdmin of player
 
 TODO: dont send hardcoded mc status response

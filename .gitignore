@@ -1,6 +1,6 @@
 .env
 node_modules
-/mc_server/world.zip
+*.zip
 /f3
 temp
 .DS_Store
@@ -9,9 +9,10 @@ temp
 bin
 /mc_server/world
 .terraform
-mc_server/mc-server-key.pem
-mc_server/.terraform.lock.hcl
+*.pem
+*.hcl
 *.tfstate
 *.tfstate.backup
 tmp
 *.db
+/mc_analyser/data

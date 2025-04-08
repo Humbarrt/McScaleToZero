@@ -100,6 +100,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 			logging.Debug("Server has IP: ", "IP", ipv4)
 
 			//TODO: get whitelist
+			go UpdateWhitelistAndAdmins(sw.App)
 			//TODO: make server backup
 		}
 
