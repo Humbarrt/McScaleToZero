@@ -5,6 +5,7 @@ import (
 	"mc_analyser/logging"
 	"mc_analyser/model"
 	"sync"
+	"time"
 
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
@@ -26,6 +27,7 @@ type InstanceStatus struct {
 	InstanceId string
 	isOnline   bool
 	PublicIP   *string
+	state      ec2Types.InstanceStateName
 }
 
 func NewAWSAPI(app *model.App) (*awsAPI, error) {
@@ -65,6 +67,7 @@ func (aws *awsAPI) getInstanceStatus() (InstanceStatus, error) {
 		InstanceId: "",
 		isOnline:   false,
 		PublicIP:   nil,
+		state:      "",
 	}
 
 	resp, err := aws.client.DescribeInstances(context.Background(), input)
@@ -99,6 +102,7 @@ func (aws *awsAPI) getInstanceStatus() (InstanceStatus, error) {
 
 	instanceStatus.InstanceId = *instance.InstanceId
 	instanceStatus.isOnline = instance.State.Name == ec2Types.InstanceStateNameRunning
+	instanceStatus.state = instance.State.Name
 	if instance.PublicIpAddress != nil {
 		instanceStatus.PublicIP = instance.PublicIpAddress
 	}
@@ -127,6 +131,18 @@ func (aws *awsAPI) getInstanceId() (string, error) {
 	return instanceStatus.InstanceId, nil
 }
 
+func (aws *awsAPI) GetInstanceState() (ec2Types.InstanceStateName, error) {
+	instanceStatus, err := aws.getInstanceStatus()
+	if err != nil {
+		logging.Error("Failed to get instance status", "error", err)
+		return "", err
+	}
+	if instanceStatus.state == "" {
+		return "", fmt.Errorf("instance state is empty")
+	}
+	return instanceStatus.state, nil
+}
+
 func (aws *awsAPI) IsInstanceOnline() (bool, error) {
 	instanceStatus, err := aws.getInstanceStatus()
 	if err != nil {
@@ -153,6 +169,37 @@ func (aws *awsAPI) StartInstance() error {
 	instanceId, err := aws.getInstanceId()
 	if err != nil {
 		logging.Error("Failed to get instance ID", "error", err)
+		return err
+	}
+
+InstanceCheck:
+	for i := 0; i < 12; i++ {
+		instanceStatus, err := aws.getInstanceStatus()
+		if err != nil {
+			logging.Error("Failed to get instance status", "error", err)
+			goto waitAndContinue
+		}
+		switch instanceStatus.state {
+		case ec2Types.InstanceStateNameRunning:
+			logging.Info("Instance is already running")
+			return nil
+		case ec2Types.InstanceStateNamePending:
+			goto waitAndContinue
+		case ec2Types.InstanceStateNameStopping:
+			goto waitAndContinue
+		case ec2Types.InstanceStateNameStopped:
+			break InstanceCheck
+		case ec2Types.InstanceStateNameShuttingDown:
+			goto waitAndContinue
+		case ec2Types.InstanceStateNameTerminated:
+			return fmt.Errorf("instance is terminated, cannot start it")
+		default:
+			logging.Error("Unknown instance state", "state", instanceStatus.state)
+			continue
+		}
+
+	waitAndContinue:
+		time.Sleep(5 * time.Second)
 	}
 
 	input := &ec2.StartInstancesInput{
@@ -166,25 +213,5 @@ func (aws *awsAPI) StartInstance() error {
 	}
 
 	logging.Info("Instance started successfully")
-	return nil
-}
-
-func (aws *awsAPI) StopInstance() error {
-	instanceId, err := aws.getInstanceId()
-	if err != nil {
-		logging.Error("Failed to get instance ID", "error", err)
-	}
-
-	input := &ec2.StopInstancesInput{
-		InstanceIds: []string{instanceId},
-	}
-
-	_, err = aws.client.StopInstances(context.Background(), input)
-	if err != nil {
-		logging.Error("Failed to stop instance", "error", err)
-		return err
-	}
-
-	logging.Info("Instance stopped successfully")
 	return nil
 }

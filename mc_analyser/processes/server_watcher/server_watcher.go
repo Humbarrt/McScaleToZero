@@ -7,6 +7,8 @@ import (
 	"mc_analyser/model"
 	"sync"
 	"time"
+
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 type serverWatcher struct {
@@ -15,7 +17,7 @@ type serverWatcher struct {
 
 	//protected
 	mutex       sync.Mutex
-	_retries    int
+	_try        int
 	_isWatching bool
 	_isOnline   bool
 	_isReady    bool
@@ -54,7 +56,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 	logging.Info("Trying to start ServerWatcher")
 	sw.mutex.Lock()
 	isWatching := sw._isWatching
-	sw._retries = 0
+	sw._try = 0
 	sw.mutex.Unlock()
 	if isWatching {
 		logging.Error("ServerWatcher is already running")
@@ -70,18 +72,25 @@ func (sw *serverWatcher) StartWatchingServer() {
 		sw.mutex.Lock()
 		wasOnline := sw._isOnline
 		wasReady := sw._isReady
-		retries := sw._retries
-		sw.mutex.Unlock()
+		retries := sw._try
+
 		if retries > sw.retries {
+			sw._isWatching = false
+			sw.mutex.Unlock()
 			break
 		}
+		sw.mutex.Unlock()
 
-		isOnline, err := sw.App.AWS.IsInstanceOnline()
+		isOnline := false
+		isStateStable := true
+		state, err := sw.App.AWS.GetInstanceState()
 		if err != nil {
-			logging.Error("Error checking server status: ", "error", err)
+			logging.Error("Error checking server state: ", "error", err)
 			goto waitAndContinue
 		}
-		logging.Debug("Server status: ", "isOnline", isOnline, "wasOnline", wasOnline)
+		isOnline = state == ec2Types.InstanceStateNameRunning
+		isStateStable = state == ec2Types.InstanceStateNameRunning || state == ec2Types.InstanceStateNameStopped || state == ec2Types.InstanceStateNameTerminated
+		logging.Debug("Server state: ", "isOnline", isOnline, "wasOnline", wasOnline, "wasReady", wasReady, "state", state, "isStateStable", isStateStable)
 
 		if !wasOnline && isOnline {
 			logging.Info("Server started")
@@ -92,14 +101,13 @@ func (sw *serverWatcher) StartWatchingServer() {
 			}
 
 			sw.mutex.Lock()
-			sw._retries = 0
+			sw._try = 0
 			sw._ipv4 = &ipv4
 			sw._isOnline = true
 			sw.mutex.Unlock()
 			logging.Info("Server is set to online")
 			logging.Debug("Server has IP: ", "IP", ipv4)
 
-			//TODO: get whitelist
 			go UpdateWhitelistAndAdmins(sw.App)
 			//TODO: make server backup
 		}
@@ -125,9 +133,10 @@ func (sw *serverWatcher) StartWatchingServer() {
 				logging.Debug("Server has IP: ", "IP", ipv4)
 			}
 
-			status, err := mc.ReadServerStatus(ipv4, sw.App.Config.GetMCPort())
-			if err != nil || status == "" {
-				logging.Error("Error reading server status: ", "error", err, "status", status)
+			logging.Debug("Server has IP: ", "IP", ipv4, "port", sw.App.Config.GetMCPort())
+			canTransfer, err := mc.IsServerTransferReady(ipv4, sw.App.Config.GetMCPort())
+			if err != nil || !canTransfer {
+				logging.Error("Error reading server status: ", "error", err, "canTransfer", canTransfer)
 				goto waitAndContinue
 			}
 
@@ -138,7 +147,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 		}
 
 		if wasOnline && !isOnline {
-			logging.Info("Server stopped")
+			logging.Info("Server is stopping")
 
 			sw.mutex.Lock()
 			sw._isOnline = false
@@ -147,10 +156,10 @@ func (sw *serverWatcher) StartWatchingServer() {
 			sw.mutex.Unlock()
 		}
 
-		if !isOnline {
+		if !isOnline && isStateStable {
 			logging.Info("Server is offline", "retries left", sw.retries-retries)
 			sw.mutex.Lock()
-			sw._retries = retries + 1
+			sw._try = retries + 1
 			sw.mutex.Unlock()
 		}
 
@@ -158,8 +167,5 @@ func (sw *serverWatcher) StartWatchingServer() {
 		time.Sleep(5 * time.Second)
 	}
 
-	sw.mutex.Lock()
-	sw._isWatching = false
-	sw.mutex.Unlock()
 	logging.Info("ServerWatcher stopped")
 }

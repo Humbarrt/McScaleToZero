@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"database/sql"
 	"encoding/json"
-	"mc_analyser/api/sftp"
+	"mc_analyser/api/ssh"
 	"mc_analyser/db"
 	"mc_analyser/db/queries"
 	"mc_analyser/logging"
@@ -61,14 +61,14 @@ func parseMcPlayerFile(data *bufio.Reader) ([]*mcPlayer, error) {
 }
 
 func downloadMcFiles(app *model.App) ([]*mcPlayer, []*mcPlayer, error) {
-	sftpClient, err := sftp.NewSFTPClient(app)
+	sshClient, err := ssh.NewClient(app)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer sftpClient.Close()
+	defer sshClient.Close()
 
 	// Read the whitelist file from the SFTP server
-	whitelistReader, err := sftpClient.ReadFile("./mc-server/data/whitelist.json")
+	whitelistReader, err := sshClient.ReadFile("./mc-server/data/whitelist.json")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -78,7 +78,7 @@ func downloadMcFiles(app *model.App) ([]*mcPlayer, []*mcPlayer, error) {
 	}
 
 	// Read the admin file from the SFTP server
-	adminReader, err := sftpClient.ReadFile("./mc-server/data/ops.json")
+	adminReader, err := sshClient.ReadFile("./mc-server/data/ops.json")
 	if err != nil {
 		return nil, nil, err
 	}

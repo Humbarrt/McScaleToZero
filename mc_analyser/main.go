@@ -64,9 +64,6 @@ func main() {
 }
 
 /*
-TODO: Test whitelist
-TODO: Download admin list
-TODO: Read whitelist and add aliases
 TODO: Read cloudWatch logs
 TODO: Parse logs and add to database
 TODO: Find last position based on 5 logs
@@ -77,8 +74,6 @@ TODO: Record AWS Invoice
 TODO: Create Splitwise invoice
 TODO: Get player history since last bill. Even if player is currently online
 TODO: On config, LOG to file
-
-TODO: Set IsAdmin of player
 
 TODO: dont send hardcoded mc status response
 TODO: what if the next minecraft version comes out? - maybe check the version on boot?
