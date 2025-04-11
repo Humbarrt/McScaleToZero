@@ -21,12 +21,14 @@ func TestUUID(t *testing.T) {
 	uuid2, err := model.NewUUIDFromBytes(uuid.Bytes())
 	assert.NoError(t, err)
 	assert.Equal(t, uuid2.Bytes(), uuid.Bytes())
+	assert.True(t, uuid.IsEqual(uuid2))
 
 	// Test UUID creation from short string
 	uuidStrShort := strings.ReplaceAll(uuidStr, "-", "")
 	uuid3, err := model.NewUUIDFromString(uuidStrShort)
 	assert.NoError(t, err)
 	assert.Equal(t, uuid3.Bytes(), uuid.Bytes())
+	assert.True(t, uuid3.IsEqual(uuid))
 
 	// Test invalid UUID string
 	invalidUUIDStr := "c99efdca-519c-43ea-83fb-ebc7042c8e3"
@@ -44,4 +46,5 @@ func TestUUID(t *testing.T) {
 	uuid4, err := model.NewUUIDFromString("c99efdca-519c-43ea-83fb-ebc7042c8e3g")
 	assert.NoError(t, err)
 	assert.NotEqual(t, uuid, uuid4)
+	assert.False(t, uuid.IsEqual(uuid4))
 }

@@ -14,6 +14,14 @@ func WriteVarInt(data *[]byte, num int) {
 	}
 }
 
+func WriteBoolean(data *[]byte, value bool) {
+	if value {
+		*data = append(*data, 0x01)
+	} else {
+		*data = append(*data, 0x00)
+	}
+}
+
 func WriteUnsignedShort(data *[]byte, num uint16) {
 	*data = append(*data, byte(num>>8), byte(num))
 }

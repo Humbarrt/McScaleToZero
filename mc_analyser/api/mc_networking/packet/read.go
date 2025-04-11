@@ -16,6 +16,7 @@ func ReadPacket(conn net.Conn) (*Packet, error) {
 		return &Packet{}, err
 	}
 	p.Length = length
+	logging.Debug("Packet length", "length", length)
 
 	// Read the packet data
 	p.Data = make([]byte, length)

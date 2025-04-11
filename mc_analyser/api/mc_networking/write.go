@@ -1,6 +1,7 @@
 package mc_networking
 
 import (
+	"mc_analyser/api/mc_networking/conn"
 	"mc_analyser/api/mc_networking/packet"
 	"mc_analyser/logging"
 	"mc_analyser/model"
@@ -31,10 +32,8 @@ func WriteTransfer(conn net.Conn, host string, port int) error {
 		PacketID: 0x0B,
 		Data:     make([]byte, 0),
 	}
-	data := make([]byte, 0)
-	packet.WriteString(&data, host)
-	packet.WriteVarInt(&data, port)
-	p.Data = data
+	packet.WriteString(&p.Data, host)
+	packet.WriteVarInt(&p.Data, port)
 
 	packetBytes := p.ToBytes()
 	_, err := conn.Write(packetBytes)
@@ -57,9 +56,7 @@ func WriteStatusResponse(conn net.Conn, status string) {
 		PacketID: 0x00,
 		Data:     make([]byte, 0),
 	}
-	data := make([]byte, 0)
-	packet.WriteString(&data, status)
-	p.Data = data
+	packet.WriteString(&p.Data, status)
 
 	packetBytes := p.ToBytes()
 	conn.Write(packetBytes)
@@ -70,13 +67,10 @@ func WriteHandshake(conn net.Conn, protocolVersion int, serverAddress string, se
 		PacketID: 0x00,
 		Data:     make([]byte, 0),
 	}
-	data := make([]byte, 0)
-	packet.WriteVarInt(&data, protocolVersion)
-	packet.WriteString(&data, serverAddress)
-	packet.WriteUnsignedShort(&data, uint16(serverPort))
-	packet.WriteVarInt(&data, nextState)
-	p.Data = data
-
+	packet.WriteVarInt(&p.Data, protocolVersion)
+	packet.WriteString(&p.Data, serverAddress)
+	packet.WriteUnsignedShort(&p.Data, uint16(serverPort))
+	packet.WriteVarInt(&p.Data, nextState)
 	logging.Info("Handshake packet data: ", "data", p.Data)
 
 	packetBytes := p.ToBytes()
@@ -95,14 +89,35 @@ func WriteStatusRequest(conn net.Conn) error {
 	return err
 }
 
-func stringToBytesUTF16BE(str string) []byte {
-	codes := utf16.Encode([]rune(str))
-	b := make([]byte, len(codes)*2)
-	for i, r := range codes {
-		b[i*2] = byte(r >> 8)
-		b[i*2+1] = byte(r)
+func WriteEncryptionRequest(conn *conn.McConn) error {
+	p := packet.Packet{
+		PacketID: 0x01,
+		Data:     make([]byte, 0),
 	}
-	return b
+
+	serverID := ""
+	packet.WriteString(&p.Data, serverID)
+
+	encryption, err := conn.GetEncryption()
+	if err != nil {
+		logging.Error("Error getting encryption:", "error", err)
+		return err
+	}
+
+	var publicKeyArray packet.PrefixedArray
+	publicKeyArray.Data = encryption.GetPublicKey()
+	packet.WritePrefixedArray(&p.Data, &publicKeyArray)
+
+	var verifyTokenArray packet.PrefixedArray
+	verifyTokenArray.Data = encryption.GetVerifyToken()
+	packet.WritePrefixedArray(&p.Data, &verifyTokenArray)
+
+	shouldAuthenticate := true
+	packet.WriteBoolean(&p.Data, shouldAuthenticate)
+
+	packetBytes := p.ToBytes()
+	_, err = conn.Write(packetBytes)
+	return err
 }
 
 func WriteLegacyStatusResponse(conn net.Conn, protocolVersion string, minecraftVersion string, motd string, playerCount string, maxPlayers string) error {
@@ -134,4 +149,14 @@ func WriteLegacyStatusResponse(conn net.Conn, protocolVersion string, minecraftV
 
 	_, err := conn.Write(packetBytes)
 	return err
+}
+
+func stringToBytesUTF16BE(str string) []byte {
+	codes := utf16.Encode([]rune(str))
+	b := make([]byte, len(codes)*2)
+	for i, r := range codes {
+		b[i*2] = byte(r >> 8)
+		b[i*2+1] = byte(r)
+	}
+	return b
 }

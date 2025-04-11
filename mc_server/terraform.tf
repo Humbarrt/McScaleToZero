@@ -215,6 +215,7 @@ EOF
 
   tags = {
     Name = "mc-server"
+    Project = "Minecraft"
   }
 }
 

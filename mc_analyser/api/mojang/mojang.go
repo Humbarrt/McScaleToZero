@@ -10,9 +10,8 @@ import (
 )
 
 func request(route string, method string) (*http.Response, error) {
-	baseUrl := "https://api.mojang.com/"
 	client := &http.Client{}
-	req, err := http.NewRequest(method, baseUrl+route, nil)
+	req, err := http.NewRequest(method, route, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +55,7 @@ func getRequest(route string, responseVal any) error {
 }
 
 func GetPlayerUUID(playerName string) (*model.UUID, error) {
-	route := "users/profiles/minecraft/" + playerName
+	route := "https://api.mojang.com/users/profiles/minecraft/" + playerName
 	var result struct {
 		ID string `json:"id"`
 	}
@@ -65,5 +64,27 @@ func GetPlayerUUID(playerName string) (*model.UUID, error) {
 	if err != nil {
 		return nil, err
 	}
+	return model.NewUUIDFromString(result.ID)
+}
+
+func GetPlayerSession(serverId string, playerName string, ipv4 string) (*model.UUID, error) {
+	route := fmt.Sprintf("https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s&serverId=%s&ip=%s", playerName, serverId, ipv4)
+	var result struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+
+	err := getRequest(route, &result)
+	if err != nil {
+		logging.Error("Error getting player session", "error", err)
+		return nil, err
+	}
+
+	if result.Name != playerName {
+		logging.Error("Player name does not match", "expected", playerName, "got", result.Name)
+		return nil, fmt.Errorf("player name does not match")
+	}
+
+	logging.Info("Player session", "id", result.ID, "name", result.Name)
 	return model.NewUUIDFromString(result.ID)
 }

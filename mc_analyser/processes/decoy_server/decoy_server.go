@@ -3,6 +3,7 @@ package decoy_server
 import (
 	"fmt"
 	mc "mc_analyser/api/mc_networking"
+	"mc_analyser/api/mc_networking/conn"
 	mcp "mc_analyser/api/mc_networking/packet"
 	"mc_analyser/api/mojang"
 	"mc_analyser/db/queries"
@@ -54,7 +55,7 @@ func handleServerListPing(clientConn net.Conn, app *model.App) {
 					clientConn.Close()
 					return
 				}
-				status, err := mc.ReadServerStatus(ipv4, app.Config.GetMCPort()) //"91.107.192.240", app.Config.MC_PORT)
+				status, err := mc.ReadServerStatus(ipv4, app.Config.GetMCPort())
 				if err != nil {
 					logging.Error("Error reading server status:", "error", err)
 				} else {
@@ -91,7 +92,7 @@ func findPlayerUUID(playerName string, app *model.App) (*model.UUID, error) {
 	return uuid, nil
 }
 
-func handlePlayerLogin(clientConn net.Conn, app *model.App) {
+func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 	logging.Info("Player is connecting to the server", "remoteAddr", clientConn.RemoteAddr().String())
 
 	//Wait for Login packet
@@ -107,15 +108,20 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 		clientConn.Close()
 		return
 	}
-	logging.Info("Player is logging in", "username", loginStart.Username, "uuid", loginStart.UUID)
 
+	// Check if the player is in the database
 	uuid := *loginStart.UUID
-	if true || loginStart.UUID == nil {
-		id_found, _ := findPlayerUUID(loginStart.Username, app)
-
-		logging.Info("Player UUID found:", "uuid", id_found)
+	if loginStart.UUID == nil {
+		idound, err := findPlayerUUID(loginStart.Username, app)
+		if err != nil {
+			logging.Error("Error finding player UUID:", "error", err)
+			clientConn.Close()
+			return
+		}
+		uuid = *idound
 	}
 
+	logging.Info("Player is trying to log in", "username", loginStart.Username, "uuid", loginStart.UUID)
 	player, err := queries.GetPlayerByUUID(app.Db, uuid)
 	if err != nil {
 		logging.Error("Error querying player:", "error", err)
@@ -129,6 +135,67 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 		return
 	}
 
+	// Send EncryptionRequest packet
+	err = clientConn.CreateEncryption()
+	if err != nil {
+		logging.Error("Error creating encryption:", "error", err)
+		clientConn.Close()
+		return
+	}
+
+	err = mc.WriteEncryptionRequest(clientConn)
+	if err != nil {
+		logging.Error("Error writing encryption request:", "error", err)
+		clientConn.Close()
+		return
+	}
+	logging.Info("Sent EncryptionRequest packet")
+
+	packet, err = mcp.ReadPacket(clientConn)
+	if err != nil {
+		logging.Error("Error reading encryptionResponse packet:", "error", err)
+		clientConn.Close()
+		return
+	}
+
+	encryptionResponse, err := mc.ParseEncryptionResponse(packet)
+	if err != nil {
+		logging.Error("Error reading encryption response:", "error", err)
+		clientConn.Close()
+	}
+
+	// Set encryption key
+	err = clientConn.EnableEncryption(encryptionResponse.SharedSecret.Data, encryptionResponse.VerifyToken.Data)
+	if err != nil {
+		logging.Error("Error enabling encryption key:", "error", err)
+		clientConn.Close()
+		return
+	}
+
+	playerIPV4 := clientConn.RemoteAddr().String()
+	playerIPV4 = strings.Split(playerIPV4, ":")[0]
+	serverId, err := clientConn.GetServerId()
+	if err != nil {
+		logging.Error("Error getting server ID:", "error", err)
+		clientConn.Close()
+		return
+	}
+
+	sessionUUID, err := mojang.GetPlayerSession(serverId, loginStart.Username, playerIPV4)
+	if err != nil || sessionUUID == nil {
+		logging.Error("Error getting player session:", "error", err)
+		clientConn.Close()
+		return
+	}
+
+	if !sessionUUID.IsEqual(&player.McUUID) {
+		logging.Error("Player UUID does not match session UUID", "sessionUUID", sessionUUID, "playerUUID", player.McUUID)
+		logging.Warn("Imposter detected, kicking player")
+		clientConn.Close()
+		return
+	}
+	logging.Info("Player session verified by mojang")
+
 	err = queries.AddPlayerAlias(app.Db, player.Id, loginStart.Username)
 	if err != nil {
 		logging.Error("Error adding player alias:", "error", err)
@@ -136,9 +203,7 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 		return
 	}
 
-	newIPV4 := clientConn.RemoteAddr().String()
-	newIPV4 = strings.Split(newIPV4, ":")[0]
-	err = queries.UpdatePlayerLastIPV4(app.Db, player.Id, &newIPV4)
+	err = queries.UpdatePlayerLastIPV4(app.Db, player.Id, &playerIPV4)
 	if err != nil {
 		logging.Error("Error setting player IP:", "error", err)
 		clientConn.Close()
@@ -169,19 +234,15 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 	}
 	logging.Info("Player acknowledged login", "loggedIn", loginAcknowledged, "username", loginStart.Username)
 
-	err = app.AWS.StartInstance()
-	if err != nil {
-		logging.Error("Error starting AWS instance:", "error", err)
-		clientConn.Close()
-		return
-	}
+	go app.AWS.StartInstance()
+	go app.SW.StartWatchingServer()
 
 	for {
 		if app.SW.IsServerReady() {
 			break
 		}
 
-		logging.Info("Server not ready, stalling player...")
+		logging.Debug("Server not ready, stalling player...")
 		_, err = clientConn.Write([]byte{0x00})
 		if err != nil {
 			logging.Error("Error writing stall packet:", "error", err)
@@ -192,13 +253,20 @@ func handlePlayerLogin(clientConn net.Conn, app *model.App) {
 	}
 
 	// Send Transfer packet
-	err = mc.WriteTransfer(clientConn, "91.107.192.240", 25565)
+	ipv4, err := app.SW.IPv4()
+	if err != nil {
+		logging.Error("Error getting server IP:", "error", err)
+		clientConn.Close()
+		return
+	}
+
+	err = mc.WriteTransfer(clientConn, ipv4, app.Config.GetMCPort())
 	if err != nil {
 		logging.Error("Error writing transfer:", "error", err)
 		clientConn.Close()
 		return
 	}
-	logging.Info("Sent Transfer packet", "host", "91.107.192.240", "port", 25565)
+	logging.Info("Sent Transfer packet", "host", ipv4, "port", app.Config.GetMCPort())
 }
 
 func handleLegacyPing(clientConn net.Conn, app *model.App) {
@@ -206,7 +274,7 @@ func handleLegacyPing(clientConn net.Conn, app *model.App) {
 }
 
 // Handle incoming player connections
-func handleConnection(clientConn net.Conn, app *model.App) {
+func handleConnection(clientConn *conn.McConn, app *model.App) {
 	logging.Info("Player attempting to connect...", "remoteAddr", clientConn.RemoteAddr().String())
 	packet, err := mcp.ReadPacket(clientConn)
 	if err != nil {
@@ -221,6 +289,7 @@ func handleConnection(clientConn net.Conn, app *model.App) {
 		clientConn.Close()
 		return
 	}
+
 	handshake, err := mc.ParseHandshake(packet)
 	if err != nil {
 		logging.Error("Error reading handshake:", "error", err)
@@ -236,7 +305,6 @@ func handleConnection(clientConn net.Conn, app *model.App) {
 	} else {
 		logging.Error("Unknown handshake state", "state", handshake.NextState)
 		clientConn.Close()
-		return
 	}
 }
 
@@ -257,7 +325,7 @@ func Start(app *model.App) {
 			continue
 		}
 
-		// Handle each connection in a goroutine
-		go handleConnection(clientConn, app)
+		mcConn := conn.NewMcConn(&clientConn)
+		go handleConnection(mcConn, app)
 	}
 }

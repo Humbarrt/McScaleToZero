@@ -1,6 +1,7 @@
 package model
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -20,6 +21,10 @@ func (u *UUID) ShortString() string {
 
 func (u *UUID) Bytes() []byte {
 	return u.raw[:]
+}
+
+func (u *UUID) IsEqual(other *UUID) bool {
+	return bytes.Equal(u.raw[:], other.Bytes())
 }
 
 func (u *UUID) MarshalJSON() ([]byte, error) {

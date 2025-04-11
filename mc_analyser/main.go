@@ -64,6 +64,12 @@ func main() {
 }
 
 /*
+TODO: Login Decoy server
+TODO: create iam user with keys
+TODO: read keys from file
+TODO: get cost explorer by usage type
+
+
 TODO: Read cloudWatch logs
 TODO: Parse logs and add to database
 TODO: Find last position based on 5 logs

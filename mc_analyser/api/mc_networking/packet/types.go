@@ -1,7 +1,9 @@
 package packet
 
 import (
+	"mc_analyser/logging"
 	"net"
+	"time"
 )
 
 type Packet struct {
@@ -20,6 +22,8 @@ func (p *Packet) ToBytes() []byte {
 	WriteVarInt(&packetBytes, p.Length)
 	WriteVarInt(&packetBytes, p.PacketID)
 	packetBytes = append(packetBytes, p.Data...)
+
+	logging.Debug("Packet bytes", "packetID", p.PacketID, "length", p.Length, "data", packetBytes)
 	return packetBytes
 }
 
@@ -35,6 +39,12 @@ func readPacketLength(conn net.Conn) (int, error) {
 			return 0, err
 		}
 		byteRead = buf[0]
+		if byteRead == 0x00 {
+			logging.Debug("Got stalling byte")
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+
 		num |= int(byteRead&0x7F) << (7 * numRead)
 		numRead++
 		if (byteRead & 0x80) == 0 {
