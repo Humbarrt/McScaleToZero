@@ -82,7 +82,7 @@ func (c *McConn) CloseWithError(reason model.DisconnectReason, comment string, e
 		return
 	}
 
-	err = mc.WriteDisconnect(c.conn, "reason")
+	err = mc.WriteDisconnect(c.conn, string(reason))
 	if err != nil {
 		logging.Error("Error writing disconnect:", "error", err)
 	}

@@ -140,7 +140,6 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 		clientConn.CloseWithError(model.ReasonInternalServerError, "Error writing encryption request:", err)
 		return
 	}
-	logging.Info("Sent EncryptionRequest packet")
 
 	packet, err = mcp.ReadPacket(clientConn)
 	if err != nil {
@@ -180,7 +179,7 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 		clientConn.CloseWithError(model.ReasonNotAllowed, "Error Imposter detected, kicking player:", err)
 		return
 	}
-	logging.Info("Player session verified by mojang")
+	logging.Info("Player session was verified by mojang")
 
 	err = queries.AddPlayerAlias(app.Db, player.Id, loginStart.Username)
 	if err != nil {
@@ -214,10 +213,6 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 		return
 	}
 	logging.Info("Player acknowledged login", "loggedIn", loginAcknowledged, "username", loginStart.Username)
-
-	err = fmt.Errorf("%s, you are too ugly to join ", loginStart.Username)
-	clientConn.CloseWithError(model.ReasonInternalServerError, "This error should be printed:", err)
-	return
 
 	go app.AWS.StartInstance()
 	go app.SW.StartWatchingServer()
