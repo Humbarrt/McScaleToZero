@@ -3,17 +3,11 @@ package conn
 import (
 	"bytes"
 	"fmt"
+	mc "mc_analyser/api/mc_networking"
 	"mc_analyser/logging"
+	"mc_analyser/model"
 	"net"
 	"time"
-)
-
-// string enum
-type Reason string
-
-const (
-	ReasonInternalServerError Reason = "Internal Server Error"
-	ReasonNotAllowed          Reason = "Not Allowed"
 )
 
 type McConn struct {
@@ -74,19 +68,23 @@ func (c *McConn) EnableEncryption(encryptedSharedSecret []byte, encryptedVerifyT
 	return c.encryption.EnableEncryption(sharedSecret)
 }
 
-func (c *McConn) GetEncryption() (certify, error) {
+func (c *McConn) GetEncryption() (model.McCert, error) {
 	if c.encryption == nil {
-		logging.Error("Encryption is not created")
-		return certify{}, nil
+		return nil, fmt.Errorf("encryption is not created")
 	}
-	return *c.encryption, nil
+	return c.encryption, nil
 }
 
-func (c *McConn) CloseWithError(reason Reason, comment string, err error) {
+func (c *McConn) CloseWithError(reason model.DisconnectReason, comment string, err error) {
 	logging.Error(comment, "error", err)
 	if !c.isConnected {
 		logging.Error("Connection is not established, cannot close")
 		return
+	}
+
+	err = mc.WriteDisconnect(c.conn, "reason")
+	if err != nil {
+		logging.Error("Error writing disconnect:", "error", err)
 	}
 
 	c.isConnected = false

@@ -1,7 +1,7 @@
 package mc_networking
 
 import (
-	"mc_analyser/api/mc_networking/conn"
+	"encoding/json"
 	"mc_analyser/api/mc_networking/packet"
 	"mc_analyser/logging"
 	"mc_analyser/model"
@@ -89,7 +89,7 @@ func WriteStatusRequest(conn net.Conn) error {
 	return err
 }
 
-func WriteEncryptionRequest(conn *conn.McConn) error {
+func WriteEncryptionRequest(conn model.McConn) error {
 	p := packet.Packet{
 		PacketID: 0x01,
 		Data:     make([]byte, 0),
@@ -114,6 +114,28 @@ func WriteEncryptionRequest(conn *conn.McConn) error {
 
 	shouldAuthenticate := true
 	packet.WriteBoolean(&p.Data, shouldAuthenticate)
+
+	packetBytes := p.ToBytes()
+	_, err = conn.Write(packetBytes)
+	return err
+}
+
+func WriteDisconnect(conn net.Conn, reason string) error {
+	p := packet.Packet{
+		PacketID: 0x00,
+		Data:     make([]byte, 0),
+	}
+
+	jsonReason := map[string]string{
+		"text":  reason,
+		"color": "red",
+	}
+	jsonData, err := json.Marshal(jsonReason)
+	if err != nil {
+		logging.Error("Error marshalling disconnect data:", "error", err)
+		return err
+	}
+	packet.WriteString(&p.Data, string(jsonData))
 
 	packetBytes := p.ToBytes()
 	_, err = conn.Write(packetBytes)

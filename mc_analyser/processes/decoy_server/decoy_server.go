@@ -32,15 +32,14 @@ var defaultResponse string = `
 }
 `
 
-func handleServerListPing(clientConn net.Conn, app *model.App) {
+func handleServerListPing(clientConn *conn.McConn, app *model.App) {
 	logging.Info("Player is pinging the server", "remoteAddr", clientConn.RemoteAddr().String())
 
 	for {
 		// receive packet
 		packet, err := mcp.ReadPacket(clientConn)
 		if err != nil {
-			logging.Error("Error reading packet:", "error", err)
-			clientConn.Close()
+			clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading packet:", err)
 			return
 		}
 
@@ -51,10 +50,10 @@ func handleServerListPing(clientConn net.Conn, app *model.App) {
 				logging.Info("MC Server is ready, sending status response")
 				ipv4, err := app.SW.IPv4()
 				if err != nil {
-					logging.Error("Error getting server IP:", "error", err)
-					clientConn.Close()
+					clientConn.CloseWithError(model.ReasonInternalServerError, "Error getting server IP:", err)
 					return
 				}
+
 				status, err := mc.ReadServerStatus(ipv4, app.Config.GetMCPort())
 				if err != nil {
 					logging.Error("Error reading server status:", "error", err)
@@ -66,9 +65,7 @@ func handleServerListPing(clientConn net.Conn, app *model.App) {
 			mc.WriteStatusResponse(clientConn, statusResponse)
 		} else if packet.PacketID == 0x01 {
 			mc.WritePongResponse(clientConn, packet.Data)
-
 			clientConn.Close()
-			return
 		}
 	}
 }
@@ -98,14 +95,12 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 	//Wait for Login packet
 	packet, err := mcp.ReadPacket(clientConn)
 	if err != nil {
-		logging.Error("Error reading packet:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading packet:", err)
 		return
 	}
 	loginStart, err := mc.ParseLoginStart(packet)
 	if err != nil {
-		logging.Error("Error reading login start:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading login start:", err)
 		return
 	}
 
@@ -114,8 +109,7 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 	if loginStart.UUID == nil {
 		idound, err := findPlayerUUID(loginStart.Username, app)
 		if err != nil {
-			logging.Error("Error finding player UUID:", "error", err)
-			clientConn.Close()
+			clientConn.CloseWithError(model.ReasonInternalServerError, "Error finding player UUID:", err)
 			return
 		}
 		uuid = *idound
@@ -124,51 +118,46 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 	logging.Info("Player is trying to log in", "username", loginStart.Username, "uuid", loginStart.UUID)
 	player, err := queries.GetPlayerByUUID(app.Db, uuid)
 	if err != nil {
-		logging.Error("Error querying player:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error querying player:", err)
 		return
 	}
 
 	if !player.IsAllowed {
-		logging.Error("Player is not allowed to connect", "username", loginStart.Username, "uuid", loginStart.UUID)
-		clientConn.Close()
+		err := fmt.Errorf("username: %s, UUID: %s ", loginStart.Username, loginStart.UUID.LongString())
+		clientConn.CloseWithError(model.ReasonNotAllowed, "Error player is not allowed to connect:", err)
 		return
 	}
 
 	// Send EncryptionRequest packet
 	err = clientConn.CreateEncryption()
 	if err != nil {
-		logging.Error("Error creating encryption:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error creating encryption:", err)
 		return
 	}
 
 	err = mc.WriteEncryptionRequest(clientConn)
 	if err != nil {
-		logging.Error("Error writing encryption request:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error writing encryption request:", err)
 		return
 	}
 	logging.Info("Sent EncryptionRequest packet")
 
 	packet, err = mcp.ReadPacket(clientConn)
 	if err != nil {
-		logging.Error("Error reading encryptionResponse packet:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading encryptionResponse packet:", err)
 		return
 	}
 
 	encryptionResponse, err := mc.ParseEncryptionResponse(packet)
 	if err != nil {
-		logging.Error("Error reading encryption response:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading encryption response:", err)
+		return
 	}
 
 	// Set encryption key
 	err = clientConn.EnableEncryption(encryptionResponse.SharedSecret.Data, encryptionResponse.VerifyToken.Data)
 	if err != nil {
-		logging.Error("Error enabling encryption key:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error enabling encryption key:", err)
 		return
 	}
 
@@ -176,45 +165,39 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 	playerIPV4 = strings.Split(playerIPV4, ":")[0]
 	serverId, err := clientConn.GetServerId()
 	if err != nil {
-		logging.Error("Error getting server ID:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error getting server ID:", err)
 		return
 	}
 
 	sessionUUID, err := mojang.GetPlayerSession(serverId, loginStart.Username, playerIPV4)
 	if err != nil || sessionUUID == nil {
-		logging.Error("Error getting player session:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error getting player session:", err)
 		return
 	}
 
 	if !sessionUUID.IsEqual(&player.McUUID) {
-		logging.Error("Player UUID does not match session UUID", "sessionUUID", sessionUUID, "playerUUID", player.McUUID)
-		logging.Warn("Imposter detected, kicking player")
-		clientConn.Close()
+		err := fmt.Errorf("player UUID does not match session UUID: %s != %s", sessionUUID, player.McUUID)
+		clientConn.CloseWithError(model.ReasonNotAllowed, "Error Imposter detected, kicking player:", err)
 		return
 	}
 	logging.Info("Player session verified by mojang")
 
 	err = queries.AddPlayerAlias(app.Db, player.Id, loginStart.Username)
 	if err != nil {
-		logging.Error("Error adding player alias:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error adding player alias:", err)
 		return
 	}
 
 	err = queries.UpdatePlayerLastIPV4(app.Db, player.Id, &playerIPV4)
 	if err != nil {
-		logging.Error("Error setting player IP:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error setting player IP:", err)
 		return
 	}
 
 	// Send LoginSuccess packet
 	loginSuccess := mc.WriteLoginSuccess(clientConn, uuid, loginStart.Username)
 	if loginSuccess != nil {
-		logging.Error("Error writing login success:", "error", loginSuccess)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error writing login success:", err)
 		return
 	}
 	logging.Info("Sent LoginSuccess", "username", loginStart.Username)
@@ -222,17 +205,19 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 	// Wait for LoginAcknowledged packet
 	packet, err = mcp.ReadPacket(clientConn)
 	if err != nil {
-		logging.Error("Error reading packet:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading packet:", err)
 		return
 	}
 	loginAcknowledged, err := mc.ParseLoginAcknowledged(packet)
 	if err != nil {
-		logging.Error("Error reading login acknowledged:", "error", loginAcknowledged)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading login acknowledged:", err)
 		return
 	}
 	logging.Info("Player acknowledged login", "loggedIn", loginAcknowledged, "username", loginStart.Username)
+
+	err = fmt.Errorf("%s, you are too ugly to join ", loginStart.Username)
+	clientConn.CloseWithError(model.ReasonInternalServerError, "This error should be printed:", err)
+	return
 
 	go app.AWS.StartInstance()
 	go app.SW.StartWatchingServer()
@@ -245,8 +230,7 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 		logging.Debug("Server not ready, stalling player...")
 		_, err = clientConn.Write([]byte{0x00})
 		if err != nil {
-			logging.Error("Error writing stall packet:", "error", err)
-			clientConn.Close()
+			clientConn.CloseWithError(model.ReasonInternalServerError, "Error writing stall packet:", err)
 			return
 		}
 		time.Sleep(1 * time.Second)
@@ -255,15 +239,13 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 	// Send Transfer packet
 	ipv4, err := app.SW.IPv4()
 	if err != nil {
-		logging.Error("Error getting server IP:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error getting server IP:", err)
 		return
 	}
 
 	err = mc.WriteTransfer(clientConn, ipv4, app.Config.GetMCPort())
 	if err != nil {
-		logging.Error("Error writing transfer:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error writing transfer:", err)
 		return
 	}
 	logging.Info("Sent Transfer packet", "host", ipv4, "port", app.Config.GetMCPort())
@@ -278,8 +260,7 @@ func handleConnection(clientConn *conn.McConn, app *model.App) {
 	logging.Info("Player attempting to connect...", "remoteAddr", clientConn.RemoteAddr().String())
 	packet, err := mcp.ReadPacket(clientConn)
 	if err != nil {
-		logging.Error("Error reading packet:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading packet:", err)
 		return
 	}
 
@@ -292,8 +273,7 @@ func handleConnection(clientConn *conn.McConn, app *model.App) {
 
 	handshake, err := mc.ParseHandshake(packet)
 	if err != nil {
-		logging.Error("Error reading handshake:", "error", err)
-		clientConn.Close()
+		clientConn.CloseWithError(model.ReasonInternalServerError, "Error parsing handshake:", err)
 		return
 	}
 	logging.Info("Player handshake received", "handshake", handshake)
