@@ -13,7 +13,7 @@ import (
 type Config interface {
 	GetAWSAccessKeyId() string
 	GetAWSSecretAccessKey() string
-	GetAWSInstanceName() string
+	GetAWSProjectName() string
 	GetSplitwiseApiKey() string
 	GetSplitwiseGroupId() string
 	GetMCServerSSHUser() string

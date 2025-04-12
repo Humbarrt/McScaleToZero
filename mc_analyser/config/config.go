@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"image"
-	"log"
 	"mc_analyser/db"
 	"mc_analyser/db/queries"
 	"mc_analyser/logging"
@@ -21,7 +20,7 @@ var version = "development"
 type config struct {
 	awsAccessKeyId     string
 	awsSecretAccessKey string
-	awsInstanceName    string
+	awsProjectName     string
 	splitwiseApiKey    string
 	splitwiseGroupId   string
 	mcServerSSHUser    string
@@ -46,8 +45,8 @@ func (c *config) GetAWSAccessKeyId() string {
 func (c *config) GetAWSSecretAccessKey() string {
 	return c.awsSecretAccessKey
 }
-func (c *config) GetAWSInstanceName() string {
-	return c.awsInstanceName
+func (c *config) GetAWSProjectName() string {
+	return c.awsProjectName
 }
 func (c *config) GetSplitwiseApiKey() string {
 	return c.splitwiseApiKey
@@ -197,6 +196,14 @@ func (c *config) SetBackupsToKeep(backupsToKeep int) error {
 	return nil
 }
 
+func getenv(key, fallback string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return fallback
+	}
+	return value
+}
+
 func Load(db *db.DB) *config {
 	logging.Info("Version", "version", version)
 	currentPath, err := os.Executable()
@@ -217,30 +224,54 @@ func Load(db *db.DB) *config {
 		logging.Fatal("Error getting config", "error", err, "config", dynConfig)
 	}
 
-	dataPath := os.Getenv("DATA_PATH")
-	if dataPath == "" {
-		dataPath = path.Join(path.Dir(currentPath), "data")
-	}
-	mcServerSSHUser := os.Getenv("MC_SERVER_SSH_USER")
-	if mcServerSSHUser == "" {
-		mcServerSSHUser = "ec2-user"
-	}
-	mcServerSSHKeyFile := os.Getenv("MC_SERVER_SSH_KEY_FILE")
-	if mcServerSSHKeyFile == "" {
-		mcServerSSHKeyFile = "mc-server-key.pem"
-	}
+	dataPath := getenv("DATA_PATH", path.Join(path.Dir(currentPath), "data"))
+	mcServerSSHUser := getenv("MC_SERVER_SSH_USER", "ec2-user")
+	mcServerSSHKeyFile := getenv("MC_SERVER_SSH_KEY_FILE", "mc-server-key.pem")
 	mcServerSSHKey, err := os.ReadFile(path.Join(dataPath, mcServerSSHKeyFile))
 	if err != nil {
-		log.Fatalf("unable to read private key: %v", err)
+		logging.Fatal("unable to read private key:", "error", err)
 	}
 	if len(mcServerSSHKey) == 0 {
-		log.Fatalf("private key is empty")
+		logging.Fatal("private key is empty")
+	}
+	awsAccessKeyId := getenv("AWS_ACCESS_KEY_ID", "")
+	awsSecretAccessKey := getenv("AWS_SECRET_ACCESS_KEY", "")
+	awsAccessKeyIdFile := getenv("AWS_ACCESS_KEY_ID_FILE", "mc-access-key-id.txt")
+	awsSecretAccessKeyFile := getenv("AWS_SECRET_ACCESS_KEY_FILE", "mc-secret-access-key.txt")
+
+	if awsAccessKeyId != "" && awsSecretAccessKey != "" {
+		logging.Debug("Using AWS credentials from environment variables")
+	} else if awsAccessKeyId == "" && awsSecretAccessKey == "" {
+		logging.Debug("Using AWS credentials from file")
+
+		awsAccessKeyIdBytes, err := os.ReadFile(path.Join(dataPath, awsAccessKeyIdFile))
+		if err != nil {
+			logging.Fatal("unable to read AWS access key ID file:", "error", err)
+		}
+		if len(awsAccessKeyIdBytes) == 0 {
+			logging.Fatal("AWS access key ID file is empty")
+		}
+		awsAccessKeyId = string(awsAccessKeyIdBytes)
+
+		awsSecretAccessKeyBytes, err := os.ReadFile(path.Join(dataPath, awsSecretAccessKeyFile))
+		if err != nil {
+			logging.Fatal("unable to read AWS secret access key file:", "error", err)
+		}
+		if len(awsSecretAccessKeyBytes) == 0 {
+			logging.Fatal("AWS secret access key file is empty")
+		}
+
+		awsSecretAccessKey = string(awsSecretAccessKeyBytes)
+	} else {
+		logging.Fatal("You need to provide AWS credentials. Either put them in DATA_PATH and specify AWS_ACCESS_KEY_ID_FILE & AWS_SECRET_ACCESS_KEY_FILE or set them in environment variables with AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY")
 	}
 
+	awsProjectName := getenv("AWS_PROJECT_NAME", "minecraft")
+
 	config := &config{
-		awsAccessKeyId:     os.Getenv("AWS_ACCESS_KEY_ID"),
-		awsSecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		awsInstanceName:    os.Getenv("AWS_INSTANCE_NAME"),
+		awsAccessKeyId:     awsAccessKeyId,
+		awsSecretAccessKey: awsSecretAccessKey,
+		awsProjectName:     awsProjectName,
 		splitwiseApiKey:    os.Getenv("SPLITWISE_API_KEY"),
 		splitwiseGroupId:   os.Getenv("SPLITWISE_GROUP_ID"),
 		mcServerSSHUser:    mcServerSSHUser,
@@ -256,7 +287,7 @@ func Load(db *db.DB) *config {
 		version:            version,
 	}
 
-	for _, env := range []string{config.awsAccessKeyId, config.awsSecretAccessKey, config.awsInstanceName, config.splitwiseApiKey, config.splitwiseGroupId, config.mcServerSSHUser, config.mcServerSSHKeyFile} {
+	for _, env := range []string{config.awsAccessKeyId, config.awsSecretAccessKey, config.awsProjectName, config.splitwiseApiKey, config.splitwiseGroupId, config.mcServerSSHUser, config.mcServerSSHKeyFile} {
 		if env == "" {
 			logging.Fatal("Environment variable is not set", "variable", env)
 		}

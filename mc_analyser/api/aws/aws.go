@@ -53,12 +53,12 @@ func NewAWSAPI(app *model.App) (*awsAPI, error) {
 }
 
 func (aws *awsAPI) getInstanceStatus() (InstanceStatus, error) {
-	filter1Name := "tag:Name"
+	filter1Name := "tag:Project"
 	input := &ec2.DescribeInstancesInput{
 		Filters: []ec2Types.Filter{
 			{
 				Name:   &filter1Name,
-				Values: []string{aws.app.Config.GetAWSInstanceName()},
+				Values: []string{aws.app.Config.GetAWSProjectName()},
 			},
 		},
 	}

@@ -16,3 +16,4 @@ bin
 tmp
 *.db
 /mc_analyser/data
+/mc_server/data
