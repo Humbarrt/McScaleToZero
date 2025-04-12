@@ -37,6 +37,7 @@ type config struct {
 	_mcOfflineImage *[]byte
 	_mcOfflineMOTD  *string
 	_ipCheck        bool
+	_backupsToKeep  int
 }
 
 func (c *config) GetAWSAccessKeyId() string {
@@ -62,6 +63,9 @@ func (c *config) GetMCServerSSHKey() []byte {
 }
 func (ch *config) GetVersion() string {
 	return ch.version
+}
+func (c *config) GetDataPath() string {
+	return c.dataPath
 }
 
 func (ch *config) IsDevMode() bool {
@@ -176,6 +180,23 @@ func (c *config) SetIPCheck(ipCheck bool) error {
 	return nil
 }
 
+func (c *config) GetBackupsToKeep() int {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._backupsToKeep
+}
+func (c *config) SetBackupsToKeep(backupsToKeep int) error {
+	err := queries.UpdateBackupsToKeep(c.db, backupsToKeep)
+	if err != nil {
+		logging.Error("Error updating backups to keep in database:", err)
+		return err
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._backupsToKeep = backupsToKeep
+	return nil
+}
+
 func Load(db *db.DB) *config {
 	logging.Info("Version", "version", version)
 	currentPath, err := os.Executable()
@@ -225,11 +246,13 @@ func Load(db *db.DB) *config {
 		mcServerSSHUser:    mcServerSSHUser,
 		mcServerSSHKeyFile: mcServerSSHKeyFile,
 		mcServerSSHKey:     mcServerSSHKey,
+		dataPath:           dataPath,
 		db:                 db,
 		_mcPort:            dynConfig.MCServerPort,
 		_mcOfflineImage:    dynConfig.OfflineImage,
 		_mcOfflineMOTD:     dynConfig.OfflineMOTD,
 		_ipCheck:           dynConfig.IPCheck,
+		_backupsToKeep:     dynConfig.BackupsToKeep,
 		version:            version,
 	}
 

@@ -18,6 +18,8 @@ type Config interface {
 	GetSplitwiseGroupId() string
 	GetMCServerSSHUser() string
 	GetMCServerSSHKey() []byte
+	GetVersion() string
+	GetDataPath() string
 
 	GetMCPort() int
 	SetMCPort(port int) error
@@ -27,6 +29,8 @@ type Config interface {
 	SetMCOfflineMOTD(motd *string) error
 	GetIPCheck() bool
 	SetIPCheck(ipCheck bool) error
+	GetBackupsToKeep() int
+	SetBackupsToKeep(backupsToKeep int) error
 }
 
 type AuthClaims struct {

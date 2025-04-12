@@ -106,10 +106,9 @@ func (sw *serverWatcher) StartWatchingServer() {
 			sw._isOnline = true
 			sw.mutex.Unlock()
 			logging.Info("Server is set to online")
-			logging.Debug("Server has IP: ", "IP", ipv4)
 
 			go UpdateWhitelistAndAdmins(sw.App)
-			//TODO: make server backup
+			go BackupWorld(sw.App)
 		}
 
 		if isOnline && !wasReady {
@@ -130,10 +129,8 @@ func (sw *serverWatcher) StartWatchingServer() {
 				sw.mutex.Unlock()
 
 				logging.Info("IP recovery successful")
-				logging.Debug("Server has IP: ", "IP", ipv4)
 			}
 
-			logging.Debug("Server has IP: ", "IP", ipv4, "port", sw.App.Config.GetMCPort())
 			canTransfer, err := mc.IsServerTransferReady(ipv4, sw.App.Config.GetMCPort())
 			if err != nil || !canTransfer {
 				logging.Error("Error reading server status: ", "error", err, "canTransfer", canTransfer)

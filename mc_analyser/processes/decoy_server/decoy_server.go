@@ -35,7 +35,7 @@ var defaultResponse string = `
 func handleServerListPing(clientConn *conn.McConn, app *model.App) {
 	logging.Info("Player is pinging the server", "remoteAddr", clientConn.RemoteAddr().String())
 
-	for {
+	for clientConn.IsConnected() {
 		// receive packet
 		packet, err := mcp.ReadPacket(clientConn)
 		if err != nil {
@@ -71,18 +71,18 @@ func handleServerListPing(clientConn *conn.McConn, app *model.App) {
 }
 
 func findPlayerUUID(playerName string, app *model.App) (*model.UUID, error) {
-	// Check if the player is in the database
 	player, err := queries.GetPlayerByAlias(app.Db, playerName)
 	uuid := &player.McUUID
+	if err == nil {
+		logging.Info("Player found in database", "playerName", playerName, "uuid", uuid)
+		return uuid, nil
+	}
 
+	logging.Info("Player not found in database, requesting UUID from Mojang", "playerName", playerName)
+	uuid, err = mojang.GetPlayerUUID(playerName)
 	if err != nil {
-		logging.Info("Player not found in database, requesting UUID from Mojang", "playerName", playerName)
-
-		uuid, err = mojang.GetPlayerUUID(playerName)
-		if err != nil {
-			logging.Error("Error getting player UUID from Mojang:", "error", err)
-			return &model.UUID{}, err
-		}
+		logging.Error("Error getting player UUID from Mojang:", "error", err)
+		return &model.UUID{}, err
 	}
 
 	logging.Info("Found UUID:", "uuid", uuid)
@@ -104,19 +104,19 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 		return
 	}
 
-	// Check if the player is in the database
-	uuid := *loginStart.UUID
+	// Find player UUID in db or request from Mojang
+	uuid := loginStart.UUID
 	if loginStart.UUID == nil {
 		idound, err := findPlayerUUID(loginStart.Username, app)
 		if err != nil {
 			clientConn.CloseWithError(model.ReasonInternalServerError, "Error finding player UUID:", err)
 			return
 		}
-		uuid = *idound
+		uuid = idound
 	}
 
-	logging.Info("Player is trying to log in", "username", loginStart.Username, "uuid", loginStart.UUID)
-	player, err := queries.GetPlayerByUUID(app.Db, uuid)
+	logging.Info("Player is trying to log in", "username", loginStart.Username, "uuid", uuid)
+	player, err := queries.GetPlayerByUUID(app.Db, *uuid)
 	if err != nil {
 		clientConn.CloseWithError(model.ReasonInternalServerError, "Error querying player:", err)
 		return
@@ -141,6 +141,7 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 		return
 	}
 
+	// Wait for EncryptionResponse packet
 	packet, err = mcp.ReadPacket(clientConn)
 	if err != nil {
 		clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading encryptionResponse packet:", err)
@@ -153,13 +154,13 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 		return
 	}
 
-	// Set encryption key
 	err = clientConn.EnableEncryption(encryptionResponse.SharedSecret.Data, encryptionResponse.VerifyToken.Data)
 	if err != nil {
 		clientConn.CloseWithError(model.ReasonInternalServerError, "Error enabling encryption key:", err)
 		return
 	}
 
+	// Verify player session with Mojang
 	playerIPV4 := clientConn.RemoteAddr().String()
 	playerIPV4 = strings.Split(playerIPV4, ":")[0]
 	serverId, err := clientConn.GetServerId()
@@ -181,6 +182,7 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 	}
 	logging.Info("Player session was verified by mojang")
 
+	// Update player information in the database
 	err = queries.AddPlayerAlias(app.Db, player.Id, loginStart.Username)
 	if err != nil {
 		clientConn.CloseWithError(model.ReasonInternalServerError, "Error adding player alias:", err)
@@ -194,7 +196,7 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 	}
 
 	// Send LoginSuccess packet
-	loginSuccess := mc.WriteLoginSuccess(clientConn, uuid, loginStart.Username)
+	loginSuccess := mc.WriteLoginSuccess(clientConn, *uuid, loginStart.Username)
 	if loginSuccess != nil {
 		clientConn.CloseWithError(model.ReasonInternalServerError, "Error writing login success:", err)
 		return

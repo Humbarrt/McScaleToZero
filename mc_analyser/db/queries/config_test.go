@@ -59,4 +59,42 @@ func TestGetConfig(t *testing.T) {
 	err = queries.UpdateOfflineMOTD(DB, &longMotd)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "CHECK constraint failed")
+
+	// Test if update backups to keep works
+	err = queries.UpdateBackupsToKeep(DB, 5)
+	assert.NoError(t, err)
+	config, err = queries.GetConfig(DB)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, 5, config.BackupsToKeep)
+
+	err = queries.UpdateBackupsToKeep(DB, 15)
+	assert.NoError(t, err)
+	config, err = queries.GetConfig(DB)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, 15, config.BackupsToKeep)
+
+	err = queries.UpdateBackupsToKeep(DB, 0)
+	assert.NoError(t, err)
+	config, err = queries.GetConfig(DB)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, 0, config.BackupsToKeep)
+
+	err = queries.UpdateBackupsToKeep(DB, -1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CHECK constraint failed")
+	config, err = queries.GetConfig(DB)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, 0, config.BackupsToKeep)
+
+	err = queries.UpdateBackupsToKeep(DB, 16)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CHECK constraint failed")
+	config, err = queries.GetConfig(DB)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, 0, config.BackupsToKeep)
 }

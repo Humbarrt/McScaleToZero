@@ -10,6 +10,7 @@ import (
 	"mc_analyser/logging"
 	"mc_analyser/model"
 	"slices"
+	"time"
 )
 
 type mcPlayer struct {
@@ -120,7 +121,14 @@ func processMcPlayers(db *db.DB, whitelist []*mcPlayer, admins []*mcPlayer) erro
 func UpdateWhitelistAndAdmins(app *model.App) error {
 	whitelist, admins, err := downloadMcFiles(app)
 	if err != nil {
-		return err
+		logging.Warn("Error downloading player files, trying again.", "error", err)
+
+		time.Sleep(5 * time.Second)
+		whitelist, admins, err = downloadMcFiles(app)
+		if err != nil {
+			logging.Error("Error downloading player files, giving up.", "error", err)
+			return err
+		}
 	}
 
 	logging.Debug("Whitelist and Admins loaded", "whitelist", whitelist, "admins", admins)

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"mc_analyser/logging"
 	"mc_analyser/model"
-	"runtime"
+	"os"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -23,10 +23,6 @@ func NewClient(app *model.App) (*Client, error) {
 	client := &Client{
 		app: app,
 	}
-	runtime.SetFinalizer(client, func(s *Client) {
-		s.Close()
-	})
-
 	err := client.Connect()
 	if err != nil {
 		logging.Warn("Error connecting to SFTP server, trying again:", "error", err)
@@ -97,8 +93,8 @@ func (s *Client) Connect() error {
 	return nil
 }
 
-func (s *Client) ZipFolder(client *ssh.Client, remoteFolder, outputZip string) error {
-	session, err := client.NewSession()
+func (s *Client) ZipFolder(remoteFolder, outputZip string) error {
+	session, err := s.conn.NewSession()
 	if err != nil {
 		return err
 	}
@@ -126,7 +122,7 @@ func (s *Client) DownloadFile(remotePath, localPath string) error {
 	}
 	defer remoteFile.Close()
 
-	localFile, err := s.sftpClient.Create(localPath)
+	localFile, err := os.Create(localPath)
 	if err != nil {
 		logging.Error("Error creating local file", "error", err)
 		return err

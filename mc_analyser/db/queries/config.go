@@ -3,14 +3,14 @@ package queries
 import (
 	"fmt"
 	"mc_analyser/db"
-	"mc_analyser/logging"
 )
 
 type dynamicConfig struct {
-	OfflineImage *[]byte
-	OfflineMOTD  *string
-	MCServerPort int
-	IPCheck      bool
+	OfflineImage  *[]byte
+	OfflineMOTD   *string
+	MCServerPort  int
+	IPCheck       bool
+	BackupsToKeep int
 }
 
 func GetConfig(DB *db.DB) (*dynamicConfig, error) {
@@ -21,7 +21,7 @@ func GetConfig(DB *db.DB) (*dynamicConfig, error) {
 
 	result := stmt.QueryRow()
 	config := &dynamicConfig{}
-	err = result.Scan(&config.OfflineImage, &config.OfflineMOTD, &config.MCServerPort, &config.IPCheck)
+	err = result.Scan(&config.OfflineImage, &config.OfflineMOTD, &config.MCServerPort, &config.IPCheck, &config.BackupsToKeep)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,15 @@ func UpdateIPCheck(DB *db.DB, ipCheck bool) error {
 		return err
 	}
 	config.IPCheck = ipCheck
-	logging.Info("IPCheck", "ipCheck", config.IPCheck)
+	return updateConfig(DB, config)
+}
+
+func UpdateBackupsToKeep(DB *db.DB, backupsToKeep int) error {
+	config, err := GetConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.BackupsToKeep = backupsToKeep
 	return updateConfig(DB, config)
 }
 
@@ -75,7 +83,7 @@ func updateConfig(DB *db.DB, config *dynamicConfig) error {
 		return err
 	}
 
-	_, err = stmt.Exec(config.OfflineImage, config.OfflineMOTD, config.MCServerPort, config.IPCheck)
+	_, err = stmt.Exec(config.OfflineImage, config.OfflineMOTD, config.MCServerPort, config.IPCheck, config.BackupsToKeep)
 	if err != nil {
 		return err
 	}

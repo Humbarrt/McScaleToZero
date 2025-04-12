@@ -64,11 +64,13 @@ func main() {
 }
 
 /*
-TODO: Login Decoy server
 TODO: create iam user with keys
 TODO: read keys from file
 TODO: get cost explorer by usage type
 
+TODO: dynamic decoy response, based on the last version we saw.
+TODO: dynamic image/motd/max-player-count replacement
+TODO: show different text on online/started/offline
 
 TODO: Read cloudWatch logs
 TODO: Parse logs and add to database
