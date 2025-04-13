@@ -19,9 +19,9 @@ func TestPlayerEvent(t *testing.T) {
 	assert.NoError(t, err)
 
 	player_uuid, err := model.NewUUIDFromString("c99efdca-519c-43ea-83fb-ebc7042c8e3f")
-	splitwise_id := "test_splitwise_id"
+	invoice_service_user_id := "test_invoice_service_user_id"
 	assert.NoError(t, err)
-	err = queries.AddPlayer(DB, *player_uuid, true, true, nil, []string{"Test"}, &splitwise_id)
+	err = queries.AddPlayer(DB, *player_uuid, true, true, nil, []string{"Test"}, &invoice_service_user_id)
 	assert.NoError(t, err)
 
 	player, err := queries.GetPlayerByAlias(DB, "Test")
@@ -81,9 +81,9 @@ func TestPlayerEvent(t *testing.T) {
 
 	//Test multiple players online
 	player2_uuid, err := model.NewUUIDFromString("210c22ac-1019-495a-ae72-a9707bfef19d")
-	splitwise_id2 := "test_splitwise_id_2"
+	invoice_service_user_id_2 := "test_invoice_service_user_id_2"
 	assert.NoError(t, err)
-	err = queries.AddPlayer(DB, *player2_uuid, true, false, nil, []string{"Test2"}, &splitwise_id2)
+	err = queries.AddPlayer(DB, *player2_uuid, true, false, nil, []string{"Test2"}, &invoice_service_user_id_2)
 	assert.NoError(t, err)
 	player2, err := queries.GetPlayerByAlias(DB, "Test2")
 	assert.NoError(t, err)
@@ -133,9 +133,9 @@ func TestPlaytimeCalculation(t *testing.T) {
 	assert.NoError(t, err)
 
 	player_uuid, err := model.NewUUIDFromString("c99efdca-519c-43ea-83fb-ebc7042c8e3f")
-	splitwise_id := "test_splitwise_id"
+	invoice_service_user_id := "test_invoice_service_user_id"
 	assert.NoError(t, err)
-	err = queries.AddPlayer(DB, *player_uuid, true, true, nil, []string{"Test"}, &splitwise_id)
+	err = queries.AddPlayer(DB, *player_uuid, true, true, nil, []string{"Test"}, &invoice_service_user_id)
 	assert.NoError(t, err)
 
 	player, err := queries.GetPlayerByAlias(DB, "Test")
@@ -215,9 +215,9 @@ func TestPlaytimeCalculation(t *testing.T) {
 
 	//Test multiple players with interleaved events
 	player_uuid2, err := model.NewUUIDFromString("210c22ac-1019-495a-ae72-a9707bfef19d")
-	splitwise_id2 := "test_splitwise_id_2"
+	invoice_service_user_id2 := "test_invoice_service_user_id_2"
 	assert.NoError(t, err)
-	err = queries.AddPlayer(DB, *player_uuid2, true, true, nil, []string{"Test2"}, &splitwise_id2)
+	err = queries.AddPlayer(DB, *player_uuid2, true, true, nil, []string{"Test2"}, &invoice_service_user_id2)
 	assert.NoError(t, err)
 
 	player2, err := queries.GetPlayerByAlias(DB, "Test2")
@@ -225,9 +225,9 @@ func TestPlaytimeCalculation(t *testing.T) {
 	assert.Equal(t, player2.McUUID.Bytes(), player_uuid2.Bytes())
 
 	player_uuid3, err := model.NewUUIDFromString("6f3b2c4e-5a0d-4f1b-8a7c-9d6e0f2f3b4c")
-	splitwise_id3 := "test_splitwise_id_3"
+	invoice_service_user_id3 := "test_invoice_service_user_id_3"
 	assert.NoError(t, err)
-	err = queries.AddPlayer(DB, *player_uuid3, true, true, nil, []string{"Test3"}, &splitwise_id3)
+	err = queries.AddPlayer(DB, *player_uuid3, true, true, nil, []string{"Test3"}, &invoice_service_user_id3)
 	assert.NoError(t, err)
 
 	player3, err := queries.GetPlayerByAlias(DB, "Test3")

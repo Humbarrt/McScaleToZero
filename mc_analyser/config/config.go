@@ -22,8 +22,6 @@ type config struct {
 	awsAccessKeyId     string
 	awsSecretAccessKey string
 	awsProjectName     string
-	splitwiseApiKey    string
-	splitwiseGroupId   string
 	mcServerSSHUser    string
 	mcServerSSHKeyFile string
 	mcServerSSHKey     []byte
@@ -50,12 +48,6 @@ func (c *config) GetAWSSecretAccessKey() string {
 }
 func (c *config) GetAWSProjectName() string {
 	return c.awsProjectName
-}
-func (c *config) GetSplitwiseApiKey() string {
-	return c.splitwiseApiKey
-}
-func (c *config) GetSplitwiseGroupId() string {
-	return c.splitwiseGroupId
 }
 func (c *config) GetMCServerSSHUser() string {
 	return c.mcServerSSHUser
@@ -293,8 +285,6 @@ func Load(db *db.DB) *config {
 		awsAccessKeyId:     awsAccessKeyId,
 		awsSecretAccessKey: awsSecretAccessKey,
 		awsProjectName:     awsProjectName,
-		splitwiseApiKey:    os.Getenv("SPLITWISE_API_KEY"),
-		splitwiseGroupId:   os.Getenv("SPLITWISE_GROUP_ID"),
 		mcServerSSHUser:    mcServerSSHUser,
 		mcServerSSHKeyFile: mcServerSSHKeyFile,
 		mcServerSSHKey:     mcServerSSHKey,
@@ -309,12 +299,6 @@ func Load(db *db.DB) *config {
 		_mcOfflineMOTD:  dynConfig.OfflineMOTD,
 		_ipCheck:        dynConfig.IPCheck,
 		_backupsToKeep:  dynConfig.BackupsToKeep,
-	}
-
-	for _, env := range []string{config.splitwiseApiKey, config.splitwiseGroupId} {
-		if env == "" {
-			logging.Fatal("Environment variable is not set", "variable", env)
-		}
 	}
 
 	logging.Debug("Config loaded")

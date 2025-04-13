@@ -9,8 +9,8 @@ import (
 	ceTypes "github.com/aws/aws-sdk-go-v2/service/costexplorer/types"
 )
 
-// request splitwise, for all users in the group and all bills.
-// if the bills of db are not in splitwise, create them. --> usefull if the manager failed to create previous invoices.
+// request invoice service, for all users in the group and all bills.
+// if the bills of db are not in invoice service, create them. --> usefull if the manager failed to create previous invoices.
 
 // on start loop check if the aws allocation tag exists and if it is activated. If not, wait for it (sleep 10 minutes), and then activate it and Backfill it for the current + last month.
 // after allocation tag is confirmed, go on.
@@ -25,7 +25,7 @@ import (
 //      if there was no player usage, split the bill equally.
 //      if there was player usage, split the bills variable costs by player usage and fixed costs equally.
 //      save the bill in db.
-//      create a splitwise entry.
+//      create a invoice service invoice.
 
 // the db should look like:
 // bills:
@@ -36,7 +36,7 @@ import (
 // - fixed_cost int
 // - variable_cost int
 // - currency string
-// - splitwise_invoice_id string
+// - invoice_service_invoice_id string
 
 // bill_items:
 // - id
@@ -120,8 +120,8 @@ func (cs *costWatcher) StartWatching() {
 	cs._isWatching = true
 	cs.mutex.Unlock()
 
-	//TODO: init splitwise api
-	//TODO: ensure all bills have splitwise invoices
+	//TODO: init invoice service api
+	//TODO: ensure all bills have invoice service invoices
 
 	cs.setupCostAllocationTag()
 

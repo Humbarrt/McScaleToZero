@@ -16,21 +16,21 @@ func TestPlayer(t *testing.T) {
 	assert.NoError(t, err)
 
 	player_uuid, err := model.NewUUIDFromString("55724e6b-00fd-4e1a-a9e9-224207a57792")
-	splitwise_id := "test_splitwise_id1"
+	invoice_service_user_id := "test_invoice_service_user_id1"
 	assert.NoError(t, err)
-	err = queries.AddPlayer(DB, *player_uuid, true, true, nil, []string{"Test", "TheGoat", "TestDummy"}, &splitwise_id)
+	err = queries.AddPlayer(DB, *player_uuid, true, true, nil, []string{"Test", "TheGoat", "TestDummy"}, &invoice_service_user_id)
 	assert.NoError(t, err)
 
 	player_uuid2, err := model.NewUUIDFromString("3cd521d2-c736-40f2-aecc-74362310eac8")
-	splitwise_id2 := "test_splitwise_id2"
+	invoice_service_user_id2 := "test_invoice_service_user_id2"
 	assert.NoError(t, err)
-	err = queries.AddPlayer(DB, *player_uuid2, true, false, nil, []string{"Test1", "Mustermann"}, &splitwise_id2)
+	err = queries.AddPlayer(DB, *player_uuid2, true, false, nil, []string{"Test1", "Mustermann"}, &invoice_service_user_id2)
 	assert.NoError(t, err)
 
 	player_uuid3, err := model.NewUUIDFromString("a1b34617-d5a8-4f75-a67e-b67bd03bd9e4")
-	splitwise_id3 := "test_splitwise_id3"
+	invoice_service_user_id3 := "test_invoice_service_user_id3"
 	assert.NoError(t, err)
-	err = queries.AddPlayer(DB, *player_uuid3, false, false, nil, []string{"Test2", "Musterfrau"}, &splitwise_id3)
+	err = queries.AddPlayer(DB, *player_uuid3, false, false, nil, []string{"Test2", "Musterfrau"}, &invoice_service_user_id3)
 	assert.NoError(t, err)
 
 	players, err := queries.GetPlayers(DB)
@@ -99,13 +99,13 @@ func TestPlayer(t *testing.T) {
 	assert.Equal(t, true, player.IsAllowed)
 	assert.Equal(t, player_uuid3.Bytes(), player.McUUID.Bytes())
 
-	//Can set splitwise id
-	new_splitwise_id := "different_splitwise_id"
-	err = queries.UpdatePlayerSplitwiseId(DB, 2, &new_splitwise_id)
+	//Can set invoice_service_user_id
+	new_invoice_service_user_id := "different_invoice_service_user_id"
+	err = queries.UpdatePlayerInvoiceServiceUserId(DB, 2, &new_invoice_service_user_id)
 	assert.NoError(t, err)
 	player, err = queries.GetPlayerById(DB, 2)
 	assert.NoError(t, err)
-	assert.Equal(t, &new_splitwise_id, player.SplitwiseId)
+	assert.Equal(t, &new_invoice_service_user_id, player.InvoiceServiceUserId)
 	assert.Equal(t, player_uuid2.Bytes(), player.McUUID.Bytes())
 
 	//Can set isAdmin
@@ -152,7 +152,7 @@ func TestPlayer(t *testing.T) {
 	assert.Equal(t, player_uuid.Bytes(), player.McUUID.Bytes())
 
 	//Can not set same UUID
-	err = queries.AddPlayer(DB, *player_uuid, true, true, nil, []string{"Test", "TheGoat", "TestDummy"}, &splitwise_id)
+	err = queries.AddPlayer(DB, *player_uuid, true, true, nil, []string{"Test", "TheGoat", "TestDummy"}, &invoice_service_user_id)
 	assert.Error(t, err)
 
 	//Bulk update isAllowed for all players that match the ids

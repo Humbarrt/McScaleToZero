@@ -4,7 +4,7 @@ SELECT "id",
     "is_admin",
     "last_ipv4",
     "aliases",
-    "splitwise_id"
+    "invoice_service_user_id"
 FROM "players"
 WHERE EXISTS (
         SELECT 1

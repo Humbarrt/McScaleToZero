@@ -6,5 +6,5 @@ CREATE TABLE IF NOT EXISTS "players" (
     "is_admin" BOOLEAN NOT NULL DEFAULT FALSE,
     "last_ipv4" TEXT CHECK (length("last_ipv4") <= 15),
     "aliases" TEXT NOT NULL DEFAULT '[]' CHECK (json_valid("aliases")),
-    "splitwise_id" TEXT
+    "invoice_service_user_id" TEXT
 );

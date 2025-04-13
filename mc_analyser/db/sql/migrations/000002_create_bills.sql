@@ -7,5 +7,5 @@ CREATE TABLE IF NOT EXISTS "bills" (
     "fixed_cost" INTEGER NOT NULL,
     "variable_cost" INTEGER NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'USD' CHECK (length("currency") <= 128),
-    "splitwise_invoice_id" TEXT NOT NULL DEFAULT '' CHECK (length("splitwise_bill_id") <= 1024)
+    "invoice_service_invoice_id" TEXT NOT NULL DEFAULT '' CHECK (length("invoice_service_invoice_id") <= 1024)
 );

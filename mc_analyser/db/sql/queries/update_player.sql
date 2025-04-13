@@ -4,5 +4,5 @@ SET "mc_uuid" = ?,
     "is_admin" = ?,
     "last_ipv4" = ?,
     "aliases" = ?,
-    "splitwise_id" = ?
+    "invoice_service_user_id" = ?
 WHERE "id" = ?;

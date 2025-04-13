@@ -15,8 +15,8 @@ func parsePlayer(row scannable) (*model.Player, error) {
 	var isAdmin bool
 	var lastIPV4 *string
 	var aliasesString string
-	var splitwiseId *string
-	err := row.Scan(&id, &mcUUIDRaw, &isAllowed, &isAdmin, &lastIPV4, &aliasesString, &splitwiseId)
+	var invoiceServiceUserId *string
+	err := row.Scan(&id, &mcUUIDRaw, &isAllowed, &isAdmin, &lastIPV4, &aliasesString, &invoiceServiceUserId)
 	if err != nil {
 		return nil, err
 	}
@@ -40,13 +40,13 @@ func parsePlayer(row scannable) (*model.Player, error) {
 	}
 
 	return &model.Player{
-		Id:          id,
-		McUUID:      *mcUUID,
-		IsAllowed:   isAllowed,
-		IsAdmin:     isAdmin,
-		LastIPV4:    lastIPV4,
-		Aliases:     aliases,
-		SplitwiseId: splitwiseId,
+		Id:                   id,
+		McUUID:               *mcUUID,
+		IsAllowed:            isAllowed,
+		IsAdmin:              isAdmin,
+		LastIPV4:             lastIPV4,
+		Aliases:              aliases,
+		InvoiceServiceUserId: invoiceServiceUserId,
 	}, nil
 }
 
@@ -118,7 +118,7 @@ func GetPlayerByAlias(DB *db.DB, alias string) (*model.Player, error) {
 	return parsePlayer(result)
 }
 
-func AddPlayer(DB *db.DB, mcUUID model.UUID, isAllowed bool, isAdmin bool, lastIPV4 *string, aliases []string, splitwiseId *string) error {
+func AddPlayer(DB *db.DB, mcUUID model.UUID, isAllowed bool, isAdmin bool, lastIPV4 *string, aliases []string, invoiceServiceUserId *string) error {
 	stmt, err := DB.GetQuery("add_player")
 	if err != nil {
 		return err
@@ -129,7 +129,7 @@ func AddPlayer(DB *db.DB, mcUUID model.UUID, isAllowed bool, isAdmin bool, lastI
 		return err
 	}
 
-	_, err = stmt.Exec(mcUUID.Bytes(), isAllowed, isAdmin, lastIPV4, string(aliasesString), splitwiseId)
+	_, err = stmt.Exec(mcUUID.Bytes(), isAllowed, isAdmin, lastIPV4, string(aliasesString), invoiceServiceUserId)
 	if err != nil {
 		return err
 	}
@@ -219,13 +219,13 @@ func UpdatePlayersIsAdmin(DB *db.DB, playerIds []int, matchIds bool, isAdmin boo
 	return nil
 }
 
-func UpdatePlayerSplitwiseId(DB *db.DB, playerId int, splitwiseId *string) error {
+func UpdatePlayerInvoiceServiceUserId(DB *db.DB, playerId int, InvoiceServiceUserId *string) error {
 	player, err := GetPlayerById(DB, playerId)
 	if err != nil {
 		return err
 	}
 
-	player.SplitwiseId = splitwiseId
+	player.InvoiceServiceUserId = InvoiceServiceUserId
 	return updatePlayer(DB, player)
 }
 
@@ -270,7 +270,7 @@ func updatePlayer(DB *db.DB, player *model.Player) error {
 		return err
 	}
 
-	_, err = stmt.Exec(player.McUUID.Bytes(), player.IsAllowed, player.IsAdmin, player.LastIPV4, string(aliasesString), player.SplitwiseId, player.Id)
+	_, err = stmt.Exec(player.McUUID.Bytes(), player.IsAllowed, player.IsAdmin, player.LastIPV4, string(aliasesString), player.InvoiceServiceUserId, player.Id)
 	if err != nil {
 		return err
 	}

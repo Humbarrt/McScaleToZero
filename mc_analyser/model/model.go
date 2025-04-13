@@ -14,8 +14,6 @@ type Config interface {
 	GetAWSAccessKeyId() string
 	GetAWSSecretAccessKey() string
 	GetAWSProjectName() string
-	GetSplitwiseApiKey() string
-	GetSplitwiseGroupId() string
 	GetMCServerSSHUser() string
 	GetMCServerSSHKey() []byte
 	GetDashboardPort() int
@@ -41,13 +39,13 @@ type AuthClaims struct {
 }
 
 type Player struct {
-	Id          int      `json:"id"`
-	McUUID      UUID     `json:"mc_uuid"`
-	IsAllowed   bool     `json:"is_active"`
-	IsAdmin     bool     `json:"is_admin"`
-	LastIPV4    *string  `json:"last_ip"`
-	Aliases     []string `json:"aliases"`
-	SplitwiseId *string  `json:"splitwise_id"`
+	Id                   int      `json:"id"`
+	McUUID               UUID     `json:"mc_uuid"`
+	IsAllowed            bool     `json:"is_active"`
+	IsAdmin              bool     `json:"is_admin"`
+	LastIPV4             *string  `json:"last_ip"`
+	Aliases              []string `json:"aliases"`
+	InvoiceServiceUserId *string  `json:"invoice_service_user_id"`
 }
 
 type PlayerEvent struct {
