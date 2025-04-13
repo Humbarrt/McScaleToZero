@@ -18,11 +18,13 @@ type Config interface {
 	GetSplitwiseGroupId() string
 	GetMCServerSSHUser() string
 	GetMCServerSSHKey() []byte
+	GetDashboardPort() int
+	GetTransferServerPort() int
 	GetVersion() string
 	GetDataPath() string
 
-	GetMCPort() int
-	SetMCPort(port int) error
+	GetMCServerPort() int
+	SetMCServerPort(port int) error
 	GetMCOfflineImage() *[]byte
 	SetMCOfflineImage(image *[]byte) error
 	GetMCOfflineMOTD() *string
@@ -73,6 +75,7 @@ type App struct {
 	Config     Config
 	WebTimeout time.Duration
 	SW         ServerWatcher
+	CW         CostWatcher
 	AWS        AWSAPI
 	JWTSecret  []byte
 

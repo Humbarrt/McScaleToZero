@@ -9,7 +9,7 @@ type DisconnectReason string
 
 const (
 	ReasonInternalServerError DisconnectReason = "Internal Server Error"
-	ReasonNotAllowed          DisconnectReason = "Not Allowed"
+	ReasonNotAllowed          DisconnectReason = "Player Not Allowed"
 )
 
 type McConn interface {

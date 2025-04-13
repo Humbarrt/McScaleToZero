@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"fmt"
 	"io/fs"
 	"mc_analyser/logging"
 	"mc_analyser/model"
@@ -30,6 +31,6 @@ func InitRoutes(app *model.App) error {
 	//Routes
 	index.Routes(app.Router, app)
 	auth.Routes(app.Router, app)
-	app.Router.Run()
+	app.Router.Run(fmt.Sprintf(":%d", app.Config.GetDashboardPort()))
 	return nil
 }

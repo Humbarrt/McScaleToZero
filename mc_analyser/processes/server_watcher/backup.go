@@ -35,7 +35,12 @@ func BackupWorld(app *model.App) error {
 			logging.Info("Deleted backup:", "backup", backup.Format("2006-01-02"))
 		}
 	}
+
 	backupFile := path.Join(backupPath, time.Now().Format("2006-01-02")+".zip")
+	if _, err := os.Stat(backupFile); err == nil {
+		logging.Info("Backup already exists, skipping backup.")
+		return nil
+	}
 
 	err = downloadMcWorld(app, backupFile)
 	if err != nil {

@@ -1,6 +1,7 @@
 package decoy_server
 
 import (
+	"database/sql"
 	"fmt"
 	mc "mc_analyser/api/mc_networking"
 	"mc_analyser/api/mc_networking/conn"
@@ -54,7 +55,7 @@ func handleServerListPing(clientConn *conn.McConn, app *model.App) {
 					return
 				}
 
-				status, err := mc.ReadServerStatus(ipv4, app.Config.GetMCPort())
+				status, err := mc.ReadServerStatus(ipv4, app.Config.GetMCServerPort())
 				if err != nil {
 					logging.Error("Error reading server status:", "error", err)
 				} else {
@@ -117,7 +118,10 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 
 	logging.Info("Player is trying to log in", "username", loginStart.Username, "uuid", uuid)
 	player, err := queries.GetPlayerByUUID(app.Db, *uuid)
-	if err != nil {
+	if err == sql.ErrNoRows {
+		clientConn.CloseWithError(model.ReasonNotAllowed, "Error player not found in db:", err)
+		return
+	} else if err != nil {
 		clientConn.CloseWithError(model.ReasonInternalServerError, "Error querying player:", err)
 		return
 	}
@@ -240,12 +244,12 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 		return
 	}
 
-	err = mc.WriteTransfer(clientConn, ipv4, app.Config.GetMCPort())
+	err = mc.WriteTransfer(clientConn, ipv4, app.Config.GetMCServerPort())
 	if err != nil {
 		clientConn.CloseWithError(model.ReasonInternalServerError, "Error writing transfer:", err)
 		return
 	}
-	logging.Info("Sent Transfer packet", "host", ipv4, "port", app.Config.GetMCPort())
+	logging.Info("Sent Transfer packet", "host", ipv4, "port", app.Config.GetMCServerPort())
 }
 
 func handleLegacyPing(clientConn net.Conn, app *model.App) {
@@ -286,13 +290,13 @@ func handleConnection(clientConn *conn.McConn, app *model.App) {
 }
 
 func Start(app *model.App) {
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", app.Config.GetMCPort()))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", app.Config.GetTransferServerPort()))
 	if err != nil {
 		logging.Fatal("Failed to start TCP Proxy:", "error", err)
 	}
 	defer listener.Close()
 
-	logging.Info("TCP Proxy listening on port " + fmt.Sprintf("%d", app.Config.GetMCPort()) + "...")
+	logging.Info("TCP Proxy listening on port " + fmt.Sprintf("%d", app.Config.GetTransferServerPort()) + "...")
 
 	for {
 		logging.Debug("Waiting for incoming connections...")

@@ -9,6 +9,7 @@ import (
 	"mc_analyser/logging"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -26,13 +27,15 @@ type config struct {
 	mcServerSSHUser    string
 	mcServerSSHKeyFile string
 	mcServerSSHKey     []byte
+	dashboardPort      int
+	transferServerPort int
 	dataPath           string
 	version            string
 	db                 *db.DB
 
 	//protected
 	mutex           sync.Mutex
-	_mcPort         int
+	_mcServerPort   int
 	_mcOfflineImage *[]byte
 	_mcOfflineMOTD  *string
 	_ipCheck        bool
@@ -60,23 +63,28 @@ func (c *config) GetMCServerSSHUser() string {
 func (c *config) GetMCServerSSHKey() []byte {
 	return c.mcServerSSHKey
 }
-func (ch *config) GetVersion() string {
-	return ch.version
+func (c *config) GetDashboardPort() int {
+	return c.dashboardPort
+}
+func (c *config) GetTransferServerPort() int {
+	return c.transferServerPort
 }
 func (c *config) GetDataPath() string {
 	return c.dataPath
 }
-
+func (ch *config) GetVersion() string {
+	return ch.version
+}
 func (ch *config) IsDevMode() bool {
 	return ch.GetVersion() == "development"
 }
 
-func (c *config) GetMCPort() int {
+func (c *config) GetMCServerPort() int {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	return c._mcPort
+	return c._mcServerPort
 }
-func (c *config) SetMCPort(port int) error {
+func (c *config) SetMCServerPort(port int) error {
 	err := queries.UpdateMCServerPort(c.db, port)
 	if err != nil {
 		logging.Error("Error updating MC server port in database:", err)
@@ -85,7 +93,7 @@ func (c *config) SetMCPort(port int) error {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	c._mcPort = port
+	c._mcServerPort = port
 	return nil
 }
 
@@ -230,10 +238,10 @@ func Load(db *db.DB) *config {
 	mcServerSSHKey, err := os.ReadFile(path.Join(dataPath, mcServerSSHKeyFile))
 	if err != nil {
 		logging.Fatal("unable to read private key:", "error", err)
-	}
-	if len(mcServerSSHKey) == 0 {
+	} else if len(mcServerSSHKey) == 0 {
 		logging.Fatal("private key is empty")
 	}
+
 	awsAccessKeyId := getenv("AWS_ACCESS_KEY_ID", "")
 	awsSecretAccessKey := getenv("AWS_SECRET_ACCESS_KEY", "")
 	awsAccessKeyIdFile := getenv("AWS_ACCESS_KEY_ID_FILE", "mc-access-key-id.txt")
@@ -247,8 +255,7 @@ func Load(db *db.DB) *config {
 		awsAccessKeyIdBytes, err := os.ReadFile(path.Join(dataPath, awsAccessKeyIdFile))
 		if err != nil {
 			logging.Fatal("unable to read AWS access key ID file:", "error", err)
-		}
-		if len(awsAccessKeyIdBytes) == 0 {
+		} else if len(awsAccessKeyIdBytes) == 0 {
 			logging.Fatal("AWS access key ID file is empty")
 		}
 		awsAccessKeyId = string(awsAccessKeyIdBytes)
@@ -256,8 +263,7 @@ func Load(db *db.DB) *config {
 		awsSecretAccessKeyBytes, err := os.ReadFile(path.Join(dataPath, awsSecretAccessKeyFile))
 		if err != nil {
 			logging.Fatal("unable to read AWS secret access key file:", "error", err)
-		}
-		if len(awsSecretAccessKeyBytes) == 0 {
+		} else if len(awsSecretAccessKeyBytes) == 0 {
 			logging.Fatal("AWS secret access key file is empty")
 		}
 
@@ -267,6 +273,21 @@ func Load(db *db.DB) *config {
 	}
 
 	awsProjectName := getenv("AWS_PROJECT_NAME", "minecraft")
+	dashboardPortString := getenv("DASHBOARD_PORT", "8080")
+	dashboardPort, err := strconv.Atoi(dashboardPortString)
+	if err != nil {
+		logging.Fatal("Error parsing dashboard port:", "error", err)
+	} else if dashboardPort <= 0 || dashboardPort > 65535 {
+		logging.Fatal("Invalid dashboard port:", "port", dashboardPort)
+	}
+
+	transferServerPortString := getenv("TRANSFER_SERVER_PORT", "25565")
+	transferServerPort, err := strconv.Atoi(transferServerPortString)
+	if err != nil {
+		logging.Fatal("Error parsing transfer server port:", "error", err)
+	} else if transferServerPort <= 0 || transferServerPort > 65535 {
+		logging.Fatal("Invalid transfer server port:", "port", transferServerPort)
+	}
 
 	config := &config{
 		awsAccessKeyId:     awsAccessKeyId,
@@ -277,17 +298,20 @@ func Load(db *db.DB) *config {
 		mcServerSSHUser:    mcServerSSHUser,
 		mcServerSSHKeyFile: mcServerSSHKeyFile,
 		mcServerSSHKey:     mcServerSSHKey,
+		dashboardPort:      dashboardPort,
+		transferServerPort: transferServerPort,
 		dataPath:           dataPath,
-		db:                 db,
-		_mcPort:            dynConfig.MCServerPort,
-		_mcOfflineImage:    dynConfig.OfflineImage,
-		_mcOfflineMOTD:     dynConfig.OfflineMOTD,
-		_ipCheck:           dynConfig.IPCheck,
-		_backupsToKeep:     dynConfig.BackupsToKeep,
 		version:            version,
+		db:                 db,
+
+		_mcServerPort:   dynConfig.MCServerPort,
+		_mcOfflineImage: dynConfig.OfflineImage,
+		_mcOfflineMOTD:  dynConfig.OfflineMOTD,
+		_ipCheck:        dynConfig.IPCheck,
+		_backupsToKeep:  dynConfig.BackupsToKeep,
 	}
 
-	for _, env := range []string{config.awsAccessKeyId, config.awsSecretAccessKey, config.awsProjectName, config.splitwiseApiKey, config.splitwiseGroupId, config.mcServerSSHUser, config.mcServerSSHKeyFile} {
+	for _, env := range []string{config.splitwiseApiKey, config.splitwiseGroupId} {
 		if env == "" {
 			logging.Fatal("Environment variable is not set", "variable", env)
 		}

@@ -19,6 +19,7 @@ type serverWatcher struct {
 	mutex       sync.Mutex
 	_try        int
 	_isWatching bool
+	_lastSeen   time.Time
 	_isOnline   bool
 	_isReady    bool
 	_ipv4       *string
@@ -52,18 +53,21 @@ func (sw *serverWatcher) IPv4() (string, error) {
 	return *sw._ipv4, nil
 }
 
+func (sw *serverWatcher) LastSeen() time.Time {
+	sw.mutex.Lock()
+	defer sw.mutex.Unlock()
+	return sw._lastSeen
+}
+
 func (sw *serverWatcher) StartWatchingServer() {
 	logging.Info("Trying to start ServerWatcher")
 	sw.mutex.Lock()
-	isWatching := sw._isWatching
 	sw._try = 0
-	sw.mutex.Unlock()
-	if isWatching {
+	if sw._isWatching {
+		sw.mutex.Unlock()
 		logging.Error("ServerWatcher is already running")
 		return
 	}
-
-	sw.mutex.Lock()
 	sw._isWatching = true
 	sw.mutex.Unlock()
 
@@ -131,7 +135,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 				logging.Info("IP recovery successful")
 			}
 
-			canTransfer, err := mc.IsServerTransferReady(ipv4, sw.App.Config.GetMCPort())
+			canTransfer, err := mc.IsServerTransferReady(ipv4, sw.App.Config.GetMCServerPort())
 			if err != nil || !canTransfer {
 				logging.Error("Error reading server status: ", "error", err, "canTransfer", canTransfer)
 				goto waitAndContinue
@@ -141,6 +145,12 @@ func (sw *serverWatcher) StartWatchingServer() {
 			sw._isReady = true
 			sw.mutex.Unlock()
 			logging.Info("Server is ready")
+		}
+
+		if isOnline {
+			sw.mutex.Lock()
+			sw._lastSeen = time.Now()
+			sw.mutex.Unlock()
 		}
 
 		if wasOnline && !isOnline {

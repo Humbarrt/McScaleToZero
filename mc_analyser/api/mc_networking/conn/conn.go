@@ -7,6 +7,7 @@ import (
 	"mc_analyser/logging"
 	"mc_analyser/model"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -77,8 +78,7 @@ func (c *McConn) GetEncryption() (model.McCert, error) {
 
 func (c *McConn) CloseWithError(reason model.DisconnectReason, comment string, err error) {
 	logging.Error(comment, "error", err)
-	if !c.isConnected {
-		logging.Error("Connection is not established, cannot close")
+	if !c.isConnected || c.conn == nil || strings.Contains(err.Error(), "use of closed network connection") {
 		return
 	}
 

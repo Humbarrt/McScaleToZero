@@ -1,9 +1,11 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS "bills" (
     "id" INTEGER PRIMARY KEY,
-    "timestamp" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "usd" REAL NOT NULL CHECK(typeof("usd") = "real"),
-    "eur" REAL NOT NULL CHECK(typeof("eur") = "real"),
-    "old_balance" REAL NOT NULL CHECK(typeof("old_balance") = "real"),
-    "new_balance" REAL NOT NULL CHECK(typeof("new_balance") = "real")
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "billing_month" INTEGER NOT NULL,
+    "total_cost" INTEGER NOT NULL,
+    "fixed_cost" INTEGER NOT NULL,
+    "variable_cost" INTEGER NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'USD' CHECK (length("currency") <= 128),
+    "splitwise_invoice_id" TEXT NOT NULL DEFAULT '' CHECK (length("splitwise_bill_id") <= 1024)
 );

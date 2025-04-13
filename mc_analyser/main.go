@@ -10,6 +10,7 @@ import (
 	"time"
 
 	_config "mc_analyser/config"
+	cw "mc_analyser/processes/cost_watcher"
 	"mc_analyser/processes/decoy_server"
 	sw "mc_analyser/processes/server_watcher"
 
@@ -43,6 +44,7 @@ func main() {
 		WebTimeout: 10 * time.Second,
 		JWTSecret:  secret,
 		SW:         nil,
+		CW:         nil,
 	}
 
 	app.AWS, err = aws.NewAWSAPI(&app)
@@ -51,9 +53,11 @@ func main() {
 	}
 
 	app.SW = sw.NewServerWatcher(&app)
-	logging.Info("checking if online", "isOnline", app.SW.IsServerOnline())
-
 	go app.SW.StartWatchingServer()
+
+	app.CW = cw.NewCostWatcher(&app)
+	go app.CW.StartWatching()
+
 	go decoy_server.Start(&app)
 
 	err = routes.InitRoutes(&app)
@@ -64,8 +68,6 @@ func main() {
 }
 
 /*
-TODO: create iam user with keys
-TODO: read keys from file
 TODO: get cost explorer by usage type
 
 TODO: dynamic decoy response, based on the last version we saw.

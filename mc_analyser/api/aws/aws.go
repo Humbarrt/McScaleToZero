@@ -7,16 +7,19 @@ import (
 	"sync"
 	"time"
 
+	ceTypes "github.com/aws/aws-sdk-go-v2/service/costexplorer/types"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/costexplorer"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"golang.org/x/net/context"
 )
 
 type awsAPI struct {
-	app    *model.App
-	client *ec2.Client
+	app *model.App
+	ec2 *ec2.Client
+	ce  *costexplorer.Client
 
 	// protected
 	mutex       sync.Mutex
@@ -37,10 +40,12 @@ func NewAWSAPI(app *model.App) (*awsAPI, error) {
 		return nil, err
 	}
 
-	client := ec2.NewFromConfig(cfg)
+	ce := costexplorer.NewFromConfig(cfg)
+	ec2 := ec2.NewFromConfig(cfg)
 	aws := &awsAPI{
-		app:    app,
-		client: client,
+		app: app,
+		ec2: ec2,
+		ce:  ce,
 	}
 
 	_, err = aws.getInstanceStatus()
@@ -53,11 +58,11 @@ func NewAWSAPI(app *model.App) (*awsAPI, error) {
 }
 
 func (aws *awsAPI) getInstanceStatus() (InstanceStatus, error) {
-	filter1Name := "tag:Project"
+	filterName := "tag:Project"
 	input := &ec2.DescribeInstancesInput{
 		Filters: []ec2Types.Filter{
 			{
-				Name:   &filter1Name,
+				Name:   &filterName,
 				Values: []string{aws.app.Config.GetAWSProjectName()},
 			},
 		},
@@ -70,7 +75,7 @@ func (aws *awsAPI) getInstanceStatus() (InstanceStatus, error) {
 		state:      "",
 	}
 
-	resp, err := aws.client.DescribeInstances(context.Background(), input)
+	resp, err := aws.ec2.DescribeInstances(context.Background(), input)
 	if err != nil {
 		logging.Error("Faild to describe the instance", "error", err)
 		return instanceStatus, err
@@ -206,12 +211,91 @@ InstanceCheck:
 		InstanceIds: []string{instanceId},
 	}
 
-	_, err = aws.client.StartInstances(context.Background(), input)
+	_, err = aws.ec2.StartInstances(context.Background(), input)
 	if err != nil {
 		logging.Error("Failed to start instance", "error", err)
 		return err
 	}
 
 	logging.Info("Instance started successfully")
+	return nil
+}
+
+func (aws *awsAPI) GetCostAllocationTag(tagKey string) (*ceTypes.CostAllocationTag, error) {
+	input := &costexplorer.ListCostAllocationTagsInput{
+		TagKeys: []string{tagKey},
+	}
+
+	resp, err := aws.ce.ListCostAllocationTags(context.Background(), input)
+	if err != nil {
+		logging.Error("Failed to list cost allocation tags", "error", err)
+		return nil, err
+	}
+
+	for _, tag := range resp.CostAllocationTags {
+		if tag.TagKey == &tagKey {
+			return &tag, nil
+		}
+	}
+	return nil, fmt.Errorf("tag not found")
+}
+
+func (aws *awsAPI) ActivateCostAllocationTag(tagKey string) error {
+	input := &costexplorer.UpdateCostAllocationTagsStatusInput{
+		CostAllocationTagsStatus: []ceTypes.CostAllocationTagStatusEntry{
+			{
+				TagKey: &tagKey,
+				Status: ceTypes.CostAllocationTagStatusActive,
+			},
+		},
+	}
+
+	resp, err := aws.ce.UpdateCostAllocationTagsStatus(context.Background(), input)
+	if err != nil {
+		logging.Error("Failed to create cost allocation tag", "tag", tagKey, "error", err)
+		return err
+	}
+
+	if len(resp.Errors) > 0 {
+		logging.Error("Failed to create cost allocation tag")
+		for _, err := range resp.Errors {
+			logging.Error("Error creating cost allocation tag", "tag", err.TagKey, "error", err.Message, "code", err.Code)
+		}
+		return fmt.Errorf("failed to create cost allocation tag: %s", tagKey)
+	}
+
+	logging.Info("Cost allocation tag created successfully")
+	return nil
+}
+
+func (aws *awsAPI) BackfillCostAllocationTag(tagKey string, backfillFrom time.Time) error {
+	backfillFrom = time.Date(backfillFrom.Year(), backfillFrom.Month(), 1, 0, 0, 0, 0, time.UTC)
+	if backfillFrom.After(time.Now()) {
+		return fmt.Errorf("backfillFrom date cannot be in the future")
+	}
+
+	backfillString := backfillFrom.Format("2006-01-02T15:04:05Z")
+	logging.Info("Starting cost allocation tag backfill",
+		"tag", tagKey,
+		"backfillFrom", backfillString,
+	)
+
+	input := &costexplorer.StartCostAllocationTagBackfillInput{
+		BackfillFrom: &backfillString,
+	}
+
+	resp, err := aws.ce.StartCostAllocationTagBackfill(context.Background(), input)
+	if err != nil {
+		logging.Error("Failed to backfill cost allocation tag", "tag", tagKey, "error", err)
+		return err
+	}
+	logging.Info("Cost allocation tag backfill started successfully",
+		"tag", tagKey,
+		"status", resp.BackfillRequest.BackfillStatus,
+		"backfillFrom", backfillFrom,
+		"lastUpdate", resp.BackfillRequest.LastUpdatedAt,
+		"completedAt", resp.BackfillRequest.CompletedAt,
+		"requestedAt", resp.BackfillRequest.RequestedAt,
+	)
 	return nil
 }
