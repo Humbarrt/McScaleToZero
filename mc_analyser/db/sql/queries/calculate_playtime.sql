@@ -2,7 +2,7 @@ WITH last_event_before AS (
     SELECT player_id,
         MAX(timestamp) AS last_time
     FROM player_events
-    WHERE timestamp < ?
+    WHERE timestamp < :start_time
     GROUP BY player_id
 ),
 state_before AS (
@@ -21,11 +21,11 @@ events_in_range AS (
             ORDER BY timestamp
         ) AS next_timestamp
     FROM player_events
-    WHERE timestamp BETWEEN ? AND ?
+    WHERE timestamp BETWEEN :start_time AND :end_time
 ),
 synthetic_start_events AS (
     SELECT sb.player_id,
-        ? AS timestamp,
+        :start_time AS timestamp,
         -- start_date
         1 AS is_online,
         MIN(e.timestamp) AS next_timestamp
@@ -44,8 +44,8 @@ combined_events AS (
 ),
 sessions AS (
     SELECT player_id,
-        MAX(timestamp, ?) AS session_start,
-        MIN(COALESCE(next_timestamp, ?), ?) AS session_end
+        MAX(timestamp, :start_time) AS session_start,
+        MIN(COALESCE(next_timestamp, :end_time), :end_time) AS session_end
     FROM combined_events
     WHERE is_online = 1
 ),

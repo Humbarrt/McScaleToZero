@@ -18,8 +18,8 @@ type mcPlayer struct {
 	Name string     `json:"name"`
 }
 
-func updatePlayersInDB(db *db.DB, players []*mcPlayer) (*[]int, error) {
-	playerIds := []int{}
+func updatePlayersInDB(db *db.DB, players []*mcPlayer) (*[]int64, error) {
+	playerIds := []int64{}
 	for _, mcPlayer := range players {
 		dbPlayer, err := queries.GetPlayerByUUID(db, mcPlayer.UUID)
 		if err != nil && err != sql.ErrNoRows {

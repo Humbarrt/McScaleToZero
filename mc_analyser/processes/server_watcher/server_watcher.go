@@ -3,6 +3,7 @@ package server_watcher
 import (
 	"fmt"
 	mc "mc_analyser/api/mc_networking"
+	"mc_analyser/db/queries"
 	"mc_analyser/logging"
 	"mc_analyser/model"
 	"sync"
@@ -98,6 +99,8 @@ func (sw *serverWatcher) StartWatchingServer() {
 
 		if !wasOnline && isOnline {
 			logging.Info("Server started")
+			timestamp := time.Now().UTC()
+
 			ipv4, err := sw.App.AWS.GetInstanceIP()
 			if err != nil {
 				logging.Error("Error getting server IP: ", "error", err)
@@ -109,10 +112,15 @@ func (sw *serverWatcher) StartWatchingServer() {
 			sw._ipv4 = &ipv4
 			sw._isOnline = true
 			sw.mutex.Unlock()
-			logging.Info("Server is set to online")
 
 			go UpdateWhitelistAndAdmins(sw.App)
 			go BackupWorld(sw.App)
+
+			err = queries.AddServerEvent(sw.App.Db, timestamp, true)
+			if err != nil {
+				logging.Error("Error adding server event: ", "error", err)
+			}
+			logging.Info("Server is set to online")
 		}
 
 		if isOnline && !wasReady {
@@ -149,18 +157,24 @@ func (sw *serverWatcher) StartWatchingServer() {
 
 		if isOnline {
 			sw.mutex.Lock()
-			sw._lastSeen = time.Now()
+			sw._lastSeen = time.Now().UTC()
 			sw.mutex.Unlock()
 		}
 
 		if wasOnline && !isOnline {
 			logging.Info("Server is stopping")
+			timestamp := time.Now().UTC()
 
 			sw.mutex.Lock()
 			sw._isOnline = false
 			sw._isReady = false
 			sw._ipv4 = nil
 			sw.mutex.Unlock()
+
+			err = queries.AddServerEvent(sw.App.Db, timestamp, false)
+			if err != nil {
+				logging.Error("Error adding server event: ", "error", err)
+			}
 		}
 
 		if !isOnline && isStateStable {

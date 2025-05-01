@@ -7,3 +7,5 @@ CREATE TABLE IF NOT EXISTS "player_events" (
     FOREIGN KEY("player_id") REFERENCES "players"("id")
 );
 CREATE INDEX IF NOT EXISTS "idx_player_events_player_id_timestamp" ON "player_events"("player_id", "timestamp");
+CREATE INDEX IF NOT EXISTS "idx_player_events_timestamp" ON "player_events"("timestamp");
+CREATE INDEX IF NOT EXISTS "idx_player_events_player_id" ON "player_events"("player_id");

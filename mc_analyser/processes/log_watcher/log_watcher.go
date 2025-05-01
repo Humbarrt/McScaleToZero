@@ -23,7 +23,7 @@ func LogWatcher(App *model.App) {
 			// TODO: load 100 lines with prometheus
 			// TODO: if last lines not in prometheus, load files
 		} else if hasStopped {
-			events, err := queries.GetLastPlayerEvents(App.Db)
+			events, err := queries.GetLastestPlayersEvents(App.Db)
 			if err != nil {
 				logging.Error("Error getting last player events", "error", err)
 				continue
@@ -34,7 +34,7 @@ func LogWatcher(App *model.App) {
 					continue
 				}
 
-				err = queries.AddPlayerEvent(App.Db, time.Now(), event.PlayerId, false)
+				err = queries.AddPlayerEvent(App.Db, time.Now().UTC(), event.PlayerId, false)
 				if err != nil {
 					logging.Error("Error adding player event", "error", err)
 					continue

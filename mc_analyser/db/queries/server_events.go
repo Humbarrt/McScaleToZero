@@ -8,7 +8,7 @@ import (
 )
 
 func parseServerEvent(row scannable) (*model.ServerEvent, error) {
-	var id int
+	var id int64
 	var timestamp time.Time
 	var isOnline bool
 	err := row.Scan(&id, &timestamp, &isOnline)
@@ -24,7 +24,7 @@ func parseServerEvent(row scannable) (*model.ServerEvent, error) {
 }
 
 func AddServerEvent(DB *db.DB, timestamp time.Time, isOnline bool) error {
-	lastState, err := GetLastServerEvent(DB)
+	lastState, err := GetLatestServerEvent(DB)
 	if err == sql.ErrNoRows {
 		lastState = &model.ServerEvent{
 			Id:        0,
@@ -39,7 +39,7 @@ func AddServerEvent(DB *db.DB, timestamp time.Time, isOnline bool) error {
 		return nil
 	}
 
-	stmt, err := DB.GetQuery("add_server_event")
+	stmt, err := DB.GetStmt("add_server_event")
 	if err != nil {
 		return err
 	}
@@ -48,8 +48,8 @@ func AddServerEvent(DB *db.DB, timestamp time.Time, isOnline bool) error {
 	return err
 }
 
-func GetLastServerEvent(DB *db.DB) (*model.ServerEvent, error) {
-	stmt, err := DB.GetQuery("get_last_server_event")
+func GetLatestServerEvent(DB *db.DB) (*model.ServerEvent, error) {
+	stmt, err := DB.GetStmt("get_latest_server_event")
 	if err != nil {
 		return &model.ServerEvent{}, err
 	}
@@ -64,7 +64,7 @@ func GetLastServerEvent(DB *db.DB) (*model.ServerEvent, error) {
 }
 
 func GetServerEvents(DB *db.DB, limit int) ([]*model.ServerEvent, error) {
-	stmt, err := DB.GetQuery("get_server_events")
+	stmt, err := DB.GetStmt("get_server_events")
 	if err != nil {
 		return nil, err
 	}
@@ -86,13 +86,16 @@ func GetServerEvents(DB *db.DB, limit int) ([]*model.ServerEvent, error) {
 	return events, nil
 }
 
-func CalculateServerUptime(DB *db.DB, start time.Time, end time.Time) (time.Duration, error) {
-	stmt, err := DB.GetQuery("calculate_server_uptime")
+func CalculateServerUptime(DB *db.DB, timeframe model.Timeframe) (time.Duration, error) {
+	stmt, err := DB.GetStmt("calculate_server_uptime")
 	if err != nil {
 		return 0, err
 	}
 
-	result := stmt.QueryRow(start, start, start, end, end)
+	result := stmt.QueryRow(
+		sql.Named("start_time", timeframe.Start),
+		sql.Named("end_time", timeframe.End),
+	)
 	err = result.Err()
 	if err != nil {
 		return 0, err

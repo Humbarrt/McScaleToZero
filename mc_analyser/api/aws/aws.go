@@ -4,22 +4,27 @@ import (
 	"fmt"
 	"mc_analyser/logging"
 	"mc_analyser/model"
+	"strings"
 	"sync"
 	"time"
 
 	ceTypes "github.com/aws/aws-sdk-go-v2/service/costexplorer/types"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/shopspring/decimal"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/cloudtrail"
 	"github.com/aws/aws-sdk-go-v2/service/costexplorer"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"golang.org/x/net/context"
 )
 
 type awsAPI struct {
-	app *model.App
-	ec2 *ec2.Client
-	ce  *costexplorer.Client
+	app    *model.App
+	ec2    *ec2.Client
+	ce     *costexplorer.Client
+	ct     *cloudtrail.Client
+	tagKey string
 
 	// protected
 	mutex       sync.Mutex
@@ -33,7 +38,7 @@ type InstanceStatus struct {
 	state      ec2Types.InstanceStateName
 }
 
-func NewAWSAPI(app *model.App) (*awsAPI, error) {
+func NewAWSAPI(app *model.App, tagKey string) (*awsAPI, error) {
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithAppID("mc_analyser"), config.WithRetryMaxAttempts(2))
 	if err != nil {
 		logging.Error("Unable to load SDK config", "error", err)
@@ -41,11 +46,20 @@ func NewAWSAPI(app *model.App) (*awsAPI, error) {
 	}
 
 	ce := costexplorer.NewFromConfig(cfg)
+
+	ct := cloudtrail.NewFromConfig(cfg)
+	if err != nil {
+		logging.Error("Unable to create cloudtrail client", "error", err)
+		return nil, err
+	}
+
 	ec2 := ec2.NewFromConfig(cfg)
 	aws := &awsAPI{
-		app: app,
-		ec2: ec2,
-		ce:  ce,
+		app:    app,
+		ec2:    ec2,
+		ce:     ce,
+		ct:     ct,
+		tagKey: tagKey,
 	}
 
 	_, err = aws.getInstanceStatus()
@@ -58,7 +72,7 @@ func NewAWSAPI(app *model.App) (*awsAPI, error) {
 }
 
 func (aws *awsAPI) getInstanceStatus() (InstanceStatus, error) {
-	filterName := "tag:Project"
+	filterName := fmt.Sprintf("%s:%s", "tag", aws.tagKey)
 	input := &ec2.DescribeInstancesInput{
 		Filters: []ec2Types.Filter{
 			{
@@ -221,9 +235,9 @@ InstanceCheck:
 	return nil
 }
 
-func (aws *awsAPI) GetCostAllocationTag(tagKey string) (*ceTypes.CostAllocationTag, error) {
+func (aws *awsAPI) GetCostAllocationTag() (*ceTypes.CostAllocationTag, error) {
 	input := &costexplorer.ListCostAllocationTagsInput{
-		TagKeys: []string{tagKey},
+		TagKeys: []string{aws.tagKey},
 	}
 
 	resp, err := aws.ce.ListCostAllocationTags(context.Background(), input)
@@ -233,18 +247,27 @@ func (aws *awsAPI) GetCostAllocationTag(tagKey string) (*ceTypes.CostAllocationT
 	}
 
 	for _, tag := range resp.CostAllocationTags {
-		if tag.TagKey == &tagKey {
+		if *tag.TagKey == aws.tagKey {
 			return &tag, nil
 		}
 	}
 	return nil, fmt.Errorf("tag not found")
 }
 
-func (aws *awsAPI) ActivateCostAllocationTag(tagKey string) error {
+func (aws *awsAPI) IsCostAllocationTagActive() (bool, error) {
+	tag, err := aws.GetCostAllocationTag()
+	if err != nil || tag == nil {
+		logging.Error("Failed to get cost allocation tag", "error", err, "tag", tag)
+		return false, err
+	}
+	return tag.Status == ceTypes.CostAllocationTagStatusActive, nil
+}
+
+func (aws *awsAPI) ActivateCostAllocationTag() error {
 	input := &costexplorer.UpdateCostAllocationTagsStatusInput{
 		CostAllocationTagsStatus: []ceTypes.CostAllocationTagStatusEntry{
 			{
-				TagKey: &tagKey,
+				TagKey: &aws.tagKey,
 				Status: ceTypes.CostAllocationTagStatusActive,
 			},
 		},
@@ -252,7 +275,7 @@ func (aws *awsAPI) ActivateCostAllocationTag(tagKey string) error {
 
 	resp, err := aws.ce.UpdateCostAllocationTagsStatus(context.Background(), input)
 	if err != nil {
-		logging.Error("Failed to create cost allocation tag", "tag", tagKey, "error", err)
+		logging.Error("Failed to create cost allocation tag", "tag", aws.tagKey, "error", err)
 		return err
 	}
 
@@ -261,22 +284,22 @@ func (aws *awsAPI) ActivateCostAllocationTag(tagKey string) error {
 		for _, err := range resp.Errors {
 			logging.Error("Error creating cost allocation tag", "tag", err.TagKey, "error", err.Message, "code", err.Code)
 		}
-		return fmt.Errorf("failed to create cost allocation tag: %s", tagKey)
+		return fmt.Errorf("failed to create cost allocation tag: %s", aws.tagKey)
 	}
 
 	logging.Info("Cost allocation tag created successfully")
 	return nil
 }
 
-func (aws *awsAPI) BackfillCostAllocationTag(tagKey string, backfillFrom time.Time) error {
+func (aws *awsAPI) BackfillCostAllocationTag(backfillFrom time.Time) error {
 	backfillFrom = time.Date(backfillFrom.Year(), backfillFrom.Month(), 1, 0, 0, 0, 0, time.UTC)
-	if backfillFrom.After(time.Now()) {
+	if backfillFrom.After(time.Now().UTC()) {
 		return fmt.Errorf("backfillFrom date cannot be in the future")
 	}
 
 	backfillString := backfillFrom.Format("2006-01-02T15:04:05Z")
 	logging.Info("Starting cost allocation tag backfill",
-		"tag", tagKey,
+		"tag", aws.tagKey,
 		"backfillFrom", backfillString,
 	)
 
@@ -286,11 +309,11 @@ func (aws *awsAPI) BackfillCostAllocationTag(tagKey string, backfillFrom time.Ti
 
 	resp, err := aws.ce.StartCostAllocationTagBackfill(context.Background(), input)
 	if err != nil {
-		logging.Error("Failed to backfill cost allocation tag", "tag", tagKey, "error", err)
+		logging.Error("Failed to backfill cost allocation tag", "tag", aws.tagKey, "error", err)
 		return err
 	}
 	logging.Info("Cost allocation tag backfill started successfully",
-		"tag", tagKey,
+		"tag", aws.tagKey,
 		"status", resp.BackfillRequest.BackfillStatus,
 		"backfillFrom", backfillFrom,
 		"lastUpdate", resp.BackfillRequest.LastUpdatedAt,
@@ -298,4 +321,176 @@ func (aws *awsAPI) BackfillCostAllocationTag(tagKey string, backfillFrom time.Ti
 		"requestedAt", resp.BackfillRequest.RequestedAt,
 	)
 	return nil
+}
+
+func (aws *awsAPI) IsBackfillInProgress() (bool, error) {
+	maxResults := int32(1)
+	input := &costexplorer.ListCostAllocationTagBackfillHistoryInput{
+		MaxResults: &maxResults,
+	}
+	resp, err := aws.ce.ListCostAllocationTagBackfillHistory(context.Background(), input)
+	if err != nil {
+		logging.Error("Failed to list cost allocation tag backfill history", "error", err)
+		return false, err
+	}
+	if len(resp.BackfillRequests) == 0 {
+		logging.Info("No cost allocation tag backfill history found")
+		return false, nil
+	}
+
+	logging.Info("Last allocation tag backfill",
+		"status", resp.BackfillRequests[0].BackfillStatus,
+		"backfillFrom", *resp.BackfillRequests[0].BackfillFrom,
+		"lastUpdate", *resp.BackfillRequests[0].LastUpdatedAt,
+		"completedAt", resp.BackfillRequests[0].CompletedAt,
+		"requestedAt", resp.BackfillRequests[0].RequestedAt,
+	)
+	return resp.BackfillRequests[0].BackfillStatus == ceTypes.CostAllocationTagBackfillStatusProcessing, nil
+}
+
+func (aws *awsAPI) GetCostForTimeframe(timeframe model.Timeframe) ([]*model.MonthsCost, error) {
+	startDateString := timeframe.Start.Format("2006-01-02")
+	endDateString := timeframe.End.Format("2006-01-02")
+
+	logging.Info("Getting cost for timeframe",
+		"startDate", startDateString,
+		"endDate", endDateString,
+	)
+
+	fixedLabels := []string{
+		"VolumeUsage",
+		"APIRequest",
+	}
+
+	keyName := "UnblendedCost"
+	groupBy := string(ceTypes.DimensionUsageType)
+	input := &costexplorer.GetCostAndUsageInput{
+		TimePeriod: &ceTypes.DateInterval{
+			Start: &startDateString,
+			End:   &endDateString,
+		},
+		Metrics:     []string{"UnblendedCost"},
+		Granularity: ceTypes.GranularityMonthly,
+		GroupBy: []ceTypes.GroupDefinition{
+			{
+				Key:  &groupBy,
+				Type: ceTypes.GroupDefinitionTypeDimension,
+			},
+		},
+		Filter: &ceTypes.Expression{
+			Tags: &ceTypes.TagValues{
+				Key:    &aws.tagKey,
+				Values: []string{aws.app.Config.GetAWSProjectName()},
+			},
+		},
+	}
+
+	resp, err := aws.ce.GetCostAndUsage(context.Background(), input)
+	if err != nil {
+		logging.Error("Failed to get cost and usage", "error", err)
+		return nil, err
+	}
+	monthlyCosts := make([]*model.MonthsCost, 0)
+	for _, result := range resp.ResultsByTime {
+		if result.TimePeriod == nil || result.TimePeriod.Start == nil || result.TimePeriod.End == nil {
+			logging.Error("Time period is nil")
+			continue
+		}
+		startDate, err := time.Parse("2006-01-02", *result.TimePeriod.Start)
+		if err != nil {
+			logging.Error("Failed to parse start date", "error", err)
+			continue
+		}
+		endDate, err := time.Parse("2006-01-02", *result.TimePeriod.End)
+		if err != nil {
+			logging.Error("Failed to parse end date", "error", err)
+			continue
+		}
+		if startDate.Month() != endDate.Month() {
+			logging.Error("Start and end date are not in the same month", "startDate", startDate, "endDate", endDate)
+			continue
+		}
+
+		billingMonth := model.NewYearMonthFromTime(startDate)
+
+		timeframe := model.Timeframe{
+			Start: startDate,
+			End:   endDate,
+		}
+
+		totalAmount := decimal.Zero
+		fixedAmount := decimal.Zero
+		variableAmount := decimal.Zero
+		currency := "USD"
+		items := make([]model.CostItem, 0)
+		for _, group := range result.Groups {
+			if len(group.Keys) != 1 {
+				logging.Error("Group metrics are not 1")
+				continue
+			}
+			if len(group.Metrics) == 0 {
+				logging.Error("Group metrics are nil or empty")
+				continue
+			}
+			label := group.Keys[0]
+
+			if group.Metrics[keyName].Unit == nil {
+				logging.Error("Group metrics unit is nil", "label", label)
+				continue
+			}
+			if *group.Metrics[keyName].Unit != "USD" {
+				logging.Error("Group metrics unit is not in", "base_currency", currency, "label", label, "unit", *group.Metrics[keyName].Unit)
+				continue
+			}
+
+			if group.Metrics[keyName].Amount == nil {
+				logging.Error("Group metrics amount is nil", "label", label)
+				continue
+			}
+
+			amountString := *group.Metrics[keyName].Amount
+			amount, err := decimal.NewFromString(amountString)
+			if err != nil {
+				logging.Error("Failed to parse amount", "error", err)
+				continue
+			}
+
+			isFixed := false
+			for _, fixedLabel := range fixedLabels {
+				if strings.Contains(label, fixedLabel) {
+					isFixed = true
+					break
+				}
+			}
+
+			item := model.CostItem{
+				Label:   label,
+				Amount:  amount,
+				IsFixed: isFixed,
+			}
+
+			items = append(items, item)
+			totalAmount = totalAmount.Add(amount)
+			if isFixed {
+				fixedAmount = fixedAmount.Add(amount)
+			} else {
+				variableAmount = variableAmount.Add(amount)
+			}
+		}
+
+		cost := model.MonthsCost{
+			Timeframe:    timeframe,
+			BillingMonth: billingMonth,
+			Total:        totalAmount,
+			Fixed:        fixedAmount,
+			Variable:     variableAmount,
+			Currency:     currency,
+			Items:        items,
+		}
+		monthlyCosts = append(monthlyCosts, &cost)
+		logging.Debug("Monthly cost", "total", totalAmount, "fixed", fixedAmount, "variable", variableAmount, "currency", currency)
+
+	}
+
+	return monthlyCosts, nil
 }

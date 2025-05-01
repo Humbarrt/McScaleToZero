@@ -14,7 +14,7 @@ type dynamicConfig struct {
 }
 
 func GetConfig(DB *db.DB) (*dynamicConfig, error) {
-	stmt, err := DB.GetQuery("get_config")
+	stmt, err := DB.GetStmt("get_config")
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func UpdateBackupsToKeep(DB *db.DB, backupsToKeep int) error {
 }
 
 func updateConfig(DB *db.DB, config *dynamicConfig) error {
-	stmt, err := DB.GetQuery("update_config")
+	stmt, err := DB.GetStmt("update_config")
 	if err != nil {
 		return err
 	}

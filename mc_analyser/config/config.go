@@ -7,6 +7,7 @@ import (
 	"mc_analyser/db"
 	"mc_analyser/db/queries"
 	"mc_analyser/logging"
+	"mc_analyser/model"
 	"os"
 	"path"
 	"strconv"
@@ -27,12 +28,14 @@ type config struct {
 	mcServerSSHKey     []byte
 	dashboardPort      int
 	transferServerPort int
+	invoiceService     model.InvoiceService
 	dataPath           string
 	version            string
 	db                 *db.DB
 
 	//protected
 	mutex           sync.Mutex
+	_dashboardURL   string
 	_mcServerPort   int
 	_mcOfflineImage *[]byte
 	_mcOfflineMOTD  *string
@@ -61,6 +64,9 @@ func (c *config) GetDashboardPort() int {
 func (c *config) GetTransferServerPort() int {
 	return c.transferServerPort
 }
+func (c *config) GetInvoiceService() model.InvoiceService {
+	return c.invoiceService
+}
 func (c *config) GetDataPath() string {
 	return c.dataPath
 }
@@ -69,6 +75,20 @@ func (ch *config) GetVersion() string {
 }
 func (ch *config) IsDevMode() bool {
 	return ch.GetVersion() == "development"
+}
+
+func (c *config) GetDashboardURL() string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if c._dashboardURL == "" {
+		c._dashboardURL = fmt.Sprintf("http://localhost:%d", c.dashboardPort)
+	}
+	return c._dashboardURL
+}
+func (c *config) SetDashboardURL(url string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._dashboardURL = url
 }
 
 func (c *config) GetMCServerPort() int {
@@ -281,6 +301,20 @@ func Load(db *db.DB) *config {
 		logging.Fatal("Invalid transfer server port:", "port", transferServerPort)
 	}
 
+	//Check if invoice service is set
+	invoiceServiceString := strings.ToLower(getenv("INVOICE_SERVICE", string(model.InvoiceServiceNone)))
+	var invoiceService model.InvoiceService
+	switch invoiceServiceString {
+	case string(model.InvoiceServiceNone):
+		invoiceService = model.InvoiceServiceNone
+		logging.Debug("Invoice service is set to none")
+	case string(model.InvoiceServiceSplitwise):
+		invoiceService = model.InvoiceServiceSplitwise
+		logging.Debug("Invoice service is set to splitwise")
+	default:
+		logging.Fatal("Invalid invoice service:", "service", invoiceService)
+	}
+
 	config := &config{
 		awsAccessKeyId:     awsAccessKeyId,
 		awsSecretAccessKey: awsSecretAccessKey,
@@ -290,6 +324,7 @@ func Load(db *db.DB) *config {
 		mcServerSSHKey:     mcServerSSHKey,
 		dashboardPort:      dashboardPort,
 		transferServerPort: transferServerPort,
+		invoiceService:     invoiceService,
 		dataPath:           dataPath,
 		version:            version,
 		db:                 db,

@@ -12,4 +12,5 @@ type ServerWatcher interface {
 
 type CostWatcher interface {
 	StartWatching()
+	CurrentCostEstimate() (CostEstimate, error)
 }

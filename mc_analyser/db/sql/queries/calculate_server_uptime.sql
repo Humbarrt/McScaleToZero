@@ -1,11 +1,11 @@
 WITH last_event_before AS (
     SELECT *
     FROM server_events
-    WHERE timestamp < ?
+    WHERE timestamp < :start_time
     ORDER BY timestamp DESC
     LIMIT 1
 ), state_before AS (
-    SELECT ? AS timestamp,
+    SELECT :start_time AS timestamp,
         1 AS is_online
     FROM last_event_before
     WHERE is_online = 1
@@ -14,7 +14,7 @@ events_in_range AS (
     SELECT timestamp,
         is_online
     FROM server_events
-    WHERE timestamp BETWEEN ? AND ?
+    WHERE timestamp BETWEEN :start_time AND :end_time
 ),
 combined_events AS (
     SELECT *
@@ -33,7 +33,7 @@ ordered_events AS (
 ),
 sessions AS (
     SELECT timestamp AS session_start,
-        COALESCE(next_timestamp, ?) AS session_end
+        COALESCE(next_timestamp, :end_time) AS session_end
     FROM ordered_events
     WHERE is_online = 1
 ),

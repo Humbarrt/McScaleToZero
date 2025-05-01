@@ -36,7 +36,7 @@ func BackupWorld(app *model.App) error {
 		}
 	}
 
-	backupFile := path.Join(backupPath, time.Now().Format("2006-01-02")+".zip")
+	backupFile := path.Join(backupPath, time.Now().UTC().Format("2006-01-02")+".zip")
 	if _, err := os.Stat(backupFile); err == nil {
 		logging.Info("Backup already exists, skipping backup.")
 		return nil

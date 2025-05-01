@@ -9,7 +9,7 @@ import (
 )
 
 func parsePlayer(row scannable) (*model.Player, error) {
-	var id int
+	var id int64
 	var mcUUIDRaw []byte
 	var isAllowed bool
 	var isAdmin bool
@@ -51,7 +51,7 @@ func parsePlayer(row scannable) (*model.Player, error) {
 }
 
 func GetPlayers(DB *db.DB) ([]*model.Player, error) {
-	stmt, err := DB.GetQuery("get_players")
+	stmt, err := DB.GetStmt("get_players")
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +73,8 @@ func GetPlayers(DB *db.DB) ([]*model.Player, error) {
 	return players, nil
 }
 
-func GetPlayerById(DB *db.DB, playerId int) (*model.Player, error) {
-	stmt, err := DB.GetQuery("get_player_by_id")
+func GetPlayerById(DB *db.DB, playerId int64) (*model.Player, error) {
+	stmt, err := DB.GetStmt("get_player_by_id")
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func GetPlayerById(DB *db.DB, playerId int) (*model.Player, error) {
 }
 
 func GetPlayerByUUID(DB *db.DB, playerUUID model.UUID) (*model.Player, error) {
-	stmt, err := DB.GetQuery("get_player_by_uuid")
+	stmt, err := DB.GetStmt("get_player_by_uuid")
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func GetPlayerByUUID(DB *db.DB, playerUUID model.UUID) (*model.Player, error) {
 }
 
 func GetPlayerByAlias(DB *db.DB, alias string) (*model.Player, error) {
-	stmt, err := DB.GetQuery("get_player_by_alias")
+	stmt, err := DB.GetStmt("get_player_by_alias")
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func GetPlayerByAlias(DB *db.DB, alias string) (*model.Player, error) {
 }
 
 func AddPlayer(DB *db.DB, mcUUID model.UUID, isAllowed bool, isAdmin bool, lastIPV4 *string, aliases []string, invoiceServiceUserId *string) error {
-	stmt, err := DB.GetQuery("add_player")
+	stmt, err := DB.GetStmt("add_player")
 	if err != nil {
 		return err
 	}
@@ -137,8 +137,8 @@ func AddPlayer(DB *db.DB, mcUUID model.UUID, isAllowed bool, isAdmin bool, lastI
 	return nil
 }
 
-func MakePlayerAliasUnique(DB *db.DB, playerId int, alias string) error {
-	stmt, err := DB.GetQuery("make_player_alias_unique")
+func MakePlayerAliasUnique(DB *db.DB, playerId int64, alias string) error {
+	stmt, err := DB.GetStmt("make_player_alias_unique")
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func MakePlayerAliasUnique(DB *db.DB, playerId int, alias string) error {
 	return nil
 }
 
-func AddPlayerAlias(DB *db.DB, playerId int, alias string) error {
+func AddPlayerAlias(DB *db.DB, playerId int64, alias string) error {
 	err := MakePlayerAliasUnique(DB, playerId, alias)
 	if err != nil {
 		return err
@@ -173,12 +173,12 @@ func AddPlayerAlias(DB *db.DB, playerId int, alias string) error {
 	return updatePlayer(DB, player)
 }
 
-func UpdatePlayersIsAllowed(DB *db.DB, playerIds []int, matchIds bool, isAllowed bool) error {
+func UpdatePlayersIsAllowed(DB *db.DB, playerIds []int64, matchIds bool, isAllowed bool) error {
 	queryName := "update_players_is_allowed_match"
 	if !matchIds {
 		queryName = "update_players_is_allowed_not_match"
 	}
-	stmt, err := DB.GetQuery(queryName)
+	stmt, err := DB.GetStmt(queryName)
 	if err != nil {
 		return err
 	}
@@ -196,12 +196,12 @@ func UpdatePlayersIsAllowed(DB *db.DB, playerIds []int, matchIds bool, isAllowed
 	return nil
 }
 
-func UpdatePlayersIsAdmin(DB *db.DB, playerIds []int, matchIds bool, isAdmin bool) error {
+func UpdatePlayersIsAdmin(DB *db.DB, playerIds []int64, matchIds bool, isAdmin bool) error {
 	queryName := "update_players_is_admin_match"
 	if !matchIds {
 		queryName = "update_players_is_admin_not_match"
 	}
-	stmt, err := DB.GetQuery(queryName)
+	stmt, err := DB.GetStmt(queryName)
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func UpdatePlayersIsAdmin(DB *db.DB, playerIds []int, matchIds bool, isAdmin boo
 	return nil
 }
 
-func UpdatePlayerInvoiceServiceUserId(DB *db.DB, playerId int, InvoiceServiceUserId *string) error {
+func UpdatePlayerInvoiceServiceUserId(DB *db.DB, playerId int64, InvoiceServiceUserId *string) error {
 	player, err := GetPlayerById(DB, playerId)
 	if err != nil {
 		return err
@@ -229,7 +229,7 @@ func UpdatePlayerInvoiceServiceUserId(DB *db.DB, playerId int, InvoiceServiceUse
 	return updatePlayer(DB, player)
 }
 
-func UpdatePlayerIsAllowed(DB *db.DB, playerId int, isAllowed bool) error {
+func UpdatePlayerIsAllowed(DB *db.DB, playerId int64, isAllowed bool) error {
 	player, err := GetPlayerById(DB, playerId)
 	if err != nil {
 		return err
@@ -239,7 +239,7 @@ func UpdatePlayerIsAllowed(DB *db.DB, playerId int, isAllowed bool) error {
 	return updatePlayer(DB, player)
 }
 
-func UpdatePlayerIsAdmin(DB *db.DB, playerId int, isAdmin bool) error {
+func UpdatePlayerIsAdmin(DB *db.DB, playerId int64, isAdmin bool) error {
 	player, err := GetPlayerById(DB, playerId)
 	if err != nil {
 		return err
@@ -249,7 +249,7 @@ func UpdatePlayerIsAdmin(DB *db.DB, playerId int, isAdmin bool) error {
 	return updatePlayer(DB, player)
 }
 
-func UpdatePlayerLastIPV4(DB *db.DB, playerId int, lastIPV4 *string) error {
+func UpdatePlayerLastIPV4(DB *db.DB, playerId int64, lastIPV4 *string) error {
 	player, err := GetPlayerById(DB, playerId)
 	if err != nil {
 		return err
@@ -260,7 +260,7 @@ func UpdatePlayerLastIPV4(DB *db.DB, playerId int, lastIPV4 *string) error {
 }
 
 func updatePlayer(DB *db.DB, player *model.Player) error {
-	stmt, err := DB.GetQuery("update_player")
+	stmt, err := DB.GetStmt("update_player")
 	if err != nil {
 		return err
 	}

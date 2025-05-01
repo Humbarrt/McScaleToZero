@@ -156,17 +156,17 @@ func TestPlayer(t *testing.T) {
 	assert.Error(t, err)
 
 	//Bulk update isAllowed for all players that match the ids
-	ids := []int{1, 2}
+	ids := []int64{1, 2}
 	err = queries.UpdatePlayersIsAllowed(DB, ids, true, false)
 	assert.NoError(t, err)
-	expectPlayersIsAllowed(t, DB, map[int]bool{
+	expectPlayersIsAllowed(t, DB, map[int64]bool{
 		1: false,
 		2: false,
 		3: true,
 	})
 	err = queries.UpdatePlayersIsAllowed(DB, ids, true, true)
 	assert.NoError(t, err)
-	expectPlayersIsAllowed(t, DB, map[int]bool{
+	expectPlayersIsAllowed(t, DB, map[int64]bool{
 		1: true,
 		2: true,
 		3: true,
@@ -175,32 +175,32 @@ func TestPlayer(t *testing.T) {
 	//Bulk update isAllowed for all players that do not match the ids
 	err = queries.UpdatePlayersIsAllowed(DB, ids, false, false)
 	assert.NoError(t, err)
-	expectPlayersIsAllowed(t, DB, map[int]bool{
+	expectPlayersIsAllowed(t, DB, map[int64]bool{
 		1: true,
 		2: true,
 		3: false,
 	})
-	ids = []int{3}
+	ids = []int64{3}
 	err = queries.UpdatePlayersIsAllowed(DB, ids, false, false)
 	assert.NoError(t, err)
-	expectPlayersIsAllowed(t, DB, map[int]bool{
+	expectPlayersIsAllowed(t, DB, map[int64]bool{
 		1: false,
 		2: false,
 		3: false,
 	})
 
 	//Bulk update isAdmin for all players that match the ids
-	ids = []int{1, 2}
+	ids = []int64{1, 2}
 	err = queries.UpdatePlayersIsAdmin(DB, ids, true, false)
 	assert.NoError(t, err)
-	expectPlayersIsAdmin(t, DB, map[int]bool{
+	expectPlayersIsAdmin(t, DB, map[int64]bool{
 		1: false,
 		2: false,
 		3: false,
 	})
 	err = queries.UpdatePlayersIsAdmin(DB, ids, true, true)
 	assert.NoError(t, err)
-	expectPlayersIsAdmin(t, DB, map[int]bool{
+	expectPlayersIsAdmin(t, DB, map[int64]bool{
 		1: true,
 		2: true,
 		3: false,
@@ -209,22 +209,22 @@ func TestPlayer(t *testing.T) {
 	//Bulk update isAdmin for all players that do not match the ids
 	err = queries.UpdatePlayersIsAdmin(DB, ids, false, true)
 	assert.NoError(t, err)
-	expectPlayersIsAdmin(t, DB, map[int]bool{
+	expectPlayersIsAdmin(t, DB, map[int64]bool{
 		1: true,
 		2: true,
 		3: true,
 	})
-	ids = []int{3}
+	ids = []int64{3}
 	err = queries.UpdatePlayersIsAdmin(DB, ids, false, false)
 	assert.NoError(t, err)
-	expectPlayersIsAdmin(t, DB, map[int]bool{
+	expectPlayersIsAdmin(t, DB, map[int64]bool{
 		1: false,
 		2: false,
 		3: true,
 	})
 }
 
-func expectPlayersIsAllowed(t *testing.T, DB *db.DB, pattern map[int]bool) {
+func expectPlayersIsAllowed(t *testing.T, DB *db.DB, pattern map[int64]bool) {
 	for id, isAllowed := range pattern {
 		player, err := queries.GetPlayerById(DB, id)
 		assert.NoError(t, err)
@@ -232,7 +232,7 @@ func expectPlayersIsAllowed(t *testing.T, DB *db.DB, pattern map[int]bool) {
 	}
 }
 
-func expectPlayersIsAdmin(t *testing.T, DB *db.DB, pattern map[int]bool) {
+func expectPlayersIsAdmin(t *testing.T, DB *db.DB, pattern map[int64]bool) {
 	for id, isAllowed := range pattern {
 		player, err := queries.GetPlayerById(DB, id)
 		assert.NoError(t, err)

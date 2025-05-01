@@ -18,9 +18,12 @@ type Config interface {
 	GetMCServerSSHKey() []byte
 	GetDashboardPort() int
 	GetTransferServerPort() int
+	GetInvoiceService() InvoiceService
 	GetVersion() string
 	GetDataPath() string
 
+	GetDashboardURL() string
+	SetDashboardURL(url string)
 	GetMCServerPort() int
 	SetMCServerPort(port int) error
 	GetMCOfflineImage() *[]byte
@@ -38,32 +41,37 @@ type AuthClaims struct {
 	jwt.RegisteredClaims
 }
 
-type Player struct {
-	Id                   int      `json:"id"`
-	McUUID               UUID     `json:"mc_uuid"`
-	IsAllowed            bool     `json:"is_active"`
-	IsAdmin              bool     `json:"is_admin"`
-	LastIPV4             *string  `json:"last_ip"`
-	Aliases              []string `json:"aliases"`
-	InvoiceServiceUserId *string  `json:"invoice_service_user_id"`
-}
-
-type PlayerEvent struct {
+type Invoice struct {
 	Id        int       `json:"id"`
-	PlayerId  int       `json:"player_id"`
-	Timestamp time.Time `json:"timestamp"`
-	IsOnline  bool      `json:"is_online"`
+	CreatedAt time.Time `json:"created_at"`
+	BillId    int       `json:"bill_id"`
+	TotalCost int       `json:"total_cost"`
 }
 
-type ServerEvent struct {
-	Id        int       `json:"id"`
-	Timestamp time.Time `json:"timestamp"`
-	IsOnline  bool      `json:"is_online"`
+type InvoiceServiceUser struct {
+	Id    string  `json:"id"`
+	Name  *string `json:"name"`
+	Email *string `json:"email"`
 }
 
-type Playtime struct {
-	PlayerId int           `json:"player_id"`
-	Playtime time.Duration `json:"playtime"`
+type CostEstimate struct {
+	TotalCost    int    `json:"total_cost"`
+	FixedCost    int    `json:"fixed_cost"`
+	VariableCost int    `json:"variable_cost"`
+	Currency     string `json:"currency"`
+	Players      []PlayerCostEstimate
+}
+
+type PlayerCostEstimate struct {
+	PlayerId int `json:"player_id"`
+	Cost     int `json:"cost"`
+	Playtime int `json:"playtime"`
+	CPUTime  int `json:"cpu_time"`
+}
+
+type Timeframe struct {
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
 }
 
 type App struct {
@@ -75,6 +83,7 @@ type App struct {
 	SW         ServerWatcher
 	CW         CostWatcher
 	AWS        AWSAPI
+	IS         InvoiceServiceAPI
 	JWTSecret  []byte
 
 	//protected

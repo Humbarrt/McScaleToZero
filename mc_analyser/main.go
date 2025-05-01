@@ -3,6 +3,8 @@ package main
 import (
 	"embed"
 	"mc_analyser/api/aws"
+	"mc_analyser/api/invoice_service/none"
+	"mc_analyser/api/invoice_service/splitwise"
 	"mc_analyser/db"
 	"mc_analyser/logging"
 	"mc_analyser/model"
@@ -45,9 +47,28 @@ func main() {
 		JWTSecret:  secret,
 		SW:         nil,
 		CW:         nil,
+		IS:         nil,
 	}
 
-	app.AWS, err = aws.NewAWSAPI(&app)
+	switch app.Config.GetInvoiceService() {
+	case model.InvoiceServiceSplitwise:
+		logging.Info("Invoice service configured to Splitwise")
+		app.IS, err = splitwise.NewSplitwiseAPI(&app)
+		if err != nil {
+			logging.Fatal("Error creating invoice service", "error", err)
+		}
+		err = app.IS.Init()
+		if err != nil {
+			logging.Fatal("Error initializing invoice service", "error", err)
+		}
+	case model.InvoiceServiceNone:
+		logging.Info("Invoice service not configured")
+		app.IS = none.NewNoInvoiceService(&app)
+	default:
+		logging.Fatal("Unknown invoice service")
+	}
+
+	app.AWS, err = aws.NewAWSAPI(&app, "Project")
 	if err != nil {
 		logging.Fatal("Error creating AWS API", "error", err)
 	}

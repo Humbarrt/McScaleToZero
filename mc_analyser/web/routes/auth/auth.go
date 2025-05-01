@@ -17,6 +17,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// TODO: Login session
+// TODO: Login Timeout
 func Routes(route *gin.Engine, app *model.App) {
 	auth := route.Group("/auth")
 	{
@@ -73,9 +75,9 @@ func signInHandler(app *model.App) gin.HandlerFunc {
 		claims := model.AuthClaims{
 			McUUID: fmt.Sprintf("%d", user.Id),
 			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(365 * 24 * time.Hour)),
-				IssuedAt:  jwt.NewNumericDate(time.Now()),
-				NotBefore: jwt.NewNumericDate(time.Now()),
+				ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(365 * 24 * time.Hour)),
+				IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+				NotBefore: jwt.NewNumericDate(time.Now().UTC()),
 			},
 		}
 

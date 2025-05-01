@@ -19,9 +19,9 @@ func TestServerEvent(t *testing.T) {
 	assert.NoError(t, err)
 
 	//If there is no row, we should not be able to add an offline event
-	err = queries.AddServerEvent(DB, time.Now(), false)
+	err = queries.AddServerEvent(DB, time.Now().UTC(), false)
 	assert.NoError(t, err)
-	_, err = queries.GetLastServerEvent(DB)
+	_, err = queries.GetLatestServerEvent(DB)
 	assert.Error(t, err)
 
 	//If the last event is online, we should not be able to add another online event
@@ -29,15 +29,15 @@ func TestServerEvent(t *testing.T) {
 	err = queries.AddServerEvent(DB, time_ref, true)
 	assert.NoError(t, err)
 
-	event, err := queries.GetLastServerEvent(DB)
+	event, err := queries.GetLatestServerEvent(DB)
 	assert.NoError(t, err)
 	assert.Equal(t, event.IsOnline, true)
 	assert.Equal(t, event.Timestamp, time_ref)
 
-	err = queries.AddServerEvent(DB, time.Now(), true)
+	err = queries.AddServerEvent(DB, time.Now().UTC(), true)
 	assert.NoError(t, err)
 
-	event, err = queries.GetLastServerEvent(DB)
+	event, err = queries.GetLatestServerEvent(DB)
 	assert.NoError(t, err)
 	assert.Equal(t, event.IsOnline, true)
 	assert.Equal(t, event.Timestamp, time_ref) // There should be no new event
@@ -46,7 +46,7 @@ func TestServerEvent(t *testing.T) {
 	err = queries.AddServerEvent(DB, time_ref.Add(-time.Second*10000), false)
 	assert.NoError(t, err)
 
-	event, err = queries.GetLastServerEvent(DB)
+	event, err = queries.GetLatestServerEvent(DB)
 	assert.NoError(t, err)
 	assert.Equal(t, event.IsOnline, true)
 	assert.Equal(t, event.Timestamp, time_ref) // It should still be the latest event
@@ -56,15 +56,15 @@ func TestServerEvent(t *testing.T) {
 	err = queries.AddServerEvent(DB, time_ref, false)
 	assert.NoError(t, err)
 
-	event, err = queries.GetLastServerEvent(DB)
+	event, err = queries.GetLatestServerEvent(DB)
 	assert.NoError(t, err)
 	assert.Equal(t, event.IsOnline, false)
 	assert.Equal(t, event.Timestamp, time_ref)
 
-	err = queries.AddServerEvent(DB, time.Now(), false)
+	err = queries.AddServerEvent(DB, time.Now().UTC(), false)
 	assert.NoError(t, err)
 
-	event, err = queries.GetLastServerEvent(DB)
+	event, err = queries.GetLatestServerEvent(DB)
 	assert.NoError(t, err)
 	assert.Equal(t, event.IsOnline, false)
 	assert.Equal(t, event.Timestamp, time_ref) // There should be no new event
@@ -76,7 +76,7 @@ func TestServerUptimeCalculation(t *testing.T) {
 	assert.NoError(t, err)
 
 	//Generate some events
-	startDate := time.Now().Add(-time.Hour * 24 * 365 * 10).UTC()
+	startDate := time.Now().UTC().Add(-time.Hour * 24 * 365 * 10).UTC()
 	startDate = startDate.Truncate(time.Second)
 	currentDate := startDate
 	controlUptime := time.Duration(0)
@@ -97,7 +97,7 @@ func TestServerUptimeCalculation(t *testing.T) {
 	}
 
 	//Test if the uptime calculation is correct
-	uptime, err := queries.CalculateServerUptime(DB, startDate.Add(-time.Hour*20000), currentDate.Add(time.Hour*20000))
+	uptime, err := queries.CalculateServerUptime(DB, model.Timeframe{Start: startDate.Add(-time.Hour * 20000), End: currentDate.Add(time.Hour * 20000)})
 	assert.NoError(t, err)
 	assert.Equal(t, controlUptime, uptime)
 
@@ -106,7 +106,7 @@ func TestServerUptimeCalculation(t *testing.T) {
 	startDate = serverEvents[0].Timestamp.Add(durationOnline)
 	precontrolUptime := controlUptime - durationOnline
 
-	uptime, err = queries.CalculateServerUptime(DB, startDate, currentDate.Add(time.Hour*20000))
+	uptime, err = queries.CalculateServerUptime(DB, model.Timeframe{Start: startDate, End: currentDate.Add(time.Hour * 20000)})
 	assert.NoError(t, err)
 	assert.Equal(t, precontrolUptime, uptime)
 
@@ -114,32 +114,32 @@ func TestServerUptimeCalculation(t *testing.T) {
 	durationOnline = (serverEvents[len(serverEvents)-1].Timestamp.Sub(serverEvents[len(serverEvents)-2].Timestamp) / 2).Truncate(time.Second)
 	endDate := serverEvents[len(serverEvents)-2].Timestamp.Add(durationOnline)
 	postcontrolUptime := controlUptime - durationOnline
-	uptime, err = queries.CalculateServerUptime(DB, startDate.Add(-time.Hour*20000), endDate)
+	uptime, err = queries.CalculateServerUptime(DB, model.Timeframe{Start: startDate.Add(-time.Hour * 20000), End: endDate})
 	assert.NoError(t, err)
 	assert.LessOrEqual(t, postcontrolUptime-1*time.Second, uptime)
 	assert.GreaterOrEqual(t, postcontrolUptime+1*time.Second, uptime)
 
 	//Test if never online in the given time range (before any events)
-	uptime, err = queries.CalculateServerUptime(DB, startDate.Add(-time.Hour*40000), startDate.Add(-time.Hour*20000))
+	uptime, err = queries.CalculateServerUptime(DB, model.Timeframe{Start: startDate.Add(-time.Hour * 40000), End: startDate.Add(-time.Hour * 20000)})
 	assert.NoError(t, err)
 	assert.Equal(t, time.Duration(0), uptime)
 
 	//Test if never online in the given time range (after all events)
-	uptime, err = queries.CalculateServerUptime(DB, currentDate.Add(time.Hour*20000), currentDate.Add(time.Hour*40000))
+	uptime, err = queries.CalculateServerUptime(DB, model.Timeframe{Start: currentDate.Add(time.Hour * 20000), End: currentDate.Add(time.Hour * 40000)})
 	assert.NoError(t, err)
 	assert.Equal(t, time.Duration(0), uptime)
 
 	//Test if never online in the given time range (between two sessions)
 	testStart := serverEvents[1].Timestamp.Add(time.Second)
 	testEnd := serverEvents[2].Timestamp.Add(-time.Second)
-	uptime, err = queries.CalculateServerUptime(DB, testStart, testEnd)
+	uptime, err = queries.CalculateServerUptime(DB, model.Timeframe{Start: testStart, End: testEnd})
 	assert.NoError(t, err)
 	assert.Equal(t, time.Duration(0), uptime)
 
 	//Test if is online from before the startDate to after the endDate (during a session)
 	testStart = serverEvents[0].Timestamp.Add(time.Second)
 	testEnd = serverEvents[1].Timestamp.Add(-time.Second)
-	uptime, err = queries.CalculateServerUptime(DB, testStart, testEnd)
+	uptime, err = queries.CalculateServerUptime(DB, model.Timeframe{Start: testStart, End: testEnd})
 	assert.NoError(t, err)
 	assert.Equal(t, testEnd.Sub(testStart), uptime)
 }
