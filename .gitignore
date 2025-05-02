@@ -15,5 +15,5 @@ bin
 *.tfstate.backup
 tmp
 *.db
-/mc_analyser/data
+/mc_manager/data
 /mc_server/data
