@@ -2,7 +2,7 @@ package queries
 
 import (
 	"fmt"
-	"mc_analyser/db"
+	"mc_manager/db"
 )
 
 type dynamicConfig struct {

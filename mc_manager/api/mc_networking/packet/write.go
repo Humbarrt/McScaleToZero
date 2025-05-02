@@ -1,6 +1,6 @@
 package packet
 
-import "mc_analyser/model"
+import "mc_manager/model"
 
 func WriteVarInt(data *[]byte, num int) {
 	for {

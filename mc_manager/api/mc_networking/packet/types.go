@@ -1,7 +1,7 @@
 package packet
 
 import (
-	"mc_analyser/logging"
+	"mc_manager/logging"
 	"net"
 	"time"
 )

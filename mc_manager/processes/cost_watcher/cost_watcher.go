@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"mc_manager/db/queries"
-	logging "mc_managerlogging"
-	model "mc_managermodel"
+	"mc_manager/logging"
+	"mc_manager/model"
 	"sync"
 	"time"
 

@@ -3,9 +3,9 @@ package server_watcher
 import (
 	"fmt"
 	mc "mc_manager/api/mc_networking"
+	"mc_manager/db/queries"
 	"mc_manager/logging"
 	"mc_manager/model"
-	"mc_managerdb/queries"
 	"sync"
 	"time"
 

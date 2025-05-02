@@ -3,7 +3,7 @@ package splitwise
 import (
 	"context"
 	"fmt"
-	"mc_analyser/model"
+	"mc_manager/model"
 	"os"
 	"strconv"
 	"sync"

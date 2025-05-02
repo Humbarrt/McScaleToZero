@@ -9,7 +9,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"mc_analyser/web/views/layout"
+	"mc_manager/web/views/layout"
 )
 
 func Index() templ.Component {

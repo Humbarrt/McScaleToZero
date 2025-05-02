@@ -2,7 +2,7 @@ package queries_test
 
 import (
 	"mc_manager/db"
-	"mc_managerdb/queries"
+	"mc_manager/db/queries"
 	"path"
 	"strings"
 	"testing"

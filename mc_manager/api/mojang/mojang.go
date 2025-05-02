@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mc_manager/logging"
-	model "mc_managermodel"
+	"mc_manager/model"
 	"net/http"
 	"time"
 )

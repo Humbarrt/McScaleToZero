@@ -1,7 +1,7 @@
 package none
 
 import (
-	"mc_analyser/model"
+	"mc_manager/model"
 )
 
 type NoInvoiceService struct {

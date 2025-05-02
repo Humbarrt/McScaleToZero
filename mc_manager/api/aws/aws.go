@@ -3,7 +3,7 @@ package aws
 import (
 	"fmt"
 	"mc_manager/logging"
-	"mc_managermodel"
+	"mc_manager/model"
 	"strings"
 	"sync"
 	"time"
@@ -39,7 +39,7 @@ type InstanceStatus struct {
 }
 
 func NewAWSAPI(app *model.App, tagKey string) (*awsAPI, error) {
-	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithAppID("mc_manager), config.WithRetryMaxAttempts(2))
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithAppID("mc_manager"), config.WithRetryMaxAttempts(2))
 	if err != nil {
 		logging.Error("Unable to load SDK config", "error", err)
 		return nil, err

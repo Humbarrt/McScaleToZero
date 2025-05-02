@@ -2,7 +2,7 @@ package queries
 
 import (
 	"mc_manager/db"
-	model "mc_managermodel"
+	"mc_manager/model"
 )
 
 func GetExploredCost(DB *db.DB, month model.YearMonth) (*model.ExploredCost, error) {

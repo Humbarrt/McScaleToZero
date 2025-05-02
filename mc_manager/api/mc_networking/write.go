@@ -3,8 +3,8 @@ package mc_networking
 import (
 	"encoding/json"
 	"mc_manager/api/mc_networking/packet"
-	logging "mc_managerlogging"
-	model "mc_managermodel"
+	"mc_manager/logging"
+	"mc_manager/model"
 	"net"
 	"unicode/utf16"
 )

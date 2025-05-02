@@ -5,7 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"mc_analyser/logging"
+	"mc_manager/logging"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pressly/goose/v3"

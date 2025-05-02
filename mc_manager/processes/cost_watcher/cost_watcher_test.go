@@ -4,25 +4,25 @@ import (
 	"math"
 	"math/rand/v2"
 	"mc_manager/db"
-	"mc_managerdb/queries"
-	logging "mc_managerlogging"
-	model "mc_managermodel"
+	"mc_manager/db/queries"
+	"mc_manager/logging"
+	"mc_manager/model"
 	"path"
 	"sort"
 	"testing"
 	"time"
 	_ "unsafe"
 
-	"mc_managerprocesses/cost_watcher"
+	"mc_manager/processes/cost_watcher"
 
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
-//go:linkname createBill mc_managerprocesses/cost_watcher.(*CostWatcher).createBill
+//go:linkname createBill mc_manager/processes/cost_watcher.(*CostWatcher).createBill
 func createBill(*cost_watcher.CostWatcher, model.YearMonth) error
 
-//go:linkname updateCostEstimate mc_managerprocesses/cost_watcher.(*CostWatcher).updateCostEstimate
+//go:linkname updateCostEstimate mc_manager/processes/cost_watcher.(*CostWatcher).updateCostEstimate
 func updateCostEstimate(*cost_watcher.CostWatcher) error
 
 type mockAWSAPI struct {

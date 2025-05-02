@@ -3,9 +3,9 @@ package index
 import (
 	"context"
 	"mc_manager/model"
-	"mc_managerweb/routes/middleware"
-	"mc_managerweb/views/index"
-	utils "mc_managerweb/web_utils"
+	"mc_manager/web/routes/middleware"
+	"mc_manager/web/views/index"
+	utils "mc_manager/web/web_utils"
 
 	"net/http"
 

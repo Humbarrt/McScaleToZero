@@ -3,7 +3,7 @@ package queries
 import (
 	"database/sql"
 	"mc_manager/db"
-	model "mc_managermodel"
+	"mc_manager/model"
 	"time"
 )
 

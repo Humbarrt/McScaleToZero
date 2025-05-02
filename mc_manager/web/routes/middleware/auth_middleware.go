@@ -3,9 +3,9 @@ package middleware
 import (
 	"fmt"
 	"mc_manager/logging"
-	model "mc_managermodel"
-	auth_view "mc_managerweb/views/auth"
-	utils "mc_managerweb/web_utils"
+	"mc_manager/model"
+	auth_view "mc_manager/web/views/auth"
+	utils "mc_manager/web/web_utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

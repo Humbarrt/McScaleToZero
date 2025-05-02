@@ -1,7 +1,7 @@
 package model_test
 
 import (
-	"mc_analyser/model"
+	"mc_manager/model"
 	"strings"
 	"testing"
 

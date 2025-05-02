@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"mc_manager/logging"
-	model "mc_managermodel"
+	"mc_manager/model"
 	"os"
 	"time"
 

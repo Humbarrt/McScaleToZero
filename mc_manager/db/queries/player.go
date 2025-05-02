@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"mc_manager/db"
-	logging "mc_managerlogging"
-	model "mc_managermodel"
+	"mc_manager/logging"
+	"mc_manager/model"
 )
 
 func parsePlayer(row scannable) (*model.Player, error) {

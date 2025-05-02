@@ -2,7 +2,7 @@ package model
 
 import (
 	"embed"
-	"mc_analyser/db"
+	"mc_manager/db"
 	"sync"
 	"time"
 
