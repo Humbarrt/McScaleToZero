@@ -23,7 +23,7 @@ func (ym YearMonth) StartTime() time.Time {
 	return time.Date(ym.Year(), time.Month(ym.Month()), 1, 0, 0, 0, 0, time.UTC)
 }
 func (ym YearMonth) EndTime() time.Time {
-	return ym.StartTime().AddDate(0, 1, -1)
+	return ym.StartTime().AddDate(0, 1, 0).Add(-time.Nanosecond)
 }
 func (ym YearMonth) Timeframe() Timeframe {
 	return Timeframe{

@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/shopspring/decimal"
 )
 
 type Config interface {
@@ -55,18 +56,19 @@ type InvoiceServiceUser struct {
 }
 
 type CostEstimate struct {
-	TotalCost    int    `json:"total_cost"`
-	FixedCost    int    `json:"fixed_cost"`
-	VariableCost int    `json:"variable_cost"`
-	Currency     string `json:"currency"`
+	TotalCost    decimal.Decimal `json:"total_cost"`
+	FixedCost    decimal.Decimal `json:"fixed_cost"`
+	VariableCost decimal.Decimal `json:"variable_cost"`
+	Currency     string          `json:"currency"`
+	ServerUptime time.Duration   `json:"server_uptime"`
 	Players      []PlayerCostEstimate
 }
 
 type PlayerCostEstimate struct {
-	PlayerId int `json:"player_id"`
-	Cost     int `json:"cost"`
-	Playtime int `json:"playtime"`
-	CPUTime  int `json:"cpu_time"`
+	PlayerId int64           `json:"player_id"`
+	Cost     decimal.Decimal `json:"cost"`
+	Playtime time.Duration   `json:"playtime"`
+	CPUTime  time.Duration   `json:"cpu_time"`
 }
 
 type Timeframe struct {

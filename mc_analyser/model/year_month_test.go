@@ -24,13 +24,15 @@ func TestYearMonth(t *testing.T) {
 	// Test NewYearMonthFromString
 	ym, err = model.NewYearMonthFromString("2023-10")
 	assert.NoError(t, err)
+	assert.Equal(t, 2023, ym.Year())
+	assert.Equal(t, 10, ym.Month())
 
 	// Test String method
 	assert.Equal(t, "2023-10", ym.String())
 
 	// Test StartTime and EndTime methods
 	startTime := time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC)
-	endTime := time.Date(2023, 10, 31, 0, 0, 0, 0, time.UTC)
+	endTime := time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC).Add(-time.Nanosecond)
 	assert.Equal(t, startTime, ym.StartTime())
 	assert.Equal(t, endTime, ym.EndTime())
 
