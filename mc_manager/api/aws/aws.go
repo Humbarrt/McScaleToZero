@@ -8,12 +8,14 @@ import (
 	"sync"
 	"time"
 
+	cwlTypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	ceTypes "github.com/aws/aws-sdk-go-v2/service/costexplorer/types"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/shopspring/decimal"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudtrail"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/costexplorer"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"golang.org/x/net/context"
@@ -24,6 +26,7 @@ type awsAPI struct {
 	ec2    *ec2.Client
 	ce     *costexplorer.Client
 	ct     *cloudtrail.Client
+	cwl    *cloudwatchlogs.Client
 	tagKey string
 
 	// protected
@@ -45,20 +48,22 @@ func NewAWSAPI(app *model.App, tagKey string) (*awsAPI, error) {
 		return nil, err
 	}
 
+	ec2 := ec2.NewFromConfig(cfg)
 	ce := costexplorer.NewFromConfig(cfg)
-
 	ct := cloudtrail.NewFromConfig(cfg)
-	if err != nil {
-		logging.Error("Unable to create cloudtrail client", "error", err)
-		return nil, err
+	cwl := cloudwatchlogs.NewFromConfig(cfg)
+
+	if ec2 == nil || ce == nil || ct == nil || cwl == nil {
+		logging.Error("Failed to create AWS clients", "ec2", ec2, "ce", ce, "ct", ct, "cwl", cwl)
+		return nil, fmt.Errorf("failed to create AWS clients")
 	}
 
-	ec2 := ec2.NewFromConfig(cfg)
 	aws := &awsAPI{
 		app:    app,
 		ec2:    ec2,
 		ce:     ce,
 		ct:     ct,
+		cwl:    cwl,
 		tagKey: tagKey,
 	}
 
@@ -478,6 +483,29 @@ func (aws *awsAPI) GetCostForTimeframe(timeframe model.Timeframe) ([]*model.Mont
 			}
 		}
 
+		//calculate taxes
+		taxRate := aws.app.Config.GetTaxRate()
+		if !taxRate.Equal(decimal.Zero) {
+			fixedTax := fixedAmount.Mul(taxRate)
+			fixedTaxItem := model.CostItem{
+				Label:   "Fixed Tax",
+				Amount:  fixedTax,
+				IsFixed: true,
+			}
+
+			variableTax := variableAmount.Mul(taxRate)
+			variableTaxItem := model.CostItem{
+				Label:   "Variable Tax",
+				Amount:  variableTax,
+				IsFixed: false,
+			}
+
+			items = append(items, fixedTaxItem, variableTaxItem)
+			fixedAmount = fixedAmount.Add(fixedTax)
+			variableAmount = variableAmount.Add(variableTax)
+			totalAmount = totalAmount.Add(fixedTax).Add(variableTax)
+		}
+
 		cost := model.MonthsCost{
 			Timeframe:    timeframe,
 			BillingMonth: billingMonth,
@@ -493,4 +521,88 @@ func (aws *awsAPI) GetCostForTimeframe(timeframe model.Timeframe) ([]*model.Mont
 	}
 
 	return monthlyCosts, nil
+}
+
+func (aws *awsAPI) GetLogsSince(startTime time.Time, limit int) ([]*model.Log, error) {
+	logging.Info("Getting logs since", "startTime", startTime, "limit", limit)
+	logGroupName := "/mc-server/logs"
+	//query log insights
+	query := "fields @timestamp, @message, @logStream, @log | sort @timestamp asc"
+	startTimestamp := startTime.Unix()
+	endTimestamp := time.Now().Unix()
+	limitInt := int32(limit)
+	input := &cloudwatchlogs.StartQueryInput{
+		LogGroupName: &logGroupName,
+		StartTime:    &startTimestamp,
+		EndTime:      &endTimestamp,
+		QueryString:  &query,
+		Limit:        &limitInt,
+	}
+	resp, err := aws.cwl.StartQuery(context.Background(), input)
+	if err != nil {
+		logging.Error("Failed to start query", "error", err)
+		return nil, err
+	}
+
+	logging.Debug("Started query", "queryId", *resp.QueryId)
+	var queryResults *cloudwatchlogs.GetQueryResultsOutput
+	for {
+		queryResults, err = aws.cwl.GetQueryResults(context.Background(), &cloudwatchlogs.GetQueryResultsInput{
+			QueryId: resp.QueryId,
+		})
+		if err != nil {
+			logging.Error("Failed to get query results", "error", err)
+			return nil, err
+		}
+		if queryResults.Status == cwlTypes.QueryStatusComplete {
+			break
+		}
+
+		if queryResults.Status == cwlTypes.QueryStatusRunning || queryResults.Status == cwlTypes.QueryStatusScheduled {
+			logging.Debug("Query is still running", "queryId", *resp.QueryId, "status", queryResults.Status)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		return nil, fmt.Errorf("cloudwatch query failed with status: %s", queryResults.Status)
+	}
+
+	if queryResults.Results == nil {
+		logging.Error("Query results are nil")
+		return nil, fmt.Errorf("query results are nil")
+	}
+
+	events := make([]*model.Log, 0)
+	for _, fields := range queryResults.Results {
+		var timestampString *string
+		var message *string
+		for _, field := range fields {
+			if field.Field == nil {
+				continue
+			}
+			if *field.Field == "@timestamp" {
+				timestampString = field.Value
+			} else if *field.Field == "@message" {
+				message = field.Value
+			}
+		}
+
+		if timestampString == nil || message == nil {
+			logging.Error("Timestamp or message is nil")
+			continue
+		}
+
+		timestampTime, err := time.Parse("2006-01-02 15:04:05.999999999", *timestampString)
+		if err != nil {
+			logging.Error("Failed to parse timestamp", "error", err)
+			continue
+		}
+
+		events = append(events, &model.Log{
+			Timestamp: timestampTime,
+			Message:   *message,
+		})
+	}
+
+	return events, nil
 }

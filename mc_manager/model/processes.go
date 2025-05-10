@@ -14,3 +14,7 @@ type CostWatcher interface {
 	StartWatching()
 	CurrentCostEstimate() (*CostEstimate, error)
 }
+
+type LogWatcher interface {
+	StartLogWatcher()
+}

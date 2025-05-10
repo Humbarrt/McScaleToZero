@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS "config" (
         typeof("backups_to_keep") = 'integer'
         AND "backups_to_keep" >= 0
         AND "backups_to_keep" <= 15
+    ),
+    "tax_rate" INTEGER NOT NULL CHECK (
+        typeof("tax_rate") = 'integer'
+        AND "tax_rate" >= 0
     )
 );
 INSERT INTO "config" (
@@ -26,6 +30,7 @@ INSERT INTO "config" (
         "offline_motd",
         "mc_port",
         "ip_check",
-        "backups_to_keep"
+        "backups_to_keep",
+        "tax_rate"
     )
-VALUES (NULL, NULL, 25565, TRUE, 2);
+VALUES (NULL, NULL, 25565, TRUE, 2, 1900);

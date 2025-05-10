@@ -7,16 +7,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetConfig(t *testing.T) {
+func TestGetMutableConfig(t *testing.T) {
 	filePath := path.Join(t.TempDir(), "main.db")
 	DB, err := db.InitializeDatabase(filePath)
 	assert.NoError(t, err)
 
 	// Test getting the config
-	config, err := queries.GetConfig(DB)
+	config, err := queries.GetMutableConfig(DB)
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, config.MCServerPort, 25565)
@@ -27,7 +28,7 @@ func TestGetConfig(t *testing.T) {
 	image := []byte("test_image")
 	err = queries.UpdateOfflineImage(DB, &image)
 	assert.NoError(t, err)
-	config, err = queries.GetConfig(DB)
+	config, err = queries.GetMutableConfig(DB)
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, config.OfflineImage, &image)
@@ -35,21 +36,21 @@ func TestGetConfig(t *testing.T) {
 	motd := "test_motd"
 	err = queries.UpdateOfflineMOTD(DB, &motd)
 	assert.NoError(t, err)
-	config, err = queries.GetConfig(DB)
+	config, err = queries.GetMutableConfig(DB)
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, config.OfflineMOTD, &motd)
 
 	err = queries.UpdateIPCheck(DB, false)
 	assert.NoError(t, err)
-	config, err = queries.GetConfig(DB)
+	config, err = queries.GetMutableConfig(DB)
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, false, config.IPCheck)
 
 	err = queries.UpdateIPCheck(DB, true)
 	assert.NoError(t, err)
-	config, err = queries.GetConfig(DB)
+	config, err = queries.GetMutableConfig(DB)
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, true, config.IPCheck)
@@ -63,21 +64,21 @@ func TestGetConfig(t *testing.T) {
 	// Test if update backups to keep works
 	err = queries.UpdateBackupsToKeep(DB, 5)
 	assert.NoError(t, err)
-	config, err = queries.GetConfig(DB)
+	config, err = queries.GetMutableConfig(DB)
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, 5, config.BackupsToKeep)
 
 	err = queries.UpdateBackupsToKeep(DB, 15)
 	assert.NoError(t, err)
-	config, err = queries.GetConfig(DB)
+	config, err = queries.GetMutableConfig(DB)
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, 15, config.BackupsToKeep)
 
 	err = queries.UpdateBackupsToKeep(DB, 0)
 	assert.NoError(t, err)
-	config, err = queries.GetConfig(DB)
+	config, err = queries.GetMutableConfig(DB)
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, 0, config.BackupsToKeep)
@@ -85,7 +86,7 @@ func TestGetConfig(t *testing.T) {
 	err = queries.UpdateBackupsToKeep(DB, -1)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "CHECK constraint failed")
-	config, err = queries.GetConfig(DB)
+	config, err = queries.GetMutableConfig(DB)
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, 0, config.BackupsToKeep)
@@ -93,8 +94,39 @@ func TestGetConfig(t *testing.T) {
 	err = queries.UpdateBackupsToKeep(DB, 16)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "CHECK constraint failed")
-	config, err = queries.GetConfig(DB)
+	config, err = queries.GetMutableConfig(DB)
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, 0, config.BackupsToKeep)
+
+	// Test if update tax rate works
+	taxDec := decimal.NewFromFloat(0.2)
+	err = queries.UpdateTaxRate(DB, taxDec)
+	assert.NoError(t, err)
+	config, err = queries.GetMutableConfig(DB)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.True(t, taxDec.Equal(config.TaxRate))
+	taxDec = decimal.NewFromFloat(0.5)
+	err = queries.UpdateTaxRate(DB, taxDec)
+	assert.NoError(t, err)
+	config, err = queries.GetMutableConfig(DB)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.True(t, taxDec.Equal(config.TaxRate))
+	taxDec = decimal.NewFromFloat(0.0)
+	err = queries.UpdateTaxRate(DB, taxDec)
+	assert.NoError(t, err)
+	config, err = queries.GetMutableConfig(DB)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.True(t, taxDec.Equal(config.TaxRate))
+	taxDec = decimal.NewFromFloat(-0.1)
+	err = queries.UpdateTaxRate(DB, taxDec)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CHECK constraint failed")
+	config, err = queries.GetMutableConfig(DB)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.True(t, decimal.NewFromFloat(0.0).Equal(config.TaxRate))
 }

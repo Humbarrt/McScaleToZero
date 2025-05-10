@@ -35,6 +35,8 @@ type Config interface {
 	SetIPCheck(ipCheck bool) error
 	GetBackupsToKeep() int
 	SetBackupsToKeep(backupsToKeep int) error
+	GetTaxRate() decimal.Decimal
+	SetTaxRate(taxRate decimal.Decimal) error
 }
 
 type AuthClaims struct {
@@ -86,6 +88,7 @@ type App struct {
 	CW         CostWatcher
 	AWS        AWSAPI
 	IS         InvoiceServiceAPI
+	LW         LogWatcher
 	JWTSecret  []byte
 
 	//protected

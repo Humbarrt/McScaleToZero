@@ -24,6 +24,11 @@ type MonthsCost struct {
 	Items        []CostItem      `json:"items"`
 }
 
+type Log struct {
+	Timestamp time.Time `json:"timestamp"`
+	Message   string    `json:"message"`
+}
+
 type AWSAPI interface {
 	StartInstance() error
 	GetInstanceState() (ec2Types.InstanceStateName, error)
@@ -35,6 +40,7 @@ type AWSAPI interface {
 	BackfillCostAllocationTag(backfillFrom time.Time) error
 	IsBackfillInProgress() (bool, error)
 	GetCostForTimeframe(timeframe Timeframe) ([]*MonthsCost, error)
+	GetLogsSince(startTime time.Time, limit int) ([]*Log, error)
 }
 
 type InvoiceService string

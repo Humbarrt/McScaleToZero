@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/joho/godotenv"
+	"github.com/shopspring/decimal"
 )
 
 var version = "development"
@@ -41,6 +42,7 @@ type config struct {
 	_mcOfflineMOTD  *string
 	_ipCheck        bool
 	_backupsToKeep  int
+	_taxRate        decimal.Decimal
 }
 
 func (c *config) GetAWSAccessKeyId() string {
@@ -216,6 +218,23 @@ func (c *config) SetBackupsToKeep(backupsToKeep int) error {
 	return nil
 }
 
+func (c *config) GetTaxRate() decimal.Decimal {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._taxRate
+}
+func (c *config) SetTaxRate(taxRate decimal.Decimal) error {
+	err := queries.UpdateTaxRate(c.db, taxRate)
+	if err != nil {
+		logging.Error("Error updating tax rate in database:", err)
+		return err
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._taxRate = taxRate
+	return nil
+}
+
 func getenv(key, fallback string) string {
 	value := os.Getenv(key)
 	if len(value) == 0 {
@@ -239,9 +258,9 @@ func Load(db *db.DB) *config {
 		logging.Fatal("Error loading .env file:", "error", err)
 	}
 
-	dynConfig, err := queries.GetConfig(db)
-	if err != nil || dynConfig == nil {
-		logging.Fatal("Error getting config", "error", err, "config", dynConfig)
+	mutConfig, err := queries.GetMutableConfig(db)
+	if err != nil || mutConfig == nil {
+		logging.Fatal("Error getting config", "error", err, "config", mutConfig)
 	}
 
 	dataPath := getenv("DATA_PATH", path.Join(path.Dir(currentPath), "data"))
@@ -329,11 +348,12 @@ func Load(db *db.DB) *config {
 		version:            version,
 		db:                 db,
 
-		_mcServerPort:   dynConfig.MCServerPort,
-		_mcOfflineImage: dynConfig.OfflineImage,
-		_mcOfflineMOTD:  dynConfig.OfflineMOTD,
-		_ipCheck:        dynConfig.IPCheck,
-		_backupsToKeep:  dynConfig.BackupsToKeep,
+		_mcServerPort:   mutConfig.MCServerPort,
+		_mcOfflineImage: mutConfig.OfflineImage,
+		_mcOfflineMOTD:  mutConfig.OfflineMOTD,
+		_ipCheck:        mutConfig.IPCheck,
+		_backupsToKeep:  mutConfig.BackupsToKeep,
+		_taxRate:        mutConfig.TaxRate,
 	}
 
 	logging.Debug("Config loaded")

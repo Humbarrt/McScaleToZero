@@ -14,6 +14,7 @@ import (
 	_config "mc_manager/config"
 	cw "mc_manager/processes/cost_watcher"
 	"mc_manager/processes/decoy_server"
+	lw "mc_manager/processes/log_watcher"
 	sw "mc_manager/processes/server_watcher"
 
 	"github.com/gin-gonic/gin"
@@ -48,6 +49,7 @@ func main() {
 		SW:         nil,
 		CW:         nil,
 		IS:         nil,
+		LW:         nil,
 	}
 
 	switch app.Config.GetInvoiceService() {
@@ -79,6 +81,9 @@ func main() {
 	app.CW = cw.NewCostWatcher(&app)
 	go app.CW.StartWatching()
 
+	app.LW = lw.NewLogWatcher(&app)
+	go app.LW.StartLogWatcher()
+
 	go decoy_server.Start(&app)
 
 	err = routes.InitRoutes(&app)
@@ -89,21 +94,14 @@ func main() {
 }
 
 /*
-TODO: get cost explorer by usage type
 
 TODO: dynamic decoy response, based on the last version we saw.
 TODO: dynamic image/motd/max-player-count replacement
 TODO: show different text on online/started/offline
 
-TODO: Read cloudWatch logs
-TODO: Parse logs and add to database
-TODO: Find last position based on 5 logs
-
 TODO: Check "Month-to-date cost"
-TODO: Check "Total forecasted cost for current month"
-TODO: Record AWS Invoice
+TODO: Make current cost estimate
 TODO: Create Splitwise invoice
-TODO: Get player history since last bill. Even if player is currently online
 TODO: On config, LOG to file
 
 TODO: dont send hardcoded mc status response

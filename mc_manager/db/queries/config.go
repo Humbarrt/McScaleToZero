@@ -3,25 +3,29 @@ package queries
 import (
 	"fmt"
 	"mc_manager/db"
+
+	"github.com/shopspring/decimal"
 )
 
-type dynamicConfig struct {
+type mutableConfig struct {
 	OfflineImage  *[]byte
 	OfflineMOTD   *string
 	MCServerPort  int
 	IPCheck       bool
 	BackupsToKeep int
+	TaxRate       decimal.Decimal
 }
 
-func GetConfig(DB *db.DB) (*dynamicConfig, error) {
+func GetMutableConfig(DB *db.DB) (*mutableConfig, error) {
 	stmt, err := DB.GetStmt("get_config")
 	if err != nil {
 		return nil, err
 	}
 
 	result := stmt.QueryRow()
-	config := &dynamicConfig{}
-	err = result.Scan(&config.OfflineImage, &config.OfflineMOTD, &config.MCServerPort, &config.IPCheck, &config.BackupsToKeep)
+	config := &mutableConfig{}
+	var taxRateInt int64
+	err = result.Scan(&config.OfflineImage, &config.OfflineMOTD, &config.MCServerPort, &config.IPCheck, &config.BackupsToKeep, &taxRateInt)
 	if err != nil {
 		return nil, err
 	}
@@ -29,11 +33,12 @@ func GetConfig(DB *db.DB) (*dynamicConfig, error) {
 		return nil, fmt.Errorf("MCServerPort is not set")
 	}
 
+	config.TaxRate = intToDecimal(taxRateInt)
 	return config, nil
 }
 
 func UpdateOfflineImage(DB *db.DB, image *[]byte) error {
-	config, err := GetConfig(DB)
+	config, err := GetMutableConfig(DB)
 	if err != nil {
 		return err
 	}
@@ -42,7 +47,7 @@ func UpdateOfflineImage(DB *db.DB, image *[]byte) error {
 }
 
 func UpdateOfflineMOTD(DB *db.DB, motd *string) error {
-	config, err := GetConfig(DB)
+	config, err := GetMutableConfig(DB)
 	if err != nil {
 		return err
 	}
@@ -51,7 +56,7 @@ func UpdateOfflineMOTD(DB *db.DB, motd *string) error {
 }
 
 func UpdateMCServerPort(DB *db.DB, port int) error {
-	config, err := GetConfig(DB)
+	config, err := GetMutableConfig(DB)
 	if err != nil {
 		return err
 	}
@@ -60,7 +65,7 @@ func UpdateMCServerPort(DB *db.DB, port int) error {
 }
 
 func UpdateIPCheck(DB *db.DB, ipCheck bool) error {
-	config, err := GetConfig(DB)
+	config, err := GetMutableConfig(DB)
 	if err != nil {
 		return err
 	}
@@ -69,7 +74,7 @@ func UpdateIPCheck(DB *db.DB, ipCheck bool) error {
 }
 
 func UpdateBackupsToKeep(DB *db.DB, backupsToKeep int) error {
-	config, err := GetConfig(DB)
+	config, err := GetMutableConfig(DB)
 	if err != nil {
 		return err
 	}
@@ -77,13 +82,22 @@ func UpdateBackupsToKeep(DB *db.DB, backupsToKeep int) error {
 	return updateConfig(DB, config)
 }
 
-func updateConfig(DB *db.DB, config *dynamicConfig) error {
+func UpdateTaxRate(DB *db.DB, taxRate decimal.Decimal) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.TaxRate = taxRate
+	return updateConfig(DB, config)
+}
+
+func updateConfig(DB *db.DB, config *mutableConfig) error {
 	stmt, err := DB.GetStmt("update_config")
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(config.OfflineImage, config.OfflineMOTD, config.MCServerPort, config.IPCheck, config.BackupsToKeep)
+	_, err = stmt.Exec(config.OfflineImage, config.OfflineMOTD, config.MCServerPort, config.IPCheck, config.BackupsToKeep, decimalToInt(config.TaxRate))
 	if err != nil {
 		return err
 	}
