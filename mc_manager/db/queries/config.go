@@ -3,29 +3,21 @@ package queries
 import (
 	"fmt"
 	"mc_manager/db"
+	"mc_manager/model"
 
 	"github.com/shopspring/decimal"
 )
 
-type mutableConfig struct {
-	OfflineImage  *[]byte
-	OfflineMOTD   *string
-	MCServerPort  int
-	IPCheck       bool
-	BackupsToKeep int
-	TaxRate       decimal.Decimal
-}
-
-func GetMutableConfig(DB *db.DB) (*mutableConfig, error) {
+func GetMutableConfig(DB *db.DB) (*model.MutableConfig, error) {
 	stmt, err := DB.GetStmt("get_config")
 	if err != nil {
 		return nil, err
 	}
 
 	result := stmt.QueryRow()
-	config := &mutableConfig{}
+	config := &model.MutableConfig{}
 	var taxRateInt int64
-	err = result.Scan(&config.OfflineImage, &config.OfflineMOTD, &config.MCServerPort, &config.IPCheck, &config.BackupsToKeep, &taxRateInt)
+	err = result.Scan(&config.MCServerPort, &config.OnlineImage, &config.OnlineMOTD, &config.OfflineImage, &config.OfflineMOTD, &config.ReplaceMOTD, &config.LastImage, &config.LastMOTD, &config.ProtocolVersion, &config.MaxPlayers, &config.BackupsToKeep, &taxRateInt)
 	if err != nil {
 		return nil, err
 	}
@@ -37,24 +29,6 @@ func GetMutableConfig(DB *db.DB) (*mutableConfig, error) {
 	return config, nil
 }
 
-func UpdateOfflineImage(DB *db.DB, image *[]byte) error {
-	config, err := GetMutableConfig(DB)
-	if err != nil {
-		return err
-	}
-	config.OfflineImage = image
-	return updateConfig(DB, config)
-}
-
-func UpdateOfflineMOTD(DB *db.DB, motd *string) error {
-	config, err := GetMutableConfig(DB)
-	if err != nil {
-		return err
-	}
-	config.OfflineMOTD = motd
-	return updateConfig(DB, config)
-}
-
 func UpdateMCServerPort(DB *db.DB, port int) error {
 	config, err := GetMutableConfig(DB)
 	if err != nil {
@@ -64,12 +38,87 @@ func UpdateMCServerPort(DB *db.DB, port int) error {
 	return updateConfig(DB, config)
 }
 
-func UpdateIPCheck(DB *db.DB, ipCheck bool) error {
+func UpdateOnlineImage(DB *db.DB, image *string) error {
 	config, err := GetMutableConfig(DB)
 	if err != nil {
 		return err
 	}
-	config.IPCheck = ipCheck
+	config.OnlineImage = image
+	return updateConfig(DB, config)
+}
+
+func UpdateOnlineMOTD(DB *db.DB, motd []byte) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.OnlineMOTD = motd
+	return updateConfig(DB, config)
+}
+
+func UpdateOfflineImage(DB *db.DB, image *string) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.OfflineImage = image
+	return updateConfig(DB, config)
+}
+
+func UpdateOfflineMOTD(DB *db.DB, motd []byte) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.OfflineMOTD = motd
+	return updateConfig(DB, config)
+}
+
+func UpdateReplaceMOTD(DB *db.DB, replaceMOTD bool) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.ReplaceMOTD = replaceMOTD
+	return updateConfig(DB, config)
+}
+
+func UpdateLastImage(DB *db.DB, image *string) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.LastImage = image
+	return updateConfig(DB, config)
+}
+
+func UpdateLastMOTD(DB *db.DB, motd []byte) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.LastMOTD = motd
+	return updateConfig(DB, config)
+}
+
+func UpdateProtocolVersion(DB *db.DB, protocolVersion *[]byte) error {
+	if protocolVersion == nil {
+		return fmt.Errorf("error protocol version is nil")
+	}
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.ProtocolVersion = protocolVersion
+	return updateConfig(DB, config)
+}
+
+func UpdateMaxPlayers(DB *db.DB, maxPlayers int) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.MaxPlayers = maxPlayers
 	return updateConfig(DB, config)
 }
 
@@ -91,13 +140,13 @@ func UpdateTaxRate(DB *db.DB, taxRate decimal.Decimal) error {
 	return updateConfig(DB, config)
 }
 
-func updateConfig(DB *db.DB, config *mutableConfig) error {
+func updateConfig(DB *db.DB, config *model.MutableConfig) error {
 	stmt, err := DB.GetStmt("update_config")
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(config.OfflineImage, config.OfflineMOTD, config.MCServerPort, config.IPCheck, config.BackupsToKeep, decimalToInt(config.TaxRate))
+	_, err = stmt.Exec(config.MCServerPort, config.OnlineImage, config.OnlineMOTD, config.OfflineImage, config.OfflineMOTD, config.ReplaceMOTD, config.LastImage, config.LastMOTD, config.ProtocolVersion, config.MaxPlayers, config.BackupsToKeep, decimalToInt(config.TaxRate))
 	if err != nil {
 		return err
 	}

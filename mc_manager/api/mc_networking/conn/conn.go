@@ -77,10 +77,10 @@ func (c *McConn) GetEncryption() (model.McCert, error) {
 }
 
 func (c *McConn) CloseWithError(reason model.DisconnectReason, comment string, err error) {
-	logging.Error(comment, "error", err)
 	if !c.isConnected || c.conn == nil || strings.Contains(err.Error(), "use of closed network connection") {
 		return
 	}
+	logging.Error(comment, "error", err)
 
 	err = mc.WriteDisconnect(c.conn, string(reason))
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *McConn) CloseWithError(reason model.DisconnectReason, comment string, e
 
 	c.isConnected = false
 	err = c.conn.Close()
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 		logging.Error("Error closing connection:", "error", err)
 	}
 }

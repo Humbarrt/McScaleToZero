@@ -115,6 +115,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 
 			go UpdateWhitelistAndAdmins(sw.App)
 			go BackupWorld(sw.App)
+			go sw.App.LW.StartLogWatcher()
 
 			err = queries.AddServerEvent(sw.App.Db, timestamp, true)
 			if err != nil {

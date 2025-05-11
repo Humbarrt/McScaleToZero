@@ -1,6 +1,7 @@
 package packet
 
 import (
+	"fmt"
 	"mc_manager/logging"
 	"net"
 	"time"
@@ -32,7 +33,12 @@ func readPacketLength(conn net.Conn) (int, error) {
 	var numRead int
 
 	var byteRead byte
+	maxPacketSize := 1024 * 1024 // 1 MB
 	for {
+		if num > maxPacketSize {
+			return 0, fmt.Errorf("packet size exceeds maximum limit")
+		}
+
 		buf := make([]byte, 1)
 		_, err := conn.Read(buf)
 		if err != nil {

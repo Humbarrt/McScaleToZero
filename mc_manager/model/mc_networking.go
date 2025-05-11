@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"net"
 	"time"
 )
@@ -40,4 +41,15 @@ type McCert interface {
 	EnableEncryption(sharedSecret []byte) error
 	Encrypt(data []byte) (output []byte)
 	Decrypt(data []byte) (output []byte)
+}
+
+type McStatusResponse struct {
+	Version            json.RawMessage `json:"version"`
+	Favicon            string          `json:"favicon"`
+	EnforcesSecureChat bool            `json:"enforcesSecureChat"`
+	Description        string          `json:"description"`
+	Players            struct {
+		Max    int `json:"max"`
+		Online int `json:"online"`
+	} `json:"players"`
 }

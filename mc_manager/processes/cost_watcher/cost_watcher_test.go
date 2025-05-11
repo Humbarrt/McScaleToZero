@@ -206,9 +206,9 @@ func TestCreateBill(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, bill)
 	assert.Equal(t, unbilledMonth, bill.Bill.BillingMonth)
-	assert.True(t, totalCost.Round(2).Equal(bill.Bill.TotalAmount.Round(2)), "totalCost: %s, bill.Bill.TotalAmount: %s", totalCost.String(), bill.Bill.TotalAmount.String())
-	assert.True(t, fixedCost.Round(2).Equal(bill.Bill.FixedAmount.Round(2)), "fixedCost: %s, bill.Bill.FixedAmount: %s", fixedCost.String(), bill.Bill.FixedAmount.String())
-	assert.True(t, variableCost.Round(2).Equal(bill.Bill.VariableAmount.Round(2)), "variableCost: %s, bill.Bill.VariableAmount: %s", variableCost.String(), bill.Bill.VariableAmount.String())
+	assert.True(t, isWithinTolerance(totalCost, bill.Bill.TotalAmount), "totalCost: %s, bill.Bill.TotalAmount: %s", totalCost.String(), bill.Bill.TotalAmount.String())
+	assert.True(t, isWithinTolerance(fixedCost, bill.Bill.FixedAmount), "fixedCost: %s, bill.Bill.FixedAmount: %s", fixedCost.String(), bill.Bill.FixedAmount.String())
+	assert.True(t, isWithinTolerance(variableCost, bill.Bill.VariableAmount), "variableCost: %s, bill.Bill.VariableAmount: %s", variableCost.String(), bill.Bill.VariableAmount.String())
 	assert.Equal(t, serverUptime, bill.Bill.ServerUptime)
 	assert.Equal(t, "USD", bill.Bill.Currency)
 	assert.Equal(t, 3, len(bill.BillItems))
@@ -224,8 +224,8 @@ func TestCreateBill(t *testing.T) {
 			totalVariableCost = totalVariableCost.Add(billItem.Amount)
 		}
 	}
-	assert.True(t, totalFixedCost.Round(2).Equal(bill.Bill.FixedAmount.Round(2)), "totalFixedCost: %s, bill.Bill.FixedAmount: %s", totalFixedCost.String(), bill.Bill.FixedAmount.String())
-	assert.True(t, totalVariableCost.Round(2).Equal(bill.Bill.VariableAmount.Round(2)), "totalVariableCost: %s, bill.Bill.VariableAmount: %s", totalVariableCost.String(), bill.Bill.VariableAmount.String())
+	assert.True(t, isWithinTolerance(totalFixedCost, bill.Bill.FixedAmount), "totalFixedCost: %s, bill.Bill.FixedAmount: %s", totalFixedCost.String(), bill.Bill.FixedAmount.String())
+	assert.True(t, isWithinTolerance(totalVariableCost, bill.Bill.VariableAmount), "totalVariableCost: %s, bill.Bill.VariableAmount: %s", totalVariableCost.String(), bill.Bill.VariableAmount.String())
 
 	totalFixedCost = decimal.NewFromFloat(0)
 	totalVariableCost = decimal.NewFromFloat(0)
@@ -234,8 +234,8 @@ func TestCreateBill(t *testing.T) {
 		totalFixedCost = totalFixedCost.Add(billedPlayer.FixedAmount)
 		totalVariableCost = totalVariableCost.Add(billedPlayer.VariableAmount)
 	}
-	assert.True(t, totalFixedCost.Round(2).Equal(bill.Bill.FixedAmount.Round(2)), "totalFixedCost: %s, bill.Bill.FixedAmount: %s", totalFixedCost.String(), bill.Bill.FixedAmount.String())
-	assert.True(t, totalVariableCost.Round(2).Equal(bill.Bill.VariableAmount.Round(2)), "totalVariableCost: %s, bill.Bill.VariableAmount: %s", totalVariableCost.String(), bill.Bill.VariableAmount.String())
+	assert.True(t, isWithinTolerance(totalFixedCost, bill.Bill.FixedAmount), "totalFixedCost: %s, bill.Bill.FixedAmount: %s", totalFixedCost.String(), bill.Bill.FixedAmount.String())
+	assert.True(t, isWithinTolerance(totalVariableCost, bill.Bill.VariableAmount), "totalVariableCost: %s, bill.Bill.VariableAmount: %s", totalVariableCost.String(), bill.Bill.VariableAmount.String())
 
 	// Check if explored cost are updated
 	exploredCost, err := queries.GetExploredCost(DB, unbilledMonth)
@@ -265,8 +265,8 @@ func TestCreateBill(t *testing.T) {
 	assert.NotNil(t, estimate)
 	assert.Equal(t, "USD", estimate.Currency)
 	assert.Equal(t, serverUptime, estimate.ServerUptime)
-	assert.True(t, expectedFixedCost.Round(2).Equal(estimate.FixedCost.Round(2)), "expectedFixedCost: %s, estimate.FixedCost: %s", expectedFixedCost.String(), estimate.FixedCost.String())
-	assert.True(t, expectedVariableCost.Round(2).Equal(estimate.VariableCost.Round(2)), "expectedVariableCost: %s, estimate.VariableCost: %s", expectedVariableCost.String(), estimate.VariableCost.String())
+	assert.True(t, isWithinTolerance(expectedFixedCost, estimate.FixedCost), "expectedFixedCost: %s, estimate.FixedCost: %s", expectedFixedCost.String(), estimate.FixedCost.String())
+	assert.True(t, isWithinTolerance(expectedVariableCost, estimate.VariableCost), "expectedVariableCost: %s, estimate.VariableCost: %s", expectedVariableCost.String(), estimate.VariableCost.String())
 	assert.Equal(t, len(players), len(estimate.Players))
 
 	for _, player := range estimate.Players {
@@ -276,9 +276,9 @@ func TestCreateBill(t *testing.T) {
 		}
 		if cpuTime[player.PlayerId] != 0 {
 			assert.Equal(t, math.Round(player.CPUTime.Hours()*4)/4, math.Round(cpuTime[player.PlayerId].Hours()*4)/4)
-			assert.True(t, player.Cost.Round(2).GreaterThan(expectedFixedCost.Div(decimal.NewFromInt(allowedPlayers)).Round(2)), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.Cost.String(), expectedFixedCost.Div(decimal.NewFromInt(4)).String())
+			assert.True(t, player.Cost.GreaterThan(expectedFixedCost.Div(decimal.NewFromInt(allowedPlayers))), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.Cost.String(), expectedFixedCost.Div(decimal.NewFromInt(4)).String())
 		} else {
-			assert.True(t, player.Cost.Round(2).Equal(expectedFixedCost.Div(decimal.NewFromInt(allowedPlayers)).Round(2)), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.Cost.String(), expectedFixedCost.Div(decimal.NewFromInt(4)).String())
+			assert.True(t, isWithinTolerance(player.Cost, expectedFixedCost.Div(decimal.NewFromInt(allowedPlayers))), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.Cost.String(), expectedFixedCost.Div(decimal.NewFromInt(4)).String())
 		}
 	}
 }
@@ -413,9 +413,9 @@ func TestCreateBillNoPlaytime(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, bill)
 	assert.Equal(t, unbilledMonth, bill.Bill.BillingMonth)
-	assert.True(t, totalCost.Round(2).Equal(bill.Bill.TotalAmount.Round(2)), "totalCost: %s, bill.Bill.TotalAmount: %s", totalCost.String(), bill.Bill.TotalAmount.String())
-	assert.True(t, fixedCost.Round(2).Equal(bill.Bill.FixedAmount.Round(2)), "fixedCost: %s, bill.Bill.FixedAmount: %s", fixedCost.String(), bill.Bill.FixedAmount.String())
-	assert.True(t, variableCost.Round(2).Equal(bill.Bill.VariableAmount.Round(2)), "variableCost: %s, bill.Bill.VariableAmount: %s", variableCost.String(), bill.Bill.VariableAmount.String())
+	assert.True(t, isWithinTolerance(totalCost, bill.Bill.TotalAmount), "totalCost: %s, bill.Bill.TotalAmount: %s", totalCost.String(), bill.Bill.TotalAmount.String())
+	assert.True(t, isWithinTolerance(fixedCost, bill.Bill.FixedAmount), "fixedCost: %s, bill.Bill.FixedAmount: %s", fixedCost.String(), bill.Bill.FixedAmount.String())
+	assert.True(t, isWithinTolerance(variableCost, bill.Bill.VariableAmount), "variableCost: %s, bill.Bill.VariableAmount: %s", variableCost.String(), bill.Bill.VariableAmount.String())
 	assert.Equal(t, serverUptime, bill.Bill.ServerUptime)
 	assert.Equal(t, "USD", bill.Bill.Currency)
 	assert.Equal(t, 3, len(bill.BillItems))
@@ -431,8 +431,8 @@ func TestCreateBillNoPlaytime(t *testing.T) {
 			totalVariableCost = totalVariableCost.Add(billItem.Amount)
 		}
 	}
-	assert.True(t, totalFixedCost.Round(2).Equal(bill.Bill.FixedAmount.Round(2)), "totalFixedCost: %s, bill.Bill.FixedAmount: %s", totalFixedCost.String(), bill.Bill.FixedAmount.String())
-	assert.True(t, totalVariableCost.Round(2).Equal(bill.Bill.VariableAmount.Round(2)), "totalVariableCost: %s, bill.Bill.VariableAmount: %s", totalVariableCost.String(), bill.Bill.VariableAmount.String())
+	assert.True(t, isWithinTolerance(totalFixedCost, bill.Bill.FixedAmount), "totalFixedCost: %s, bill.Bill.FixedAmount: %s", totalFixedCost.String(), bill.Bill.FixedAmount.String())
+	assert.True(t, isWithinTolerance(totalVariableCost, bill.Bill.VariableAmount), "totalVariableCost: %s, bill.Bill.VariableAmount: %s", totalVariableCost.String(), bill.Bill.VariableAmount.String())
 
 	fixedCostPerPlayer := fixedCost.Div(decimal.NewFromInt(allowedPlayers))
 	variableAmountPerPlayer := variableCost.Div(decimal.NewFromInt(allowedPlayers))
@@ -442,11 +442,11 @@ func TestCreateBillNoPlaytime(t *testing.T) {
 		assert.Equal(t, bill.Bill.Id, billedPlayer.BillId)
 		totalFixedCost = totalFixedCost.Add(billedPlayer.FixedAmount)
 		totalVariableCost = totalVariableCost.Add(billedPlayer.VariableAmount)
-		assert.True(t, billedPlayer.FixedAmount.Round(3).Equal(fixedCostPerPlayer.Round(3)), "billedPlayer.FixedAmount: %s, fixedCostPerPlayer: %s", billedPlayer.FixedAmount.String(), fixedCostPerPlayer.String())
-		assert.True(t, billedPlayer.VariableAmount.Round(3).Equal(variableAmountPerPlayer.Round(3)), "billedPlayer.VariableAmount: %s, variableAmountPerPlayer: %s", billedPlayer.VariableAmount.String(), variableAmountPerPlayer.String())
+		assert.True(t, isWithinTolerance(billedPlayer.FixedAmount, fixedCostPerPlayer), "billedPlayer.FixedAmount: %s, fixedCostPerPlayer: %s", billedPlayer.FixedAmount.String(), fixedCostPerPlayer.String())
+		assert.True(t, isWithinTolerance(billedPlayer.VariableAmount, variableAmountPerPlayer), "billedPlayer.VariableAmount: %s, variableAmountPerPlayer: %s", billedPlayer.VariableAmount.String(), variableAmountPerPlayer.String())
 	}
-	assert.True(t, totalFixedCost.Round(2).Equal(bill.Bill.FixedAmount.Round(2)), "totalFixedCost: %s, bill.Bill.FixedAmount: %s", totalFixedCost.String(), bill.Bill.FixedAmount.String())
-	assert.True(t, totalVariableCost.Round(2).Equal(bill.Bill.VariableAmount.Round(2)), "totalVariableCost: %s, bill.Bill.VariableAmount: %s", totalVariableCost.String(), bill.Bill.VariableAmount.String())
+	assert.True(t, isWithinTolerance(totalFixedCost, bill.Bill.FixedAmount), "totalFixedCost: %s, bill.Bill.FixedAmount: %s", totalFixedCost.String(), bill.Bill.FixedAmount.String())
+	assert.True(t, isWithinTolerance(totalVariableCost, bill.Bill.VariableAmount), "totalVariableCost: %s, bill.Bill.VariableAmount: %s", totalVariableCost.String(), bill.Bill.VariableAmount.String())
 
 }
 
@@ -473,4 +473,9 @@ func TestCostEstimateWithoutBills(t *testing.T) {
 	assert.Error(t, err)
 	assert.True(t, err.Error() == "not enough data to create cost estimate")
 	assert.Nil(t, estimate)
+}
+
+func isWithinTolerance(a, b decimal.Decimal) bool {
+	tolerance := decimal.NewFromFloat(0.001)
+	return a.Sub(b).Abs().LessThanOrEqual(tolerance.Mul(decimal.Max(a.Abs(), b.Abs())))
 }

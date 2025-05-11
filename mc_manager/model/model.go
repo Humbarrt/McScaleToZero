@@ -27,16 +27,43 @@ type Config interface {
 	SetDashboardURL(url string)
 	GetMCServerPort() int
 	SetMCServerPort(port int) error
-	GetMCOfflineImage() *[]byte
-	SetMCOfflineImage(image *[]byte) error
-	GetMCOfflineMOTD() *string
-	SetMCOfflineMOTD(motd *string) error
-	GetIPCheck() bool
-	SetIPCheck(ipCheck bool) error
+	GetMCOnlineImage() *string
+	SetMCOnlineImage(image *string) error
+	GetMCOnlineMOTD() []byte
+	SetMCOnlineMOTD(motd []byte) error
+	GetMCOfflineImage() *string
+	SetMCOfflineImage(image *string) error
+	GetMCOfflineMOTD() []byte
+	SetMCOfflineMOTD(motd []byte) error
+	GetReplaceMOTD() bool
+	SetReplaceMOTD(replace bool) error
+	GetLastImage() *string
+	SetLastImage(image *string) error
+	GetLastMOTD() []byte
+	SetLastMOTD(motd []byte) error
+	GetProtocolVersion() []byte
+	SetProtocolVersion(version []byte) error
+	GetMaxPlayers() int
+	SetMaxPlayers(maxPlayers int) error
 	GetBackupsToKeep() int
 	SetBackupsToKeep(backupsToKeep int) error
 	GetTaxRate() decimal.Decimal
 	SetTaxRate(taxRate decimal.Decimal) error
+}
+
+type MutableConfig struct {
+	MCServerPort    int
+	OnlineImage     *string
+	OnlineMOTD      []byte
+	OfflineImage    *string
+	OfflineMOTD     []byte
+	ReplaceMOTD     bool
+	LastImage       *string
+	LastMOTD        []byte
+	ProtocolVersion *[]byte
+	MaxPlayers      int
+	BackupsToKeep   int
+	TaxRate         decimal.Decimal
 }
 
 type AuthClaims struct {

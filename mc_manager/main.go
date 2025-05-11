@@ -94,16 +94,6 @@ func main() {
 }
 
 /*
-
-TODO: dynamic decoy response, based on the last version we saw.
-TODO: dynamic image/motd/max-player-count replacement
-TODO: show different text on online/started/offline
-
-TODO: Check "Month-to-date cost"
-TODO: Make current cost estimate
 TODO: Create Splitwise invoice
 TODO: On config, LOG to file
-
-TODO: dont send hardcoded mc status response
-TODO: what if the next minecraft version comes out? - maybe check the version on boot?
 */

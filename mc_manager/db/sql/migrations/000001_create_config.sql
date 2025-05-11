@@ -1,20 +1,24 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS "config" (
     "id" INTEGER PRIMARY KEY,
-    "offline_image" BLOB,
-    "offline_motd" TEXT CHECK (
-        "offline_motd" IS NULL
-        OR (
-            typeof("offline_motd") = 'text'
-            AND length("offline_motd") <= 1024
-        )
-    ),
     "mc_port" INTEGER NOT NULL CHECK (
         typeof("mc_port") = 'integer'
         AND "mc_port" > 0
         AND "mc_port" <= 65535
     ),
-    "ip_check" BOOLEAN NOT NULL,
+    "online_image" BLOB,
+    "online_motd" BLOB NOT NULL CHECK (length("online_motd") <= 1024),
+    "offline_image" BLOB,
+    "offline_motd" BLOB NOT NULL CHECK (length("offline_motd") <= 1024),
+    "replace_motd" BOOLEAN NOT NULL,
+    "last_image" BLOB,
+    "last_motd" BLOB NOT NULL CHECK (length("last_motd") <= 1024),
+    "protocol_version" BLOB NOT NULL CHECK (length("protocol_version") > 0),
+    "max_players" INTEGER NOT NULL CHECK (
+        typeof("max_players") = 'integer'
+        AND "max_players" >= 0
+        AND "max_players" <= 10000
+    ),
     "backups_to_keep" INTEGER NOT NULL CHECK (
         typeof("backups_to_keep") = 'integer'
         AND "backups_to_keep" >= 0
@@ -26,11 +30,32 @@ CREATE TABLE IF NOT EXISTS "config" (
     )
 );
 INSERT INTO "config" (
+        "online_image",
+        "online_motd",
         "offline_image",
         "offline_motd",
+        "replace_motd",
+        "last_image",
+        "last_motd",
+        "protocol_version",
+        "max_players",
         "mc_port",
-        "ip_check",
         "backups_to_keep",
         "tax_rate"
     )
-VALUES (NULL, NULL, 25565, TRUE, 2, 1900);
+VALUES (
+        NULL,
+        '§r
+                    §a(running)',
+        NULL,
+        '§r
+                §8(not started yet)',
+        FALSE,
+        NULL,
+        'Start your server to replace this message.',
+        '{"name": "1.21.5", "protocol": 770}',
+        20,
+        25565,
+        2,
+        1900
+    );

@@ -56,6 +56,7 @@ func WriteStatusResponse(conn net.Conn, status string) {
 		PacketID: 0x00,
 		Data:     make([]byte, 0),
 	}
+
 	packet.WriteString(&p.Data, status)
 
 	packetBytes := p.ToBytes()

@@ -12,8 +12,7 @@ func ReadPacket(conn net.Conn) (*Packet, error) {
 	// Read the packet length
 	length, err := readPacketLength(conn)
 	if err != nil {
-		logging.Error("Error reading packet length:", "error", err)
-		return &Packet{}, err
+		return &Packet{}, fmt.Errorf("error reading packet length: %v", err)
 	}
 	p.Length = length
 	logging.Debug("Packet length", "length", length)

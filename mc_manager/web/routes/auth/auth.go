@@ -65,12 +65,12 @@ func signInHandler(app *model.App) gin.HandlerFunc {
 			return
 		}
 
-		isCheckingIP := app.Config.GetIPCheck()
+		/* isCheckingIP := app.Config.GetIPCheck()
 		if isCheckingIP && (user.LastIPV4 == nil || *user.LastIPV4 != ctx.ClientIP()) {
 			logging.Error("error, ip address does not match", "ip", ctx.ClientIP(), "username", user.Aliases[0])
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "ip", "message": "Please join the MC server from the same IP address"})
 			return
-		}
+		} */
 
 		claims := model.AuthClaims{
 			McUUID: fmt.Sprintf("%d", user.Id),

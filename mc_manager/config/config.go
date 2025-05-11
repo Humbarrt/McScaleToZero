@@ -35,14 +35,20 @@ type config struct {
 	db                 *db.DB
 
 	//protected
-	mutex           sync.Mutex
-	_dashboardURL   string
-	_mcServerPort   int
-	_mcOfflineImage *[]byte
-	_mcOfflineMOTD  *string
-	_ipCheck        bool
-	_backupsToKeep  int
-	_taxRate        decimal.Decimal
+	mutex            sync.Mutex
+	_dashboardURL    string
+	_mcServerPort    int
+	_mcOnlineImage   *string
+	_mcOnlineMOTD    []byte
+	_mcOfflineImage  *string
+	_mcOfflineMOTD   []byte
+	_replaceMOTD     bool
+	_lastImage       *string
+	_lastMOTD        []byte
+	_protocolVersion *[]byte
+	_maxPlayers      int
+	_backupsToKeep   int
+	_taxRate         decimal.Decimal
 }
 
 func (c *config) GetAWSAccessKeyId() string {
@@ -101,7 +107,7 @@ func (c *config) GetMCServerPort() int {
 func (c *config) SetMCServerPort(port int) error {
 	err := queries.UpdateMCServerPort(c.db, port)
 	if err != nil {
-		logging.Error("Error updating MC server port in database:", err)
+		logging.Error("Error updating MC server port in database:", "error", err)
 		return err
 	}
 
@@ -111,51 +117,67 @@ func (c *config) SetMCServerPort(port int) error {
 	return nil
 }
 
-func (c *config) GetMCOfflineImage() *[]byte {
+func (c *config) GetMCOnlineImage() *string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._mcOnlineImage
+}
+func (c *config) SetMCOnlineImage(base64Image *string) error {
+	if base64Image != nil && len(*base64Image) != 0 {
+		err := validateImage(base64Image)
+		if err != nil {
+			logging.Error("Invalid image:", "error", err)
+			return err
+		}
+	}
+
+	err := queries.UpdateOnlineImage(c.db, base64Image)
+	if err != nil {
+		logging.Error("Error updating offline image in database:", "error", err)
+		return err
+	}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._mcOnlineImage = base64Image
+	return nil
+}
+
+func (c *config) GetMCOnlineMOTD() []byte {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._mcOnlineMOTD
+}
+func (c *config) SetMCOnlineMOTD(motd []byte) error {
+	err := queries.UpdateOnlineMOTD(c.db, motd)
+	if err != nil {
+		logging.Error("Error updating offline MOTD in database:", "error", err)
+		return err
+	}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._mcOnlineMOTD = motd
+	return nil
+}
+
+func (c *config) GetMCOfflineImage() *string {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c._mcOfflineImage
 }
-func (c *config) SetMCOfflineImage(base64Image *[]byte) error {
-	if base64Image != nil {
-		//Validate Base64
-		base64ImageStr := string(*base64Image)
-		if strings.HasPrefix(base64ImageStr, "data:") {
-			parts := strings.SplitN(base64ImageStr, ",", 2)
-			if len(parts) == 2 {
-				base64ImageStr = parts[1]
-			}
-		}
-
-		// Decode Base64
-		imgData, err := base64.StdEncoding.DecodeString(base64ImageStr)
+func (c *config) SetMCOfflineImage(base64Image *string) error {
+	if base64Image != nil && len(*base64Image) != 0 {
+		err := validateImage(base64Image)
 		if err != nil {
-			logging.Error("Error decoding Base64:", err)
+			logging.Error("Invalid image:", "error", err)
 			return err
-		}
-
-		// Decode image
-		img, _, err := image.Decode(strings.NewReader(string(imgData)))
-		if err != nil {
-			logging.Error("Error decoding image:", err)
-			return err
-		}
-
-		// Get image bounds
-		bounds := img.Bounds()
-		width := bounds.Dx()
-		height := bounds.Dy()
-
-		fmt.Printf("Width: %d, Height: %d\n", width, height)
-		if width != 64 || height != 64 {
-			logging.Error("Image dimensions are not 64x64")
-			return fmt.Errorf("image dimensions are not 64x64")
 		}
 	}
 
 	err := queries.UpdateOfflineImage(c.db, base64Image)
 	if err != nil {
-		logging.Error("Error updating offline image in database:", err)
+		logging.Error("Error updating offline image in database:", "error", err)
 		return err
 	}
 
@@ -165,15 +187,15 @@ func (c *config) SetMCOfflineImage(base64Image *[]byte) error {
 	return nil
 }
 
-func (c *config) GetMCOfflineMOTD() *string {
+func (c *config) GetMCOfflineMOTD() []byte {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c._mcOfflineMOTD
 }
-func (c *config) SetMCOfflineMOTD(motd *string) error {
+func (c *config) SetMCOfflineMOTD(motd []byte) error {
 	err := queries.UpdateOfflineMOTD(c.db, motd)
 	if err != nil {
-		logging.Error("Error updating offline MOTD in database:", err)
+		logging.Error("Error updating offline MOTD in database:", "error", err)
 		return err
 	}
 
@@ -183,21 +205,97 @@ func (c *config) SetMCOfflineMOTD(motd *string) error {
 	return nil
 }
 
-func (c *config) GetIPCheck() bool {
+func (c *config) GetReplaceMOTD() bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	return c._ipCheck
+	return c._replaceMOTD
 }
-func (c *config) SetIPCheck(ipCheck bool) error {
-	err := queries.UpdateIPCheck(c.db, ipCheck)
+func (c *config) SetReplaceMOTD(replaceMOTD bool) error {
+	err := queries.UpdateReplaceMOTD(c.db, replaceMOTD)
 	if err != nil {
-		logging.Error("Error updating MC server port in database:", err)
+		logging.Error("Error updating replace MOTD in database:", "error", err)
+		return err
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._replaceMOTD = replaceMOTD
+	return nil
+}
+
+func (c *config) GetLastImage() *string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._lastImage
+}
+func (c *config) SetLastImage(base64Image *string) error {
+	if base64Image != nil && len(*base64Image) != 0 {
+		err := validateImage(base64Image)
+		if err != nil {
+			logging.Error("Invalid image:", "error", err)
+			return err
+		}
+	}
+
+	err := queries.UpdateLastImage(c.db, base64Image)
+	if err != nil {
+		logging.Error("Error updating last image in database:", "error", err)
 		return err
 	}
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	c._ipCheck = ipCheck
+	c._lastImage = base64Image
+	return nil
+}
+
+func (c *config) GetLastMOTD() []byte {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._lastMOTD
+}
+func (c *config) SetLastMOTD(motd []byte) error {
+	err := queries.UpdateLastMOTD(c.db, motd)
+	if err != nil {
+		logging.Error("Error updating last MOTD in database:", "error", err)
+		return err
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._lastMOTD = motd
+	return nil
+}
+
+func (c *config) GetProtocolVersion() []byte {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return *c._protocolVersion
+}
+func (c *config) SetProtocolVersion(protocolVersion []byte) error {
+	err := queries.UpdateProtocolVersion(c.db, &protocolVersion)
+	if err != nil {
+		logging.Error("Error updating protocol version in database:", "error", err)
+		return err
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._protocolVersion = &protocolVersion
+	return nil
+}
+
+func (c *config) GetMaxPlayers() int {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._maxPlayers
+}
+func (c *config) SetMaxPlayers(maxPlayers int) error {
+	err := queries.UpdateMaxPlayers(c.db, maxPlayers)
+	if err != nil {
+		logging.Error("Error updating max players in database:", "error", err)
+		return err
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._maxPlayers = maxPlayers
 	return nil
 }
 
@@ -209,7 +307,7 @@ func (c *config) GetBackupsToKeep() int {
 func (c *config) SetBackupsToKeep(backupsToKeep int) error {
 	err := queries.UpdateBackupsToKeep(c.db, backupsToKeep)
 	if err != nil {
-		logging.Error("Error updating backups to keep in database:", err)
+		logging.Error("Error updating backups to keep in database:", "error", err)
 		return err
 	}
 	c.mutex.Lock()
@@ -226,12 +324,53 @@ func (c *config) GetTaxRate() decimal.Decimal {
 func (c *config) SetTaxRate(taxRate decimal.Decimal) error {
 	err := queries.UpdateTaxRate(c.db, taxRate)
 	if err != nil {
-		logging.Error("Error updating tax rate in database:", err)
+		logging.Error("Error updating tax rate in database:", "error", err)
 		return err
 	}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c._taxRate = taxRate
+	return nil
+}
+
+func validateImage(base64Image *string) error {
+	if base64Image == nil || len(*base64Image) == 0 {
+		return fmt.Errorf("base64 image is nil")
+	}
+
+	//Validate Base64
+	base64ImageStr := string(*base64Image)
+	logging.Debug("Base64 image string:", base64ImageStr)
+	if strings.HasPrefix(base64ImageStr, "data:") {
+		parts := strings.SplitN(base64ImageStr, ",", 2)
+		if len(parts) == 2 {
+			base64ImageStr = parts[1]
+		}
+	}
+
+	// Decode Base64
+	imgData, err := base64.StdEncoding.DecodeString(base64ImageStr)
+	if err != nil {
+		logging.Error("Error decoding Base64:", "error", err)
+		return err
+	}
+
+	// Decode image
+	img, _, err := image.Decode(strings.NewReader(string(imgData)))
+	if err != nil {
+		logging.Error("Error decoding image:", "error", err)
+		return err
+	}
+
+	// Get image bounds
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	fmt.Printf("Width: %d, Height: %d\n", width, height)
+	if width != 64 || height != 64 {
+		return fmt.Errorf("image dimensions are not 64x64")
+	}
 	return nil
 }
 
@@ -348,12 +487,18 @@ func Load(db *db.DB) *config {
 		version:            version,
 		db:                 db,
 
-		_mcServerPort:   mutConfig.MCServerPort,
-		_mcOfflineImage: mutConfig.OfflineImage,
-		_mcOfflineMOTD:  mutConfig.OfflineMOTD,
-		_ipCheck:        mutConfig.IPCheck,
-		_backupsToKeep:  mutConfig.BackupsToKeep,
-		_taxRate:        mutConfig.TaxRate,
+		_mcServerPort:    mutConfig.MCServerPort,
+		_mcOnlineImage:   mutConfig.OnlineImage,
+		_mcOnlineMOTD:    mutConfig.OnlineMOTD,
+		_mcOfflineImage:  mutConfig.OfflineImage,
+		_mcOfflineMOTD:   mutConfig.OfflineMOTD,
+		_replaceMOTD:     mutConfig.ReplaceMOTD,
+		_lastImage:       mutConfig.LastImage,
+		_lastMOTD:        mutConfig.LastMOTD,
+		_protocolVersion: mutConfig.ProtocolVersion,
+		_maxPlayers:      mutConfig.MaxPlayers,
+		_backupsToKeep:   mutConfig.BackupsToKeep,
+		_taxRate:         mutConfig.TaxRate,
 	}
 
 	logging.Debug("Config loaded")
