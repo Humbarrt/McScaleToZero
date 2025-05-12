@@ -29,7 +29,6 @@ func handleServerListPing(clientConn *conn.McConn, app *model.App) {
 		}
 
 		if packet.PacketID == 0x00 {
-
 			motd := []byte("")
 			replaceMOTD := app.Config.GetReplaceMOTD()
 			offlineMotd := app.Config.GetMCOfflineMOTD()
@@ -103,13 +102,12 @@ func handleServerListPing(clientConn *conn.McConn, app *model.App) {
 			var favicon *string
 			if isServerReady {
 				favicon = app.Config.GetMCOnlineImage()
-				logging.Debug("MC Server is ready, using online favicon", "favicon length", len(*favicon))
 			} else {
 				favicon = app.Config.GetMCOfflineImage()
 			}
 
 			faviconString := ""
-			if favicon == nil && lastImage != nil {
+			if (favicon == nil || *favicon == "") && lastImage != nil {
 				faviconString = string(*lastImage)
 			} else if favicon != nil {
 				faviconString = string(*favicon)

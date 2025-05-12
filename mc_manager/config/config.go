@@ -1,9 +1,7 @@
 package config
 
 import (
-	"encoding/base64"
 	"fmt"
-	"image"
 	"mc_manager/db"
 	"mc_manager/db/queries"
 	"mc_manager/logging"
@@ -331,55 +329,6 @@ func (c *config) SetTaxRate(taxRate decimal.Decimal) error {
 	defer c.mutex.Unlock()
 	c._taxRate = taxRate
 	return nil
-}
-
-func validateImage(base64Image *string) error {
-	if base64Image == nil || len(*base64Image) == 0 {
-		return fmt.Errorf("base64 image is nil")
-	}
-
-	//Validate Base64
-	base64ImageStr := string(*base64Image)
-	logging.Debug("Base64 image string:", base64ImageStr)
-	if strings.HasPrefix(base64ImageStr, "data:") {
-		parts := strings.SplitN(base64ImageStr, ",", 2)
-		if len(parts) == 2 {
-			base64ImageStr = parts[1]
-		}
-	}
-
-	// Decode Base64
-	imgData, err := base64.StdEncoding.DecodeString(base64ImageStr)
-	if err != nil {
-		logging.Error("Error decoding Base64:", "error", err)
-		return err
-	}
-
-	// Decode image
-	img, _, err := image.Decode(strings.NewReader(string(imgData)))
-	if err != nil {
-		logging.Error("Error decoding image:", "error", err)
-		return err
-	}
-
-	// Get image bounds
-	bounds := img.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-
-	fmt.Printf("Width: %d, Height: %d\n", width, height)
-	if width != 64 || height != 64 {
-		return fmt.Errorf("image dimensions are not 64x64")
-	}
-	return nil
-}
-
-func getenv(key, fallback string) string {
-	value := os.Getenv(key)
-	if len(value) == 0 {
-		return fallback
-	}
-	return value
 }
 
 func Load(db *db.DB) *config {

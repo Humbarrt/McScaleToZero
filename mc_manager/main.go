@@ -94,6 +94,13 @@ func main() {
 }
 
 /*
-TODO: Create Splitwise invoice
-TODO: On config, LOG to file
+TODO: Splitwise Create  invoice
+TODO: Splitwise Get Users
+TODO: Splitwise Render Player/User Selection
+TODO: Splitwise Render is synced
+
+TODO: AuthManager - Reset password -> remove all sessions
+TODO: AuthManager - Change password -> remove all sessions
+TODO: AuthManager - Login
+TODO: AuthManager - Logout -> remove all sessions
 */
