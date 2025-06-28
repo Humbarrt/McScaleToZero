@@ -1,0 +1,77 @@
+package playtime
+
+import (
+    "mc_manager/model"
+	"time"
+	"mc_manager/web/views/utils"
+)
+
+
+templ EventList(players map[int64]*model.Player, events []*model.PlayerEvent) {
+    {{
+        lastPlayerEvents := make(map[int64]*model.PlayerEvent)
+    }}
+    <div>
+        <h3 class="mt-2 text-lg font-semibold text-center">Player Events</h3>
+        <div class="overflow-auto max-h-[30rem] sm:max-h-[50rem]">
+            <table class="table w-full !p-0 min-w-min whitespace-nowrap" style="border: none;">
+                <thead>
+                    <tr>
+                        <th class="sticky top-0 z-10 bg-panel">Player</th>
+                        <th class="sticky top-0 z-10 bg-panel">Joined At</th>
+                        <th class="sticky top-0 z-10 bg-panel">Duration</th>
+                        <th class="sticky top-0 z-10 bg-panel">Left At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    for _, event := range events {
+                        {{
+                            if event.IsOnline == true {
+                                lastPlayerEvents[event.PlayerId] = event
+                                continue
+                            }
+
+                            lastEvent, okEvent := lastPlayerEvents[event.PlayerId]
+                            player, okPlayer := players[event.PlayerId]
+                            alias := "Unknown"
+                            joinedTimestamp := "Before the timeframe"
+                            duration := " - "
+
+                            if okPlayer && len(player.Aliases) > 0 {
+                                alias = player.Aliases[0]
+                            }
+                            if okEvent {
+                                joinedTimestamp = lastEvent.Timestamp.Format(time.DateTime)
+                                duration = utils.HumanizeDuration(event.Timestamp.Sub(lastEvent.Timestamp))
+                            }
+
+                            lastPlayerEvents[event.PlayerId] = nil
+                        }}
+                        <tr>
+                            <td>{alias}</td>
+                            <td>{joinedTimestamp}</td>
+                            <td>{duration}</td>
+                            <td>{event.Timestamp.Format(time.DateTime)}</td>
+                        </tr>
+                    }
+                    for playerId, lastEvent := range lastPlayerEvents {
+                        if lastEvent != nil {
+                            {{
+                                alias := "Unknown"
+                                if player, ok := players[playerId]; ok && len(player.Aliases) > 0 {
+                                    alias = player.Aliases[0]
+                                }
+                            }}
+                            <tr>
+                                <td>{alias}</td>
+                                <td>{lastEvent.Timestamp.Format(time.DateTime)}</td>
+                                <td> - </td>
+                                <td>After the timeframe</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

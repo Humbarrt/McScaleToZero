@@ -8,7 +8,7 @@ package layout
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-func Header() templ.Component {
+func Header(isSignedIn bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -29,7 +29,17 @@ func Header() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<header class=\"w-full h-1-block sm:h-2-block bg-block-dirt\"><div class=\"w-full h-full !bg-repeat-x bg-block-grass-side\"><div class=\"flex flex-row w-full h-full bg-cover items-center justify-center sm:justify-start bg-gradient-to-t px-8 from-[rgba(0,0,0,0.4)] to-[rgba(0,0,0,0.0)]\"><img src=\"/static/imgs/banner.png\" class=\"flex flex-row h-auto text-2xl text-white w-60 sm:text-5xl sm:w-96\" alt=\"MC Billing Split\"></div></div></header>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<header class=\"flex w-full bg-block-dirt\"><div class=\"w-full h-full !bg-repeat-x bg-block-grass-side\"><div class=\"flex flex-col sm:flex-row w-full h-full bg-cover items-center justify-between bg-gradient-to-t px-2 sm:px-8 py-2 from-[rgba(0,0,0,0.4)] to-[rgba(0,0,0,0.0)]\"><img src=\"/static/imgs/banner.png\" class=\"flex flex-row h-auto py-2 mt-2 text-2xl text-white sm:py-1 w-60 sm:text-5xl sm:w-72\" alt=\"MC Billing Split\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if isSignedIn {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<button class=\"relative flex flex-row items-center justify-center gap-2 px-4 py-2 mt-2 group\" hx-get=\"/auth/logout\" hx-disabled-elt=\"this\"><div class=\"text-white text-md sm:hidden sm:text-xl text-shadow-md\">Logout</div><div class=\"relative w-6 h-6\"><svg class=\"absolute w-6 h-6 text-black top-[1px]\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M5 3h16v4h-2V5H5v14h14v-2h2v4H3V3h2zm16 8h-2V9h-2V7h-2v2h2v2H7v2h10v2h-2v2h2v-2h2v-2h2v-2z\" fill=\"currentColor\"></path></svg> <svg class=\"absolute w-6 h-6 text-white\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M5 3h16v4h-2V5H5v14h14v-2h2v4H3V3h2zm16 8h-2V9h-2V7h-2v2h2v2H7v2h10v2h-2v2h2v-2h2v-2h2v-2z\" fill=\"currentColor\"></path></svg></div><span class=\"absolute right-0 px-2 py-1 text-white transition-opacity bg-black rounded opacity-0 pointer-events-none top-9 w-max group-hover:opacity-100\">Logout</span></button>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div></div></header>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

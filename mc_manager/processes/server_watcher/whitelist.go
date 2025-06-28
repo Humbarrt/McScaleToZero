@@ -118,6 +118,25 @@ func processMcPlayers(db *db.DB, whitelist []*mcPlayer, admins []*mcPlayer) erro
 	return queries.UpdatePlayersIsAllowed(db, mergedPlayerIds, false, false)
 }
 
+func RemoveSessionsFromNonWhitelistedPlayers(app *model.App) error {
+	players, err := queries.GetPlayers(app.Db)
+	if err != nil {
+		logging.Error("Error getting players from database", "error", err)
+		return err
+	}
+
+	for _, player := range players {
+		if player.IsAllowed || player.IsAdmin {
+			continue
+		}
+		err := app.SM.RemoveUserSessions(player.Id)
+		if err != nil {
+			logging.Error("Error removing sessions for player", "playerId", player.Id, "error", err)
+		}
+	}
+	return nil
+}
+
 func UpdateWhitelistAndAdmins(app *model.App) error {
 	whitelist, admins, err := downloadMcFiles(app)
 	if err != nil {
@@ -132,5 +151,11 @@ func UpdateWhitelistAndAdmins(app *model.App) error {
 	}
 
 	logging.Debug("Whitelist and Admins loaded", "whitelist", whitelist, "admins", admins)
-	return processMcPlayers(app.Db, whitelist, admins)
+	err = processMcPlayers(app.Db, whitelist, admins)
+	if err != nil {
+		logging.Error("Error processing players", "error", err)
+		return err
+	}
+
+	return RemoveSessionsFromNonWhitelistedPlayers(app)
 }

@@ -15,5 +15,8 @@
 	"scripts": {
 		"build": "tailwindcss build -o web/static/css/tailwind.css --minify",
 		"watch": "tailwindcss build -o web/static/css/tailwind.css --watch"
+	},
+	"dependencies": {
+		"htmx-ext-sse": "^2.2.3"
 	}
 }

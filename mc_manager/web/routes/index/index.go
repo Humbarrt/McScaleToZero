@@ -2,6 +2,7 @@ package index
 
 import (
 	"context"
+	"mc_manager/logging"
 	"mc_manager/model"
 	"mc_manager/web/routes/middleware"
 	"mc_manager/web/views/index"
@@ -23,6 +24,14 @@ func indexPageHandler(app *model.App) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		_, cancel := context.WithTimeout(context.Background(), app.WebTimeout)
 		defer cancel()
-		utils.Render(ctx, http.StatusOK, index.Index())
+
+		isAdmin, err := utils.IsAdmin(ctx)
+		if err != nil {
+			logging.Error("Error checking admin status", "error", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		utils.Render(ctx, http.StatusOK, index.Index(isAdmin, app.IS))
 	}
 }

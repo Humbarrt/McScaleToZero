@@ -13,6 +13,7 @@ import (
 	"mc_manager/logging"
 	"mc_manager/model"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -31,8 +32,16 @@ func handleServerListPing(clientConn *conn.McConn, app *model.App) {
 		if packet.PacketID == 0x00 {
 			motd := []byte("")
 			replaceMOTD := app.Config.GetReplaceMOTD()
-			offlineMotd := app.Config.GetMCOfflineMOTD()
-			onlineMotd := app.Config.GetMCOnlineMOTD()
+			offlineMotdEscaped := app.Config.GetMCOfflineMOTD()
+			offlineMotd, err := strconv.Unquote(`"` + string(offlineMotdEscaped) + `"`)
+			if err != nil {
+				offlineMotd = "error parsing motd"
+			}
+			onlineMotdEscaped := app.Config.GetMCOnlineMOTD()
+			onlineMotd, err := strconv.Unquote(`"` + string(onlineMotdEscaped) + `"`)
+			if err != nil {
+				onlineMotd = "error parsing motd"
+			}
 			lastMotd := app.Config.GetLastMOTD()
 
 			lastImage := app.Config.GetLastImage()
@@ -96,6 +105,8 @@ func handleServerListPing(clientConn *conn.McConn, app *model.App) {
 							logging.Error("Error setting max players:", "error", err)
 						}
 					}
+
+					app.EB.Broadcast(model.EB_EVENT_SERVER_INFO_UPDATE)
 				}
 			}
 
@@ -119,11 +130,11 @@ func handleServerListPing(clientConn *conn.McConn, app *model.App) {
 			case !replaceMOTD && !isServerReady:
 				motd = append(lastMotd, offlineMotd...)
 			case replaceMOTD && !isServerReady:
-				motd = offlineMotd
+				motd = []byte(offlineMotd)
 			case !replaceMOTD && isServerReady:
 				motd = append(lastMotd, onlineMotd...)
 			case replaceMOTD && isServerReady:
-				motd = onlineMotd
+				motd = []byte(onlineMotd)
 			}
 			statusResponse.Description = string(motd)
 			statusResponse.Players.Max = maxPlayers

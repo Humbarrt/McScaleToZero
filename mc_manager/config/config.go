@@ -27,26 +27,29 @@ type config struct {
 	mcServerSSHKey     []byte
 	dashboardPort      int
 	transferServerPort int
-	invoiceService     model.InvoiceService
+	invoiceService     model.InvoiceServiceType
 	dataPath           string
 	version            string
 	db                 *db.DB
 
 	//protected
-	mutex            sync.Mutex
-	_dashboardURL    string
-	_mcServerPort    int
-	_mcOnlineImage   *string
-	_mcOnlineMOTD    []byte
-	_mcOfflineImage  *string
-	_mcOfflineMOTD   []byte
-	_replaceMOTD     bool
-	_lastImage       *string
-	_lastMOTD        []byte
-	_protocolVersion *[]byte
-	_maxPlayers      int
-	_backupsToKeep   int
-	_taxRate         decimal.Decimal
+	mutex                 sync.Mutex
+	_dashboardURL         string
+	_mcServerPort         int
+	_mcOnlineImage        *string
+	_mcOnlineMOTD         []byte
+	_mcOfflineImage       *string
+	_mcOfflineMOTD        []byte
+	_replaceMOTD          bool
+	_lastImage            *string
+	_lastMOTD             []byte
+	_protocolVersion      *[]byte
+	_maxPlayers           int
+	_backupsToKeep        int
+	_taxRate              decimal.Decimal
+	_networkRatio         decimal.Decimal
+	_fallbackFixedCost    decimal.Decimal
+	_fallbackVariableCost decimal.Decimal
 }
 
 func (c *config) GetAWSAccessKeyId() string {
@@ -70,7 +73,7 @@ func (c *config) GetDashboardPort() int {
 func (c *config) GetTransferServerPort() int {
 	return c.transferServerPort
 }
-func (c *config) GetInvoiceService() model.InvoiceService {
+func (c *config) GetInvoiceService() model.InvoiceServiceType {
 	return c.invoiceService
 }
 func (c *config) GetDataPath() string {
@@ -122,7 +125,7 @@ func (c *config) GetMCOnlineImage() *string {
 }
 func (c *config) SetMCOnlineImage(base64Image *string) error {
 	if base64Image != nil && len(*base64Image) != 0 {
-		err := validateImage(base64Image)
+		err := ValidateImage(base64Image)
 		if err != nil {
 			logging.Error("Invalid image:", "error", err)
 			return err
@@ -166,7 +169,7 @@ func (c *config) GetMCOfflineImage() *string {
 }
 func (c *config) SetMCOfflineImage(base64Image *string) error {
 	if base64Image != nil && len(*base64Image) != 0 {
-		err := validateImage(base64Image)
+		err := ValidateImage(base64Image)
 		if err != nil {
 			logging.Error("Invalid image:", "error", err)
 			return err
@@ -227,7 +230,7 @@ func (c *config) GetLastImage() *string {
 }
 func (c *config) SetLastImage(base64Image *string) error {
 	if base64Image != nil && len(*base64Image) != 0 {
-		err := validateImage(base64Image)
+		err := ValidateImage(base64Image)
 		if err != nil {
 			logging.Error("Invalid image:", "error", err)
 			return err
@@ -331,6 +334,57 @@ func (c *config) SetTaxRate(taxRate decimal.Decimal) error {
 	return nil
 }
 
+func (c *config) GetNetworkRatio() decimal.Decimal {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._networkRatio
+}
+func (c *config) SetNetworkRatio(networkRatio decimal.Decimal) error {
+	err := queries.UpdateNetworkRatio(c.db, networkRatio)
+	if err != nil {
+		logging.Error("Error updating tax rate in database:", "error", err)
+		return err
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._networkRatio = networkRatio
+	return nil
+}
+
+func (c *config) GetFallbackFixedCost() decimal.Decimal {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._fallbackFixedCost
+}
+func (c *config) SetFallbackFixedCost(fallbackFixedCost decimal.Decimal) error {
+	err := queries.UpdateFallbackFixedCost(c.db, fallbackFixedCost)
+	if err != nil {
+		logging.Error("Error updating tax rate in database:", "error", err)
+		return err
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._fallbackFixedCost = fallbackFixedCost
+	return nil
+}
+
+func (c *config) GetFallbackVariableCost() decimal.Decimal {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._fallbackVariableCost
+}
+func (c *config) SetFallbackVariableCost(fallbackVariableCost decimal.Decimal) error {
+	err := queries.UpdateFallbackVariableCost(c.db, fallbackVariableCost)
+	if err != nil {
+		logging.Error("Error updating tax rate in database:", "error", err)
+		return err
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c._fallbackVariableCost = fallbackVariableCost
+	return nil
+}
+
 func Load(db *db.DB) *config {
 	logging.Info("Version", "version", version)
 	currentPath, err := os.Executable()
@@ -410,7 +464,7 @@ func Load(db *db.DB) *config {
 
 	//Check if invoice service is set
 	invoiceServiceString := strings.ToLower(getenv("INVOICE_SERVICE", string(model.InvoiceServiceNone)))
-	var invoiceService model.InvoiceService
+	var invoiceService model.InvoiceServiceType
 	switch invoiceServiceString {
 	case string(model.InvoiceServiceNone):
 		invoiceService = model.InvoiceServiceNone
@@ -436,18 +490,21 @@ func Load(db *db.DB) *config {
 		version:            version,
 		db:                 db,
 
-		_mcServerPort:    mutConfig.MCServerPort,
-		_mcOnlineImage:   mutConfig.OnlineImage,
-		_mcOnlineMOTD:    mutConfig.OnlineMOTD,
-		_mcOfflineImage:  mutConfig.OfflineImage,
-		_mcOfflineMOTD:   mutConfig.OfflineMOTD,
-		_replaceMOTD:     mutConfig.ReplaceMOTD,
-		_lastImage:       mutConfig.LastImage,
-		_lastMOTD:        mutConfig.LastMOTD,
-		_protocolVersion: mutConfig.ProtocolVersion,
-		_maxPlayers:      mutConfig.MaxPlayers,
-		_backupsToKeep:   mutConfig.BackupsToKeep,
-		_taxRate:         mutConfig.TaxRate,
+		_mcServerPort:         mutConfig.MCServerPort,
+		_mcOnlineImage:        mutConfig.OnlineImage,
+		_mcOnlineMOTD:         mutConfig.OnlineMOTD,
+		_mcOfflineImage:       mutConfig.OfflineImage,
+		_mcOfflineMOTD:        mutConfig.OfflineMOTD,
+		_replaceMOTD:          mutConfig.ReplaceMOTD,
+		_lastImage:            mutConfig.LastImage,
+		_lastMOTD:             mutConfig.LastMOTD,
+		_protocolVersion:      mutConfig.ProtocolVersion,
+		_maxPlayers:           mutConfig.MaxPlayers,
+		_backupsToKeep:        mutConfig.BackupsToKeep,
+		_taxRate:              mutConfig.TaxRate,
+		_networkRatio:         mutConfig.NetworkRatio,
+		_fallbackFixedCost:    mutConfig.FallbackFixedCost,
+		_fallbackVariableCost: mutConfig.FallbackVariableCost,
 	}
 
 	logging.Debug("Config loaded")

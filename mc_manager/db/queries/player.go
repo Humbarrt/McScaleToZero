@@ -6,6 +6,7 @@ import (
 	"mc_manager/db"
 	"mc_manager/logging"
 	"mc_manager/model"
+	"time"
 )
 
 func parsePlayer(row scannable) (*model.Player, error) {
@@ -171,6 +172,42 @@ func AddPlayerAlias(DB *db.DB, playerId int64, alias string) error {
 
 	player.Aliases = newAliases
 	return updatePlayer(DB, player)
+}
+
+func GetPlayerAvatarHead(DB *db.DB, playerId int64) ([]byte, *time.Time, error) {
+	stmt, err := DB.GetStmt("get_player_avatar_head")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := stmt.QueryRow(playerId)
+	err = result.Err()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var avatarHead []byte
+	var lastDownloaded *time.Time
+	err = result.Scan(&avatarHead, &lastDownloaded)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return avatarHead, lastDownloaded, nil
+}
+
+func UpdatePlayerAvatarHead(DB *db.DB, playerId int64, avatarHead []byte, lastDownloaded time.Time) error {
+	stmt, err := DB.GetStmt("update_player_avatar_head")
+	if err != nil {
+		return err
+	}
+
+	_, err = stmt.Exec(avatarHead, lastDownloaded, playerId)
+	if err != nil {
+		return fmt.Errorf("error updating player avatar head: %w", err)
+	}
+
+	return nil
 }
 
 func UpdatePlayersIsAllowed(DB *db.DB, playerIds []int64, matchIds bool, isAllowed bool) error {

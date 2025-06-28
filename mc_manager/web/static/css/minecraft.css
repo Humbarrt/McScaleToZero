@@ -204,6 +204,8 @@ Classes:
 }
 
 .button {
+	position: relative;
+	z-index: 0;
 	--zoom: 10;
 	user-select: none;
 	cursor: pointer;
@@ -213,7 +215,7 @@ Classes:
 	border-width: calc(var(--block-size) / var(--zoom));
 	border-image: url("../imgs/ui/button-border.png");
 	border-image-width: calc(var(--block-size) / var(--zoom));
-	border-image-slice: 10% 3%;
+	border-image-slice: 10% 4%;
 	border-image-repeat: stretch;
 	color: #d1d5db;
 }
@@ -223,7 +225,7 @@ Classes:
 	border-width: calc(var(--block-size) / var(--zoom));
 	border-image: url("../imgs/ui/button-border-hover.png");
 	border-image-width: calc(var(--block-size) / var(--zoom));
-	border-image-slice: 10% 3%;
+	border-image-slice: 10% 4%;
 	border-image-repeat: stretch;
 	color: #fef08a;
 }
@@ -233,9 +235,39 @@ Classes:
 	border-width: calc(var(--block-size) / var(--zoom));
 	border-image: url("../imgs/ui/button-border-active.png");
 	border-image-width: calc(var(--block-size) / var(--zoom));
-	border-image-slice: 10% 3%;
+	border-image-slice: 10% 4%;
 	border-image-repeat: contain;
 	color: #a8a29e;
+}
+
+.button:disabled,
+.button.disabled {
+	cursor: disabled;
+}
+.button:disabled:hover,
+.button.disabled:hover {
+	cursor: disabled;
+	image-rendering: pixelated;
+	background-size: cover;
+	background-image: url("../imgs/ui/button-inside.png");
+	border-width: calc(var(--block-size) / var(--zoom));
+	border-image: url("../imgs/ui/button-border.png");
+	border-image-width: calc(var(--block-size) / var(--zoom));
+	border-image-slice: 10% 4%;
+	border-image-repeat: stretch;
+	color: #d1d5db;
+}
+
+.button:disabled::after,
+.button.disabled::after {
+	content: "";
+	position: absolute;
+	top: calc(-1 * var(--block-size) / var(--zoom));
+	left: calc(-1 * var(--block-size) / var(--zoom));
+	right: calc(-1 * var(--block-size) / var(--zoom));
+	bottom: calc(-1 * var(--block-size) / var(--zoom));
+	background-color: rgba(0, 0, 0, 0.1);
+	z-index: 1;
 }
 
 .scrollbar {
@@ -346,6 +378,8 @@ Classes:
 .raised-slot,
 .raised-slot-button,
 .scrollbar::-webkit-scrollbar-corner {
+	position: relative;
+	z-index: 0;
 	--zoom: 24;
 	border-width: calc(var(--block-size) / var(--zoom));
 	border-image: url("../imgs/ui/raised-slot.png");
@@ -370,6 +404,37 @@ Classes:
 	border-image-width: calc(var(--block-size) / var(--zoom));
 	border-image-slice: 33.5% 33.5% fill;
 	border-image-repeat: stretch;
+}
+.raised-slot-disabled,
+.raised-slot-button:disabled {
+	cursor: disabled;
+	--zoom: 24;
+	border-width: calc(var(--block-size) / var(--zoom));
+	border-image: url("../imgs/ui/raised-slot.png");
+	border-image-width: calc(var(--block-size) / var(--zoom));
+	border-image-slice: 33.5% 33.5% fill;
+	border-image-repeat: stretch;
+}
+.raised-slot-disabled:hover,
+.raised-slot-button:disabled:hover {
+	cursor: disabled;
+	--zoom: 24;
+	border-width: calc(var(--block-size) / var(--zoom));
+	border-image: url("../imgs/ui/raised-slot.png");
+	border-image-width: calc(var(--block-size) / var(--zoom));
+	border-image-slice: 33.5% 33.5% fill;
+	border-image-repeat: stretch;
+}
+.raised-slot-disabled::after,
+.raised-slot-button:disabled::after {
+	content: "";
+	position: absolute;
+	top: calc(-1 * var(--block-size) / var(--zoom));
+	left: calc(-1 * var(--block-size) / var(--zoom));
+	right: calc(-1 * var(--block-size) / var(--zoom));
+	bottom: calc(-1 * var(--block-size) / var(--zoom));
+	background-color: rgba(0, 0, 0, 0.15);
+	z-index: 1;
 }
 
 .enchanting-slot,

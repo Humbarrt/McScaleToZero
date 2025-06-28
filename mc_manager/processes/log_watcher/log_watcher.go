@@ -6,6 +6,7 @@ import (
 	"mc_manager/logging"
 	"mc_manager/model"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 )
@@ -16,9 +17,10 @@ type logWatcher struct {
 	lastLog *model.Log
 	limit   int
 
-	reJoindedGame regexp.Regexp
-	reLeftGame    regexp.Regexp
-	reIsMessage   regexp.Regexp
+	reJoindedGame *regexp.Regexp
+	reLeftGame    *regexp.Regexp
+	reIsMessage   *regexp.Regexp
+	reIsChatToken *regexp.Regexp
 
 	//protected
 	mutex         sync.Mutex
@@ -34,9 +36,10 @@ func NewLogWatcher(app *model.App) *logWatcher {
 		limit:         100,
 		_isCatchingUp: true,
 		lastLog:       nil,
-		reJoindedGame: *regexp.MustCompile(`^\[\d{2}:\d{2}:\d{2}\] \[Server thread\/INFO\]: ([A-Za-z0-9_]{3,16}) joined the game$`),
-		reLeftGame:    *regexp.MustCompile(`^\[\d{2}:\d{2}:\d{2}\] \[Server thread\/INFO\]: ([A-Za-z0-9_]{3,16}) left the game$`),
-		reIsMessage:   *regexp.MustCompile(`^\[\d{2}:\d{2}:\d{2}\] \[Server thread\/INFO\]: <([A-Za-z0-9_]{3,16})> (.*)$`),
+		reJoindedGame: regexp.MustCompile(`^\[\d{2}:\d{2}:\d{2}\] \[Server thread\/INFO\]: ([A-Za-z0-9_]{3,16}) joined the game$`),
+		reLeftGame:    regexp.MustCompile(`^\[\d{2}:\d{2}:\d{2}\] \[Server thread\/INFO\]: ([A-Za-z0-9_]{3,16}) left the game$`),
+		reIsMessage:   regexp.MustCompile(`^\[\d{2}:\d{2}:\d{2}\] \[Server thread\/INFO\]: <([A-Za-z0-9_]{3,16})> (.*)$`),
+		reIsChatToken: regexp.MustCompile(`(?i)mcbillsplitter reset-password ([a-zA-Z0-9]{16})`),
 	}
 }
 
@@ -47,17 +50,29 @@ func (lw *logWatcher) parseLog(log *model.Log) {
 
 	var playerName *string
 	var hasJoinedGame *bool
+	var chatToken *string
 	if matches := lw.reJoindedGame.FindStringSubmatch(log.Message); matches != nil {
 		playerName = &matches[1]
 		_hasJoined := true
 		hasJoinedGame = &_hasJoined
+		lw.App.EB.Broadcast(model.EB_EVENT_PLAYER_JOINED)
 	} else if matches := lw.reLeftGame.FindStringSubmatch(log.Message); matches != nil {
 		playerName = &matches[1]
 		_hasJoined := false
 		hasJoinedGame = &_hasJoined
+		lw.App.EB.Broadcast(model.EB_EVENT_PLAYER_LEFT)
 	} else if matches := lw.reIsMessage.FindStringSubmatch(log.Message); matches != nil {
 		playerName = &matches[1]
-		logging.Info("LogWatcher: Player message", "player", matches[1], "message", lw.reIsMessage.FindStringSubmatch(log.Message)[2])
+		playerMessage := matches[2]
+		if !strings.HasPrefix(playerMessage, "mcbillsplitter") {
+			return
+		}
+		chatTokenMatches := lw.reIsChatToken.FindStringSubmatch(playerMessage)
+		if chatTokenMatches == nil {
+			return
+		}
+
+		chatToken = &playerMessage
 	}
 
 	if playerName == nil {
@@ -85,6 +100,13 @@ func (lw *logWatcher) parseLog(log *model.Log) {
 		}
 
 		logging.Info("LogWatcher: Player event", "player", playerName, "hasJoinedGame", *hasJoinedGame)
+	} else if chatToken != nil {
+		logging.Info("LogWatcher: Player authenticating passwordResetSession", "player", playerName, "chatToken", *chatToken)
+		err := lw.App.SM.AuthenticatePasswordResetSession(player.Id, *chatToken)
+		if err != nil {
+			logging.Warn("LogWatcher: Error authenticating password reset session", "error", err)
+		}
+
 	}
 }
 
@@ -143,6 +165,12 @@ func (lw *logWatcher) catchupLogs() {
 	}
 	lw.mutex.Unlock()
 	time.Sleep(10 * time.Second)
+}
+
+func (lw *logWatcher) IsCatchingUp() bool {
+	lw.mutex.Lock()
+	defer lw.mutex.Unlock()
+	return lw._isCatchingUp
 }
 
 func (lw *logWatcher) StartLogWatcher() {
@@ -213,5 +241,7 @@ func (lw *logWatcher) StartLogWatcher() {
 			continue
 		}
 	}
+
+	lw.App.EB.Broadcast(model.EB_EVENT_PLAYER_LEFT)
 	logging.Info("LogWatcher: Server stopped, all players set to offline")
 }

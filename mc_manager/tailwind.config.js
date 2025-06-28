@@ -37,7 +37,16 @@ Array.from({ length: BLOCK_SPACING_MAX }, (_, i) => i + 1).forEach((i) => {
 
 export default {
 	content: ["./web/views/**/*.templ"], // this is where our templates are located
-	safelist: ["!outline-solid", "outline-solid", "!outline-2", "!outline-dark-red"],
+	safelist: [
+		"!outline-solid",
+		"outline-solid",
+		"!outline-2",
+		"!outline-dark-red",
+		"outline-dark-red",
+		"!text-shadow-none",
+		"text-shadow-none",
+		"disabled:text-shadow-none",
+	],
 	theme: {
 		screens: {
 			xs: "480px",

@@ -103,11 +103,35 @@ func CalculateServerUptime(DB *db.DB, timeframe model.Timeframe) (time.Duration,
 
 	var uptime int
 	err = result.Scan(&uptime)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
 	if err != nil {
 		return 0, err
 	}
+
+	return time.Duration(uptime) * time.Second, nil
+}
+
+func GetBilledServerUptime(DB *db.DB) (time.Duration, error) {
+	stmt, err := DB.GetStmt("get_billed_server_uptime")
+	if err != nil {
+		return 0, err
+	}
+
+	result := stmt.QueryRow()
+	err = result.Err()
+	if err != nil {
+		return 0, err
+	}
+
+	var uptime int
+	err = result.Scan(&uptime)
 	if err == sql.ErrNoRows {
 		return 0, nil
+	}
+	if err != nil {
+		return 0, err
 	}
 
 	return time.Duration(uptime) * time.Second, nil

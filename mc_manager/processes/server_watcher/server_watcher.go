@@ -117,6 +117,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 			go BackupWorld(sw.App)
 			go sw.App.LW.StartLogWatcher()
 
+			sw.App.EB.Broadcast(model.EB_EVENT_SERVER_ONLINE)
 			err = queries.AddServerEvent(sw.App.Db, timestamp, true)
 			if err != nil {
 				logging.Error("Error adding server event: ", "error", err)
@@ -145,8 +146,11 @@ func (sw *serverWatcher) StartWatchingServer() {
 			}
 
 			canTransfer, err := mc.IsServerTransferReady(ipv4, sw.App.Config.GetMCServerPort())
-			if err != nil || !canTransfer {
+			if err != nil {
 				logging.Error("Error reading server status: ", "error", err, "canTransfer", canTransfer)
+				goto waitAndContinue
+			} else if !canTransfer {
+				logging.Info("Server is not ready yet")
 				goto waitAndContinue
 			}
 
@@ -154,6 +158,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 			sw._isReady = true
 			sw.mutex.Unlock()
 			logging.Info("Server is ready")
+			sw.App.EB.Broadcast(model.EB_EVENT_SERVER_READY)
 		}
 
 		if isOnline {
@@ -172,6 +177,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 			sw._ipv4 = nil
 			sw.mutex.Unlock()
 
+			sw.App.EB.Broadcast(model.EB_EVENT_SERVER_OFFLINE)
 			err = queries.AddServerEvent(sw.App.Db, timestamp, false)
 			if err != nil {
 				logging.Error("Error adding server event: ", "error", err)

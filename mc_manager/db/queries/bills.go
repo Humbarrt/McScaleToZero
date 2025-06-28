@@ -1,10 +1,13 @@
 package queries
 
 import (
+	"database/sql"
 	"mc_manager/db"
 	"mc_manager/logging"
 	"mc_manager/model"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 func parseBill(row scannable) (*model.Bill, error) {
@@ -88,6 +91,31 @@ func GetFullBillByBillingMonth(DB *db.DB, billing_month model.YearMonth) (*model
 	return FullBill, nil
 }
 
+func GetBilledTotalCost(DB *db.DB) (*decimal.Decimal, error) {
+	stmt, err := DB.GetStmt("get_billed_total_cost")
+	if err != nil {
+		return nil, err
+	}
+
+	result := stmt.QueryRow()
+	err = result.Err()
+	if err != nil {
+		return &decimal.Zero, err
+	}
+
+	var billedTotalCostInt int64
+	err = result.Scan(&billedTotalCostInt)
+	if err == sql.ErrNoRows {
+		return &decimal.Zero, nil
+	}
+	if err != nil {
+		return &decimal.Zero, err
+	}
+
+	billedTotalCost := intToDecimal(billedTotalCostInt)
+	return &billedTotalCost, nil
+}
+
 func GetBillById(DB *db.DB, billId int64) (*model.Bill, error) {
 	stmt, err := DB.GetStmt("get_bill_by_id")
 	if err != nil {
@@ -106,6 +134,29 @@ func GetBillByBillingMonth(DB *db.DB, billing_month model.YearMonth) (*model.Bil
 
 	row := stmt.QueryRow(billing_month)
 	return parseBill(row)
+}
+
+func GetUnsyncedBills(DB *db.DB) ([]*model.Bill, error) {
+	stmt, err := DB.GetStmt("get_unsynced_bills")
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := stmt.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bills []*model.Bill
+	for rows.Next() {
+		bill, err := parseBill(rows)
+		if err != nil {
+			return nil, err
+		}
+		bills = append(bills, bill)
+	}
+	return bills, nil
 }
 
 func GetLatestBill(DB *db.DB) (*model.Bill, error) {
@@ -182,6 +233,78 @@ func GetBilledPlayersByBillId(DB *db.DB, billId int64) ([]*model.BilledPlayer, e
 		billedPlayers = append(billedPlayers, billedPlayer)
 	}
 	return billedPlayers, nil
+}
+
+func GetBillingMonths(DB *db.DB) ([]model.YearMonth, error) {
+	stmt, err := DB.GetStmt("get_billing_months")
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := stmt.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var billingMonths []model.YearMonth
+	for rows.Next() {
+		var billingMonth model.YearMonth
+		err = rows.Scan(&billingMonth)
+		if err != nil {
+			return nil, err
+		}
+		billingMonths = append(billingMonths, billingMonth)
+	}
+	return billingMonths, nil
+}
+
+func GetBilledPlayerTime(DB *db.DB) ([]*model.BilledPlayerTime, error) {
+	stmt, err := DB.GetStmt("get_billed_player_time")
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := stmt.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var billedTimes []*model.BilledPlayerTime
+	for rows.Next() {
+		var billedTime model.BilledPlayerTime
+		err = rows.Scan(&billedTime.PlayerId, &billedTime.Playtime, &billedTime.CPUTime)
+		if err != nil {
+			return nil, err
+		}
+		billedTimes = append(billedTimes, &billedTime)
+	}
+	return billedTimes, nil
+}
+
+func GetBilledPlayerTimeForTimespan(DB *db.DB, start int, end int) ([]*model.BilledPlayerTime, error) {
+	stmt, err := DB.GetStmt("get_billed_player_time_for_timespan")
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := stmt.Query(start, end)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var billedTimes []*model.BilledPlayerTime
+	for rows.Next() {
+		var billedTime model.BilledPlayerTime
+		err = rows.Scan(&billedTime.PlayerId, &billedTime.Playtime, &billedTime.CPUTime)
+		if err != nil {
+			return nil, err
+		}
+		billedTimes = append(billedTimes, &billedTime)
+	}
+	return billedTimes, nil
 }
 
 func CreateBill(DB *db.DB, bill *model.Bill, billItems []*model.BillItem, billedPlayers []*model.BilledPlayer) error {

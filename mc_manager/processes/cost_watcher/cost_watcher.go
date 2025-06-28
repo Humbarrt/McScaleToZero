@@ -280,45 +280,47 @@ func (cs *CostWatcher) createMissingBills() error {
 	return nil
 }
 
-func (cs *CostWatcher) CurrentCostEstimate() (*model.CostEstimate, error) {
+func (cs *CostWatcher) CurrentCostEstimate() (model.CostEstimate, error) {
 	cs.mutex.Lock()
 	defer cs.mutex.Unlock()
 	if cs._currentEstimate == nil {
-		return nil, cs._currentEsitimateErr
+		return model.CostEstimate{}, cs._currentEsitimateErr
 	}
-	copyEstimate := *cs._currentEstimate
-	return &copyEstimate, cs._currentEsitimateErr
+	return *cs._currentEstimate, cs._currentEsitimateErr
 }
 
 func (cs *CostWatcher) updateCostEstimate() error {
-	var newEstimate *model.CostEstimate
+	var newEstimate model.CostEstimate
 	var err error
 	defer func() {
 		cs.mutex.Lock()
-		cs._currentEstimate = newEstimate
+		cs._currentEstimate = &newEstimate
 		cs._currentEsitimateErr = err
 		cs.mutex.Unlock()
 	}()
+
+	timeframe := model.Timeframe{
+		Start: model.NewYearMonthFromTime(time.Now()).StartTime(),
+		End:   time.Now(),
+	}
+
+	hourlyFixedCost := cs.App.Config.GetFallbackFixedCost().Div(decimal.NewFromFloat(24))
+	hourlyVariableCost := cs.App.Config.GetFallbackVariableCost()
 
 	lastFixedCostBill, err := queries.GetLatestBillWithFixedCost(cs.App.Db)
 	if err != nil && err != sql.ErrNoRows {
 		logging.Error("Error getting last fixed cost bill", "error", err)
 		return err
 	}
-	//get last variable cost
 	lastVariableCostBill, err := queries.GetLatestBillWithVariableCost(cs.App.Db)
 	if err != nil && err != sql.ErrNoRows {
 		logging.Error("Error getting last variable cost bill", "error", err)
 		return err
 	}
-	if lastFixedCostBill == nil || lastVariableCostBill == nil {
-		err = fmt.Errorf("not enough data to create cost estimate")
-		return nil
-	}
-
-	timeframe := model.Timeframe{
-		Start: model.NewYearMonthFromTime(time.Now()).StartTime(),
-		End:   time.Now(),
+	if lastFixedCostBill != nil || lastVariableCostBill != nil {
+		hoursInFixedMonth := lastFixedCostBill.BillingMonth.EndTime().Sub(lastFixedCostBill.BillingMonth.StartTime()).Hours()
+		hourlyFixedCost = lastFixedCostBill.FixedAmount.Div(decimal.NewFromFloat(hoursInFixedMonth))
+		hourlyVariableCost = lastVariableCostBill.VariableAmount.Div(decimal.NewFromFloat(lastVariableCostBill.ServerUptime.Hours()))
 	}
 
 	serverUptime, err := queries.CalculateServerUptime(cs.App.Db, timeframe)
@@ -326,6 +328,7 @@ func (cs *CostWatcher) updateCostEstimate() error {
 		logging.Error("Error getting server uptime", "error", err)
 		return err
 	}
+
 	cpuTime, err := queries.CalculateCPUTime(cs.App.Db, timeframe)
 	if err != nil {
 		logging.Error("Error getting cpu time", "error", err)
@@ -361,10 +364,6 @@ func (cs *CostWatcher) updateCostEstimate() error {
 	}
 
 	hoursInCurrentMonth := timeframe.End.Sub(timeframe.Start).Hours()
-	hoursInFixedMonth := lastFixedCostBill.BillingMonth.EndTime().Sub(lastFixedCostBill.BillingMonth.StartTime()).Hours()
-	hourlyFixedCost := lastFixedCostBill.FixedAmount.Div(decimal.NewFromFloat(hoursInFixedMonth))
-	hourlyVariableCost := lastVariableCostBill.VariableAmount.Div(decimal.NewFromFloat(lastVariableCostBill.ServerUptime.Hours()))
-
 	fixedCost := hourlyFixedCost.Mul(decimal.NewFromFloat(hoursInCurrentMonth))
 	variableCost := hourlyVariableCost.Mul(decimal.NewFromFloat(serverUptime.Hours()))
 	playerCostEstimates := make([]model.PlayerCostEstimate, 0)
@@ -380,10 +379,12 @@ func (cs *CostWatcher) updateCostEstimate() error {
 
 		if !player.IsAllowed {
 			playerCostEstimates = append(playerCostEstimates, model.PlayerCostEstimate{
-				PlayerId: player.Id,
-				Cost:     decimal.Zero,
-				Playtime: playerPlaytime,
-				CPUTime:  playerCPUTime,
+				PlayerId:     player.Id,
+				TotalCost:    decimal.Zero,
+				FixedCost:    decimal.Zero,
+				VariableCost: decimal.Zero,
+				Playtime:     playerPlaytime,
+				CPUTime:      playerCPUTime,
 			})
 			continue
 		}
@@ -396,22 +397,23 @@ func (cs *CostWatcher) updateCostEstimate() error {
 		}
 
 		playerTotalCost := playerFixedCost.Add(playerVariableCost)
-		logging.Debug("Player cost", "player", player.Aliases[0], "totalCost", playerTotalCost, "fixedCost", playerFixedCost, "variableCost", playerVariableCost)
 		playerCostEstimates = append(playerCostEstimates, model.PlayerCostEstimate{
-			PlayerId: player.Id,
-			Cost:     playerTotalCost,
-			Playtime: playerPlaytime,
-			CPUTime:  playerCPUTime,
+			PlayerId:     player.Id,
+			TotalCost:    playerTotalCost,
+			FixedCost:    playerFixedCost,
+			VariableCost: playerVariableCost,
+			Playtime:     playerPlaytime,
+			CPUTime:      playerCPUTime,
 		})
 	}
 
-	newEstimate = &model.CostEstimate{
+	newEstimate = model.CostEstimate{
 		TotalCost:    fixedCost.Add(variableCost),
 		FixedCost:    fixedCost,
 		VariableCost: variableCost,
 		ServerUptime: serverUptime,
 		Players:      playerCostEstimates,
-		Currency:     lastFixedCostBill.Currency,
+		Currency:     "USD",
 	}
 	return nil
 }
@@ -429,16 +431,17 @@ func (cs *CostWatcher) StartWatching() {
 
 	cs.setupCostAllocationTag()
 
+	for cs.App.LW.IsCatchingUp() {
+		time.Sleep(1 * time.Second)
+	}
+
 	for {
 		var err error
 		lastCostUpdate := cs.LastCostUpdate()
-		lastCostUpdate = lastCostUpdate.Truncate(time.Minute)
+		logging.Debug("CostWatcher: checking if cost estimate needs update", "lastCostUpdate", lastCostUpdate)
+		isHourlyCostUpdateNeeded := time.Since(lastCostUpdate) >= 1*time.Hour
 
-		isHourlyBillingUpdateNeeded := time.Since(lastCostUpdate) >= 1*time.Hour
-
-		//TODO: wait if the logWatcher is still catching up
-		isLogwatcherCatchingUp := false
-		if isLogwatcherCatchingUp {
+		if cs.App.LW.IsCatchingUp() {
 			goto waitAndContinue
 		}
 
@@ -446,7 +449,9 @@ func (cs *CostWatcher) StartWatching() {
 		if err != nil {
 			logging.Error("Error updating cost estimate", "error", err)
 		}
-		if !isHourlyBillingUpdateNeeded {
+
+		cs.App.EB.Broadcast(model.EB_EVENT_NEW_COST_ESTIMATE)
+		if !isHourlyCostUpdateNeeded {
 			goto waitAndContinue
 		}
 		logging.Debug("CostWatcher: creating missing bills")
@@ -458,15 +463,18 @@ func (cs *CostWatcher) StartWatching() {
 		err = cs.createMissingBills()
 		if err != nil {
 			logging.Error("Error creating bill for last month", "error", err)
+			cs.App.EB.Broadcast(model.EB_EVENT_NEW_BILL)
 			goto waitAndContinue
 		}
 
 		err = cs.App.IS.SyncBills()
 		if err != nil {
 			logging.Error("Error syncing bills with invoice service", "error", err)
+			cs.App.EB.Broadcast(model.EB_EVENT_NEW_BILL)
 			goto waitAndContinue
 		}
 
+		cs.App.EB.Broadcast(model.EB_EVENT_NEW_BILL)
 	waitAndContinue:
 		time.Sleep(1 * time.Minute)
 	}

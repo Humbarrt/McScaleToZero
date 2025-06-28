@@ -18,7 +18,7 @@ func getenv(key, fallback string) string {
 	return value
 }
 
-func validateImage(base64Image *string) error {
+func ValidateImage(base64Image *string) error {
 	if base64Image == nil || len(*base64Image) == 0 {
 		return fmt.Errorf("base64 image is nil")
 	}
@@ -49,7 +49,7 @@ func validateImage(base64Image *string) error {
 	width := bounds.Dx()
 	height := bounds.Dy()
 
-	fmt.Printf("Width: %d, Height: %d\n", width, height)
+	logging.Debug("Width: %d, Height: %d\n", width, height)
 	if width != 64 || height != 64 {
 		return fmt.Errorf("image dimensions are not 64x64")
 	}

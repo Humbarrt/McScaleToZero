@@ -40,6 +40,19 @@ func (m *mockAWSAPI) GetCostForTimeframe(timeframe model.Timeframe) ([]*model.Mo
 	return m.NextCostResponse, m.NextErrorResponse
 }
 
+type mockConfig struct {
+	model.Config
+	_fallbackFixedCost    decimal.Decimal
+	_fallbackVariableCost decimal.Decimal
+}
+
+func (c *mockConfig) GetFallbackFixedCost() decimal.Decimal {
+	return c._fallbackFixedCost
+}
+func (c *mockConfig) GetFallbackVariableCost() decimal.Decimal {
+	return c._fallbackVariableCost
+}
+
 func TestCreateBill(t *testing.T) {
 	filePath := path.Join(t.TempDir(), "main.db")
 	DB, err := db.InitializeDatabase(filePath)
@@ -53,6 +66,10 @@ func TestCreateBill(t *testing.T) {
 	app := &model.App{
 		Db:  DB,
 		AWS: aws,
+		Config: &mockConfig{
+			_fallbackFixedCost:    decimal.NewFromFloat(0.05),
+			_fallbackVariableCost: decimal.NewFromFloat(0.0432),
+		},
 	}
 	cw := cost_watcher.NewCostWatcher(app)
 	app.CW = cw
@@ -170,6 +187,47 @@ func TestCreateBill(t *testing.T) {
 	variableCost := hourlyVariableCost.Mul(decimal.NewFromFloat(serverUptime.Hours()))
 	totalCost := fixedCost.Add(variableCost)
 
+	// Test CostEstimate Fallback
+	err = updateCostEstimate(cw)
+	assert.NoError(t, err)
+
+	currentMonth := model.NewYearMonthFromTime(time.Now())
+	monthToDate := model.Timeframe{
+		Start: currentMonth.StartTime(),
+		End:   time.Now(),
+	}
+	serverUptime, err = queries.CalculateServerUptime(DB, monthToDate)
+	assert.NoError(t, err)
+	cpuTime, err = queries.CalculateCPUTime(DB, monthToDate)
+	assert.NoError(t, err)
+	monthToDateDays := monthToDate.End.Sub(monthToDate.Start).Hours() / 24
+	expectedFixedCost := dailyFixedCost.Mul(decimal.NewFromFloat(monthToDateDays))
+	expectedVariableCost := hourlyVariableCost.Mul(decimal.NewFromFloat(serverUptime.Hours()))
+
+	estimate, err := cw.CurrentCostEstimate()
+	assert.NoError(t, err)
+	assert.NotNil(t, estimate)
+	assert.Equal(t, "USD", estimate.Currency)
+	assert.Equal(t, serverUptime, estimate.ServerUptime)
+	assert.True(t, isWithinTolerance(expectedFixedCost, estimate.FixedCost), "expectedFixedCost: %s, estimate.FixedCost: %s", expectedFixedCost.String(), estimate.FixedCost.String())
+	assert.True(t, isWithinTolerance(expectedVariableCost, estimate.VariableCost), "expectedVariableCost: %s, estimate.VariableCost: %s", expectedVariableCost.String(), estimate.VariableCost.String())
+	assert.Equal(t, len(players), len(estimate.Players))
+
+	for _, player := range estimate.Players {
+		if !players[player.PlayerId].IsAllowed {
+			assert.True(t, player.TotalCost.Equal(decimal.Zero), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.TotalCost.String(), decimal.Zero.String())
+			continue
+		}
+		if cpuTime[player.PlayerId] != 0 {
+			assert.Equal(t, math.Round(player.CPUTime.Hours()*4)/4, math.Round(cpuTime[player.PlayerId].Hours()*4)/4)
+			assert.True(t, player.TotalCost.GreaterThan(expectedFixedCost.Div(decimal.NewFromInt(allowedPlayers))), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.TotalCost.String(), expectedFixedCost.Div(decimal.NewFromInt(4)).String())
+		} else {
+			assert.True(t, isWithinTolerance(player.TotalCost, expectedFixedCost.Div(decimal.NewFromInt(allowedPlayers))), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.TotalCost.String(), expectedFixedCost.Div(decimal.NewFromInt(4)).String())
+		}
+
+		assert.True(t, player.FixedCost.Add(player.VariableCost).Equal(player.TotalCost), "playerId: %d, player.FixedCost: %s, player.VariableCost: %s, player.TotalCost: %s", player.PlayerId, player.FixedCost.String(), player.VariableCost.String(), player.TotalCost.String())
+	}
+
 	// Create AWS response
 	aws.NextCostResponse = []*model.MonthsCost{
 		{
@@ -196,6 +254,14 @@ func TestCreateBill(t *testing.T) {
 			},
 		},
 	}
+
+	cpuTime, err = queries.CalculateCPUTime(DB, unbilledMonth.Timeframe())
+	assert.NoError(t, err)
+	logging.Debug("CPU time", "cpuTime", cpuTime)
+
+	serverUptime, err = queries.CalculateServerUptime(DB, unbilledMonth.Timeframe())
+	assert.NoError(t, err)
+	logging.Debug("Server uptime", "uptime", serverUptime)
 
 	// Call the createBill method
 	err = createBill(cw, unbilledMonth)
@@ -247,8 +313,8 @@ func TestCreateBill(t *testing.T) {
 	err = updateCostEstimate(cw)
 	assert.NoError(t, err)
 
-	currentMonth := model.NewYearMonthFromTime(time.Now())
-	monthToDate := model.Timeframe{
+	currentMonth = model.NewYearMonthFromTime(time.Now())
+	monthToDate = model.Timeframe{
 		Start: currentMonth.StartTime(),
 		End:   time.Now(),
 	}
@@ -256,11 +322,11 @@ func TestCreateBill(t *testing.T) {
 	assert.NoError(t, err)
 	cpuTime, err = queries.CalculateCPUTime(DB, monthToDate)
 	assert.NoError(t, err)
-	monthToDateDays := monthToDate.End.Sub(monthToDate.Start).Hours() / 24
-	expectedFixedCost := dailyFixedCost.Mul(decimal.NewFromFloat(monthToDateDays))
-	expectedVariableCost := hourlyVariableCost.Mul(decimal.NewFromFloat(serverUptime.Hours()))
+	monthToDateDays = monthToDate.End.Sub(monthToDate.Start).Hours() / 24
+	expectedFixedCost = dailyFixedCost.Mul(decimal.NewFromFloat(monthToDateDays))
+	expectedVariableCost = hourlyVariableCost.Mul(decimal.NewFromFloat(serverUptime.Hours()))
 
-	estimate, err := cw.CurrentCostEstimate()
+	estimate, err = cw.CurrentCostEstimate()
 	assert.NoError(t, err)
 	assert.NotNil(t, estimate)
 	assert.Equal(t, "USD", estimate.Currency)
@@ -271,15 +337,17 @@ func TestCreateBill(t *testing.T) {
 
 	for _, player := range estimate.Players {
 		if !players[player.PlayerId].IsAllowed {
-			assert.True(t, player.Cost.Equal(decimal.Zero), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.Cost.String(), decimal.Zero.String())
+			assert.True(t, player.TotalCost.Equal(decimal.Zero), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.TotalCost.String(), decimal.Zero.String())
 			continue
 		}
 		if cpuTime[player.PlayerId] != 0 {
 			assert.Equal(t, math.Round(player.CPUTime.Hours()*4)/4, math.Round(cpuTime[player.PlayerId].Hours()*4)/4)
-			assert.True(t, player.Cost.GreaterThan(expectedFixedCost.Div(decimal.NewFromInt(allowedPlayers))), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.Cost.String(), expectedFixedCost.Div(decimal.NewFromInt(4)).String())
+			assert.True(t, player.TotalCost.GreaterThan(expectedFixedCost.Div(decimal.NewFromInt(allowedPlayers))), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.TotalCost.String(), expectedFixedCost.Div(decimal.NewFromInt(4)).String())
 		} else {
-			assert.True(t, isWithinTolerance(player.Cost, expectedFixedCost.Div(decimal.NewFromInt(allowedPlayers))), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.Cost.String(), expectedFixedCost.Div(decimal.NewFromInt(4)).String())
+			assert.True(t, isWithinTolerance(player.TotalCost, expectedFixedCost.Div(decimal.NewFromInt(allowedPlayers))), "playerId: %d, player.Cost: %s, expectedCost: %s", player.PlayerId, player.TotalCost.String(), expectedFixedCost.Div(decimal.NewFromInt(4)).String())
 		}
+
+		assert.True(t, player.FixedCost.Add(player.VariableCost).Equal(player.TotalCost), "playerId: %d, player.FixedCost: %s, player.VariableCost: %s, player.Cost: %s", player.PlayerId, player.FixedCost.String(), player.VariableCost.String(), player.TotalCost.String())
 	}
 }
 
@@ -297,6 +365,10 @@ func TestCreateBillNoPlaytime(t *testing.T) {
 	app := &model.App{
 		Db:  DB,
 		AWS: aws,
+		Config: &mockConfig{
+			_fallbackFixedCost:    decimal.NewFromFloat(0.05),
+			_fallbackVariableCost: decimal.NewFromFloat(0.0432),
+		},
 	}
 	cw := cost_watcher.NewCostWatcher(app)
 	app.CW = cw
@@ -450,7 +522,7 @@ func TestCreateBillNoPlaytime(t *testing.T) {
 
 }
 
-func TestCostEstimateWithoutBills(t *testing.T) {
+func TestCostEstimateWithoutData(t *testing.T) {
 	filePath := path.Join(t.TempDir(), "main.db")
 	DB, err := db.InitializeDatabase(filePath)
 	assert.NoError(t, err)
@@ -463,16 +535,25 @@ func TestCostEstimateWithoutBills(t *testing.T) {
 	app := &model.App{
 		Db:  DB,
 		AWS: aws,
+		Config: &mockConfig{
+			_fallbackFixedCost:    decimal.NewFromFloat(0.05),
+			_fallbackVariableCost: decimal.NewFromFloat(0.0432),
+		},
 	}
 	cw := cost_watcher.NewCostWatcher(app)
 	app.CW = cw
 
 	err = updateCostEstimate(cw)
-	assert.NoError(t, err)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "no active players in DB")
 	estimate, err := cw.CurrentCostEstimate()
 	assert.Error(t, err)
-	assert.True(t, err.Error() == "not enough data to create cost estimate")
-	assert.Nil(t, estimate)
+	assert.True(t, estimate.TotalCost.Equal(decimal.Zero), "estimate.TotalCost: %s", estimate.TotalCost.String())
+	assert.True(t, estimate.FixedCost.Equal(decimal.Zero), "estimate.FixedCost: %s", estimate.FixedCost.String())
+	assert.True(t, estimate.VariableCost.Equal(decimal.Zero), "estimate.VariableCost: %s", estimate.VariableCost.String())
+	assert.Equal(t, estimate.ServerUptime, time.Duration(0), "estimate.ServerUptime: %s", estimate.ServerUptime.String())
+	assert.Equal(t, len(estimate.Players), 0, "estimate.Players: %d", len(estimate.Players))
+	assert.Equal(t, estimate.Currency, "", "estimate.Currency: %s", estimate.Currency)
 }
 
 func isWithinTolerance(a, b decimal.Decimal) bool {

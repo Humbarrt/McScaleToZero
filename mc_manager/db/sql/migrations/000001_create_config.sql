@@ -27,6 +27,20 @@ CREATE TABLE IF NOT EXISTS "config" (
     "tax_rate" INTEGER NOT NULL CHECK (
         typeof("tax_rate") = 'integer'
         AND "tax_rate" >= 0
+        AND "tax_rate" <= 10000
+    ),
+    "network_ratio" INTEGER NOT NULL CHECK (
+        typeof("network_ratio") = 'integer'
+        AND "network_ratio" >= 0
+        AND "network_ratio" <= 10000
+    ),
+    "fallback_fixed_cost" INTEGER NOT NULL CHECK (
+        typeof("fallback_fixed_cost") = 'integer'
+        AND "fallback_fixed_cost" >= 0
+    ),
+    "fallback_variable_cost" INTEGER NOT NULL CHECK (
+        typeof("fallback_variable_cost") = 'integer'
+        AND "fallback_variable_cost" >= 0
     )
 );
 INSERT INTO "config" (
@@ -41,15 +55,16 @@ INSERT INTO "config" (
         "max_players",
         "mc_port",
         "backups_to_keep",
-        "tax_rate"
+        "tax_rate",
+        "network_ratio",
+        "fallback_fixed_cost",
+        "fallback_variable_cost"
     )
 VALUES (
         NULL,
-        '§r
-                    §a(running)',
+        '\n                    \u00A7a(running)',
         NULL,
-        '§r
-                §8(not started yet)',
+        '\n                \u00A78(not started yet)',
         FALSE,
         NULL,
         'Start your server to replace this message.',
@@ -57,5 +72,8 @@ VALUES (
         20,
         25565,
         2,
-        1900
+        1900,
+        1300,
+        500,
+        500
     );

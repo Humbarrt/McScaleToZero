@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"embed"
 	"mc_manager/api/aws"
 	"mc_manager/api/invoice_service/none"
@@ -14,8 +15,10 @@ import (
 	_config "mc_manager/config"
 	cw "mc_manager/processes/cost_watcher"
 	"mc_manager/processes/decoy_server"
+	eb "mc_manager/processes/event_broadcaster"
 	lw "mc_manager/processes/log_watcher"
 	sw "mc_manager/processes/server_watcher"
+	sm "mc_manager/processes/session_manager"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,10 +36,10 @@ func main() {
 
 	//generate jwt secret
 	secret := make([]byte, 64)
-	/* _, err = rand.Read(secret)
+	_, err = rand.Read(secret)
 	if err != nil {
 		logging.Fatal("Error creating JWTSecret", "error", err)
-	} */
+	}
 
 	router := gin.Default()
 	app := model.App{
@@ -75,6 +78,9 @@ func main() {
 		logging.Fatal("Error creating AWS API", "error", err)
 	}
 
+	app.EB = eb.NewEventBroadcaster()
+	go app.EB.Start()
+
 	app.SW = sw.NewServerWatcher(&app)
 	go app.SW.StartWatchingServer()
 
@@ -86,6 +92,8 @@ func main() {
 
 	go decoy_server.Start(&app)
 
+	app.SM = sm.NewSessionManager(&app)
+
 	err = routes.InitRoutes(&app)
 	if err != nil {
 		panic(err)
@@ -94,13 +102,5 @@ func main() {
 }
 
 /*
-TODO: Splitwise Create  invoice
-TODO: Splitwise Get Users
-TODO: Splitwise Render Player/User Selection
-TODO: Splitwise Render is synced
-
-TODO: AuthManager - Reset password -> remove all sessions
-TODO: AuthManager - Change password -> remove all sessions
-TODO: AuthManager - Login
-TODO: AuthManager - Logout -> remove all sessions
+TODO: Web: make docs for splitwise
 */

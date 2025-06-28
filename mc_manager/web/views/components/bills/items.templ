@@ -1,0 +1,50 @@
+package bills
+
+import (
+    "mc_manager/model"
+    "mc_manager/web/views/utils"
+)
+
+
+templ billItemTable(billItems []model.BillItem, title string, isFixed bool) {
+    <div class={"w-full text-2xl font-bold text-center text-white text-shadow-xs", templ.KV("mt-6", isFixed), templ.KV("mt-8", !isFixed)}>{title}</div>
+            <table class="table w-full !p-0 min-w-min whitespace-nowrap" style="border: none;">
+                <thead>
+                    <tr>
+                        <th class="w-3/4">Label</th>
+                        <th class="w-1/4">Amount ($)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    for _, item := range billItems {
+                        if item.IsFixed == isFixed {
+                            <tr>
+                                <td>
+                                    {item.Label}
+                                </td>
+                                <td>
+                                    {utils.HumanizeMoney(item.Amount)}
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+}
+
+templ BillItems(bill model.BillResponse, billItems []model.BillItem, isLatest bool) {
+    {{
+        monthString := bill.Month.String()
+        if isLatest {
+            monthString = "latest"
+        }
+    }}
+    @billsHolder(monthString, false, false) {
+        @BillHeader(bill.Month, isLatest, false)
+        @billStats(bill)
+        <div class="overflow-x-auto">
+            @billItemTable(billItems, "Fixed Costs", true)
+            @billItemTable(billItems, "Variable Costs", false)
+        </div>
+    }
+}

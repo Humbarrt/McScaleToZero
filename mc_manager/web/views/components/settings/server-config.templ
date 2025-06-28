@@ -1,0 +1,209 @@
+package settings
+
+import (
+    "mc_manager/model"
+    "fmt"
+)
+
+templ serverConfigLoader() {
+    @sectionLoader("server", []model.EB_EventType{
+        model.EB_EVENT_SERVER_CONFIG_UPDATE,
+    }, 521)
+}
+
+templ replaceMotdInput(isAdmin bool, replaceMOTD bool) {
+    @HelperLabel("MOTD Mode", "replaceMOTD", "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#motd-mode")
+    <div class={"w-full col-span-2 custom-select", templ.KV("disabled", !isAdmin)}>
+        <select 
+            class="w-full col-span-2 px-2 text-white slot text-shadow-xs sm:max-w-96 h-7 disabled:text-black disabled:text-shadow-none"
+            name="replaceMOTD"
+            disabled?={!isAdmin}
+            required
+        >
+            <option value="false" selected?={!replaceMOTD}>Append</option>
+            <option value="true" selected?={replaceMOTD}>Replace</option>
+        </select>
+    </div>
+}
+
+templ motdInput(isAdmin bool, label string, name string, value string, wikiTag string) {
+    @HelperLabel(label, name, "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#"+ wikiTag)
+    <input 
+        class="w-full col-span-2 px-2 text-white slot text-shadow-xs sm:max-w-96 disabled:text-black disabled:text-shadow-none"
+        name={ name }
+        value={ value }
+        disabled?={!isAdmin}
+    ></input>
+}
+
+
+templ serverImage(isAdmin bool, label string, name string, image *string, wikiTag string) {
+    {{
+        imageSource := "#"
+        if image != nil {
+            imageSource = *image
+        }
+    }}
+    <div class="flex flex-col col-span-1 gap-2">
+        @HelperLabel(label, name, "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#"+ wikiTag)
+        <div class={"flex items-center justify-center w-full h-16", templ.KV("hidden", image==nil)} id={name+"PreviewHolder"}>
+            <img class="flex items-center w-16 h-16 text-center" id={name+"Preview"} src={ imageSource } alt="No Image"/>
+        </div>
+    </div>
+    <div class="grid w-full col-span-2 gap-2 sm:max-w-96">
+        <input type="file" class="hidden" id={name+"Upload"} name={name} accept="image/*" disabled?={!isAdmin} onchange="previewImage(this)"/>
+        <div class="flex flex-row w-full gap-2 h-min">
+            <label type="button" for={name+"Upload"} class={"flex-1 text-center raised-slot-button", templ.KV("raised-slot-disabled", !isAdmin)} >Upload</label>
+            <button type="button" class="flex-1 text-center raised-slot-button" disabled?={image==nil || !isAdmin} id={name+"Remove"} onclick="removeImage(this)">Remove</button>
+        </div>
+    </div>
+}
+
+templ serverPort(isAdmin bool, port int) {
+    @HelperLabel("Server Port", "serverPort", "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#server-port")
+    <input 
+        class="w-full col-span-2 px-2 text-white slot text-shadow-xs sm:max-w-96 disabled:text-black disabled:text-shadow-none"
+        value={ fmt.Sprintf("%d", port) }
+        name="serverPort"
+        type="number"
+        min="1"
+        max="65535"
+        step="1"
+        disabled?={!isAdmin}
+        required
+    ></input>
+}
+
+templ backups(isAdmin bool, backups int) {
+    @HelperLabel("Backups To Keep", "backups", "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#server-port")
+    <input 
+        class="w-full col-span-2 px-2 text-white slot text-shadow-xs sm:max-w-96 disabled:text-black disabled:text-shadow-none"
+        value={ fmt.Sprintf("%d", backups) }
+        name="backups"
+        type="number"
+        min="0"
+        max="15"
+        step="1"
+        disabled?={!isAdmin}
+        required
+    ></input>
+}
+
+templ ServerConfig(isAdmin bool, port int, backupsToKeep int, replaceMOTD bool, offlineMOTD []byte, onlineMOTD []byte, offlineImage *string, onlineImage *string, hasSaved bool) {
+    <div class="flex flex-row items-center justify-between w-full mb-3 ">
+        <h3 class="">Server Config</h3>
+        if isAdmin {
+            <div class="flex flex-row gap-2">
+                <button
+                class="flex items-center justify-center w-8 h-8 raised-slot-button" 
+                disabled?={!isAdmin}
+                hx-get="/components/settings/server"
+                hx-target="#serverHolder"
+                hx-swap="innerHTML"
+                hx-trigger="click"
+                >
+                    <svg fill="none" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M16 4h-2v2h2v2H6v2H4v8h2v2h6v-2H6v-8h10v2h-2v2h2v-2h2v-2h2V8h-2V6h-2V4z" fill="currentColor"/> </svg>
+                </button>
+                <button 
+                    class="flex items-center justify-center w-8 h-8 raised-slot-button"
+                    disabled?={!isAdmin}
+                    hx-post="/components/settings/server"
+                    hx-target-*="#serverErrorLabel"
+                    hx-target="#serverHolder"
+                    hx-swap="innerHTML"
+                    hx-trigger="click"
+                    hx-vals="js:{
+                        replaceMOTD: document.getElementsByName('replaceMOTD')[0].value,
+                        serverPort: document.getElementsByName('serverPort')[0].value,
+                        backupsToKeep: document.getElementsByName('backups')[0].value,
+                        offlineMOTD: document.getElementsByName('offlineMOTD')[0].value,
+                        onlineMOTD: document.getElementsByName('onlineMOTD')[0].value,
+                        offlineImage: document.getElementById('offlineImagePreview')?.getAttribute('src'),
+                        onlineImage: document.getElementById('onlineImagePreview')?.getAttribute('src')
+                    }"
+                    onmouseleave="resetServerSaveIcons()"
+                >
+                    <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class={"w-6 h-6", templ.KV("hidden", hasSaved)} id="serverSaveIcon" > <path d="M4 2h14v2H4v16h2v-6h12v6h2V6h2v16H2V2h2zm4 18h8v-4H8v4zM20 6h-2V4h2v2zM6 6h9v4H6V6z" fill="currentColor"/> </svg>
+                    <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class={"w-6 h-6 text-green", templ.KV("hidden", !hasSaved)} id="serverSuccessIcon"> <path d="M18 6h2v2h-2V6zm-2 4V8h2v2h-2zm-2 2v-2h2v2h-2zm-2 2h2v-2h-2v2zm-2 2h2v-2h-2v2zm-2 0v2h2v-2H8zm-2-2h2v2H6v-2zm0 0H4v-2h2v2z" fill="currentColor"/> </svg>
+                </button>
+            </div>
+        }
+    </div>
+    <div class="grid w-full grid-cols-[auto,auto] gap-4 sm:grid-cols-[auto,auto,auto] sm:max-w-max">
+        @serverPort(isAdmin, port)
+        @backups(isAdmin, backupsToKeep)
+        @replaceMotdInput(isAdmin, replaceMOTD)
+        @motdInput(isAdmin, "Offline MOTD", "offlineMOTD", string(offlineMOTD), "offline-motd")
+        @motdInput(isAdmin, "Online MOTD", "onlineMOTD", string(onlineMOTD), "online-motd")
+        @serverImage(isAdmin, "Offline Icon", "offlineImage", offlineImage, "offline-icon")
+        @serverImage(isAdmin, "Online Icon", "onlineImage", onlineImage, "online-icon")
+    </div>
+    <div class="mt-1 text-dark-red" id="serverErrorLabel"></div>
+    <script>
+        function resetServerSaveIcons(event) {
+            setTimeout(function() {
+                let successIconElement = document.getElementById("serverSuccessIcon");
+                let saveIconElement = document.getElementById("serverSaveIcon");
+                if (successIconElement == null || saveIconElement == null) {
+                    console.error("Error: Could not find the success or copy icon element.");
+                    return;
+                }
+                successIconElement.classList.add("hidden");
+                saveIconElement.classList.remove("hidden");
+            }, 3000);
+        }
+
+        function previewImage(uploadButton) {
+            let file = uploadButton.files[0];
+            let reader = new FileReader();
+            let name = uploadButton.name;
+
+            reader.onload = function (readerEvent) {
+                let base64String = readerEvent.target.result;
+                let previewElementHolder = document.getElementById(name + "PreviewHolder");
+                if (!previewElementHolder) {
+                    console.error('Previous element is not the imagePreviewHolder');
+                    return;
+                }
+                let previewElement = previewElementHolder.querySelector('img');
+                if (!previewElement) {
+                    console.error('Image element not found');
+                    return;
+                }
+
+                previewElement.src = base64String;
+                previewElementHolder.classList.remove('hidden');
+                let removeButton = document.getElementById(name + "Remove");
+                if (!removeButton) {
+                    console.error('Remove button not found');
+                    return;
+                }
+                removeButton.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage(removeButton) {
+            let inputElement = removeButton.parentElement.parentElement.querySelector('input[type="file"]');
+            if (!inputElement) {
+                console.error('Input element not found');
+                return;
+            }
+
+            let previewElementHolder = document.getElementById(inputElement.name + "PreviewHolder");
+            if (!previewElementHolder) {
+                console.error('Previous element is not the imagePreviewHolder');
+                return;
+            }
+            let previewElement = previewElementHolder.querySelector('img');
+            if (!previewElement) {
+                console.error('Image element not found');
+                return;
+            }
+
+            previewElement.src = "#";
+            previewElementHolder.classList.add('hidden');
+            removeButton.disabled = true;
+        }
+    </script>
+}

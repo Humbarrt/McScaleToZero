@@ -33,7 +33,7 @@ func readPacketLength(conn net.Conn) (int, error) {
 	var numRead int
 
 	var byteRead byte
-	maxPacketSize := 1024 * 1024 // 1 MB
+	maxPacketSize := 10 * 1024 // 10 KB
 	for {
 		if num > maxPacketSize {
 			return 0, fmt.Errorf("packet size exceeds maximum limit")

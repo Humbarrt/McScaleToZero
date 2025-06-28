@@ -17,7 +17,10 @@ func GetMutableConfig(DB *db.DB) (*model.MutableConfig, error) {
 	result := stmt.QueryRow()
 	config := &model.MutableConfig{}
 	var taxRateInt int64
-	err = result.Scan(&config.MCServerPort, &config.OnlineImage, &config.OnlineMOTD, &config.OfflineImage, &config.OfflineMOTD, &config.ReplaceMOTD, &config.LastImage, &config.LastMOTD, &config.ProtocolVersion, &config.MaxPlayers, &config.BackupsToKeep, &taxRateInt)
+	var networkRatioInt int64
+	var fallbackFixedCostInt int64
+	var fallbackVariableCostInt int64
+	err = result.Scan(&config.MCServerPort, &config.OnlineImage, &config.OnlineMOTD, &config.OfflineImage, &config.OfflineMOTD, &config.ReplaceMOTD, &config.LastImage, &config.LastMOTD, &config.ProtocolVersion, &config.MaxPlayers, &config.BackupsToKeep, &taxRateInt, &networkRatioInt, &fallbackFixedCostInt, &fallbackVariableCostInt)
 	if err != nil {
 		return nil, err
 	}
@@ -26,6 +29,9 @@ func GetMutableConfig(DB *db.DB) (*model.MutableConfig, error) {
 	}
 
 	config.TaxRate = intToDecimal(taxRateInt)
+	config.NetworkRatio = intToDecimal(networkRatioInt)
+	config.FallbackFixedCost = intToDecimal(fallbackFixedCostInt)
+	config.FallbackVariableCost = intToDecimal(fallbackVariableCostInt)
 	return config, nil
 }
 
@@ -140,13 +146,40 @@ func UpdateTaxRate(DB *db.DB, taxRate decimal.Decimal) error {
 	return updateConfig(DB, config)
 }
 
+func UpdateNetworkRatio(DB *db.DB, networkRatio decimal.Decimal) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.NetworkRatio = networkRatio
+	return updateConfig(DB, config)
+}
+
+func UpdateFallbackFixedCost(DB *db.DB, fallbackFixedCost decimal.Decimal) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.FallbackFixedCost = fallbackFixedCost
+	return updateConfig(DB, config)
+}
+
+func UpdateFallbackVariableCost(DB *db.DB, fallbackVariableCost decimal.Decimal) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.FallbackVariableCost = fallbackVariableCost
+	return updateConfig(DB, config)
+}
+
 func updateConfig(DB *db.DB, config *model.MutableConfig) error {
 	stmt, err := DB.GetStmt("update_config")
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(config.MCServerPort, config.OnlineImage, config.OnlineMOTD, config.OfflineImage, config.OfflineMOTD, config.ReplaceMOTD, config.LastImage, config.LastMOTD, config.ProtocolVersion, config.MaxPlayers, config.BackupsToKeep, decimalToInt(config.TaxRate))
+	_, err = stmt.Exec(config.MCServerPort, config.OnlineImage, config.OnlineMOTD, config.OfflineImage, config.OfflineMOTD, config.ReplaceMOTD, config.LastImage, config.LastMOTD, config.ProtocolVersion, config.MaxPlayers, config.BackupsToKeep, decimalToInt(config.TaxRate), decimalToInt(config.NetworkRatio), decimalToInt(config.FallbackFixedCost), decimalToInt(config.FallbackVariableCost))
 	if err != nil {
 		return err
 	}

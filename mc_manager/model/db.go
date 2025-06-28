@@ -81,3 +81,9 @@ type FullBill struct {
 	BillItems     []*BillItem     `json:"bill_items"`
 	BilledPlayers []*BilledPlayer `json:"billed_players"`
 }
+
+type BilledPlayerTime struct {
+	PlayerId int64         `json:"player_id"`
+	Playtime time.Duration `json:"playtime"`
+	CPUTime  time.Duration `json:"cpu_time"`
+}

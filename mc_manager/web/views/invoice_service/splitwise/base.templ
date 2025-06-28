@@ -1,0 +1,205 @@
+package splitwise
+
+import (
+    "mc_manager/web/views/utils"
+	"mc_manager/model"
+	"mc_manager/web/views/components/settings"
+    "fmt"
+)
+
+templ Loader(swapEvents []model.EB_EventType) {
+    {{
+        swapEventsString := ""
+        for _, event := range swapEvents {
+            swapEventsString += fmt.Sprintf(",sse:%d", event)
+        }
+    }}
+    <div
+        class="flex flex-col w-full p-4 pt-0 rounded-lg shadow-md sm:max-w-max panel sm:min-w-80"
+        hx-get="/splitwise/"
+        hx-trigger={"load" + swapEventsString}
+        hx-swap="innerHTML"
+        id="splitwiseHolder"
+        hx-vals="js:{
+            splitwiseConfigSuccessIcon: document.getElementById('splitwiseSuccessIcon')?.classList?.contains('hidden') == false || false,
+        }"
+    >
+        <div class="flex items-center justify-center h-32 mt-4 w-96">
+            @utils.StaticIndicator("")
+        </div>
+    </div>
+}
+
+templ Select(isAdmin bool, label string, name string, options []struct{ Value string; Label string }, selected string) {
+    @settings.HelperLabel(label, name, "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#motd-mode")
+    <div class={"w-full col-span-2 custom-select", templ.KV("disabled", !isAdmin)}>
+        <select 
+            class="w-full px-2 text-white slot text-shadow-xs sm:max-w-96 h-7 disabled:text-black disabled:text-shadow-none"
+            name={name}
+            disabled?={!isAdmin}
+            required
+        >
+            for _, option := range options {
+                <option value={option.Value} selected?={option.Value == selected}>{option.Label}</option>
+            }
+        </select>
+    </div>
+}
+
+templ TableSelect(isAdmin bool, name string, options []struct{ Value string; Label string }, selected string) {
+    <td class="!p-0">
+        <div class={"w-full custom-select", templ.KV("disabled", !isAdmin)}>
+            <select 
+                class="w-full px-2 text-white text-shadow-xs h-7 disabled:text-black disabled:text-shadow-none"
+                name={name}
+                disabled?={!isAdmin}
+                required
+            >
+                for _, option := range options {
+                    <option value={option.Value} selected?={option.Value == selected}>{option.Label}</option>
+                }
+            </select>
+        </div>
+    </td>
+}
+
+templ UpdateSplitwiseUsers(isAdmin bool) {
+    @settings.HelperLabel("Splitwise Users", "_", "safkasf")
+    <div class="relative w-full col-span-1 group">
+        <button
+            class="px-2 text-center raised-slot-button" 
+            disabled?={!isAdmin}
+            hx-get="/splitwise/users"
+            hx-target="#splitwiseHolder"
+            hx-swap="innerHTML"
+            hx-trigger="click"
+            hx-indicator="#updateSplitwiseUsersIndicator, #updateSplitwiseUsersInverseIndicator"
+            hx-disabled-elt="this"
+        >   
+            @utils.Indicator("updateSplitwiseUsersIndicator", "absolute top-1/2 right-1/2 transform translate-x-1/2 -translate-y-1/2")
+            <span id="updateSplitwiseUsersInverseIndicator" class="htmx-inverse-indicator-opacity">
+                Update
+            </span>
+        </button>
+        <span class="absolute right-0 px-2 py-1 text-white transition-opacity bg-black rounded opacity-0 pointer-events-none -top-8 w-max group-hover:opacity-100">
+            Update Splitwise Users
+        </span>
+    </div>
+}
+
+templ IsSynced(isSynced bool) {
+    @settings.HelperLabel("Is Synced", "isSynced", "safkasf")
+    <div class="col-span-2" name="isSynced">
+        if isSynced {
+            <span class="text-green">synced</span>
+        } else {
+            <span class="text-red">not synced</span>
+        }
+    </div>
+}
+
+templ Overview(isAdmin bool, hasSaved bool, players []*model.Player, splitwiseUsers []model.SplitwiseUser, currencies []string, currentCurrency string, isSynced bool) {
+    <div class="flex flex-row items-center justify-between w-full mb-3">
+        <h3 class="">Splitwise Config</h3>
+        if isAdmin {
+            <div class="flex flex-row gap-2">
+                <button
+                    class="flex items-center justify-center w-8 h-8 raised-slot-button" 
+                    disabled?={!isAdmin}
+                    hx-get="/splitwise"
+                    hx-target="#splitwiseHolder"
+                    hx-swap="innerHTML"
+                    hx-trigger="click"
+                >
+                    <svg fill="none" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M16 4h-2v2h2v2H6v2H4v8h2v2h6v-2H6v-8h10v2h-2v2h2v-2h2v-2h2V8h-2V6h-2V4z" fill="currentColor"/> </svg>
+                </button>
+                <button 
+                    class="flex items-center justify-center w-8 h-8 raised-slot-button"
+                    disabled?={!isAdmin}
+                    hx-post="/splitwise"
+                    hx-target-*="#splitwiseErrorLabel"
+                    hx-target="#splitwiseHolder"
+                    hx-swap="innerHTML"
+                    hx-trigger="click"
+                    hx-include="[name='invoiceCurrency'], [name^='splitwiseUser_']"
+                    onmouseleave="resetSplitwiseSaveIcons()"
+                    
+                >
+                    <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class={"w-6 h-6", templ.KV("hidden", hasSaved)} id="splitwiseSaveIcon" > <path d="M4 2h14v2H4v16h2v-6h12v6h2V6h2v16H2V2h2zm4 18h8v-4H8v4zM20 6h-2V4h2v2zM6 6h9v4H6V6z" fill="currentColor"/> </svg>
+                    <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class={"w-6 h-6 text-green", templ.KV("hidden", !hasSaved)} id="splitwiseSuccessIcon"> <path d="M18 6h2v2h-2V6zm-2 4V8h2v2h-2zm-2 2v-2h2v2h-2zm-2 2h2v-2h-2v2zm-2 2h2v-2h-2v2zm-2 0v2h2v-2H8zm-2-2h2v2H6v-2zm0 0H4v-2h2v2z" fill="currentColor"/> </svg>
+                </button>
+            </div>
+        }
+    </div>
+    <div class="grid w-full grid-cols-[auto,auto] gap-4 sm:grid-cols-[auto,auto,auto] sm:max-w-max">
+        {{
+            currencyOptions := make([]struct{ Value string; Label string }, 0)
+            for _, currency := range currencies {
+                currencyOptions = append(currencyOptions, struct{ Value string; Label string }{Value: currency, Label: currency})
+            }
+        }}
+        @IsSynced(isSynced)
+        @Select(isAdmin, "Invoice Currency", "invoiceCurrency", currencyOptions, currentCurrency)
+        @UpdateSplitwiseUsers(isAdmin)
+    </div>
+    <div class="mt-1 text-dark-red" id="splitwiseErrorLabel"></div>
+
+    <span class="mt-8"></span>
+    <div class="overflow-x-auto">
+        <table class="table w-full !p-0 min-w-min whitespace-nowrap" style="border: none;">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Splitwise User</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{
+                    userOptions := make([]struct{ Value string; Label string }, 0)
+                    for _, user := range splitwiseUsers {
+                        name := user.Id
+                        if user.Name != nil {
+                            name = *user.Name
+                        } else if user.Email != nil {
+                            name = *user.Email
+                        }
+
+
+                        userOptions = append(userOptions, struct{ Value string; Label string }{Value: user.Id, Label: name})
+                    }
+                }}
+                for _, player := range players {
+                    {{
+                        playerName := "Unknown"
+                        if len(player.Aliases) > 0 {
+                            playerName = player.Aliases[0]
+                        }
+
+                        selected := ""
+                        if player.InvoiceServiceUserId != nil {
+                            selected = *player.InvoiceServiceUserId
+                        }
+                    }}
+                    <tr>
+                        <td>{playerName}</td>
+                        @TableSelect(isAdmin, fmt.Sprintf("splitwiseUser_%d", player.Id), userOptions, selected)
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <script>
+        function resetSplitwiseSaveIcons(event) {
+            setTimeout(function() {
+                let successIconElement = document.getElementById("splitwiseSuccessIcon");
+                let saveIconElement = document.getElementById("splitwiseSaveIcon");
+                if (successIconElement == null || saveIconElement == null) {
+                    console.error("Error: Could not find the success or copy icon element.");
+                    return;
+                }
+                successIconElement.classList.add("hidden");
+                saveIconElement.classList.remove("hidden");
+            }, 3000);
+        }
+    </script>
+}

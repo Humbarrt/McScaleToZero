@@ -7,6 +7,8 @@ import (
 
 type YearMonth int
 
+// YearMonth represents a year and month in the format YYYYMM.
+// String() returns the year and month in the format "YYYY-MM".
 func (ym YearMonth) String() string {
 	year := ym / 100
 	month := ym % 100

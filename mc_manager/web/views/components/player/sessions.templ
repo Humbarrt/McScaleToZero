@@ -1,0 +1,56 @@
+package player
+
+import (
+    "mc_manager/model"
+)
+
+templ playerSessionsLoader() {
+    @sectionLoader("sessions", []model.EB_EventType{}, 521)
+}
+
+templ PlayerSessions(sessions []model.UserSession, currentSessionId string) {
+    <div class="flex flex-row items-center justify-between w-full mb-3 ">
+        <h3 class="">Sessions</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="table [&_td]:!px-4 w-full !p-0 min-w-min whitespace-nowrap" style="border: none;">
+            <thead>
+                <tr>
+                    <th>OS</th>
+                    <th>Browser</th>
+                    <th>Created At</th>
+                    <th>Last Active</th>
+                </tr>
+            </thead>
+            <tbody>
+                for _, session := range sessions {
+                    {{
+                        ua := session.GetUserAgent()
+                        os := ua.OS
+                        browser := ua.Name
+                        isCurrent := session.GetId() == currentSessionId
+                    }}
+                    <tr>
+                        <td>{os}</td>
+                        <td>{browser}</td>
+                        <td>{session.GetCreatedAt().Format("2006-01-02 15:04:05 Z07:00")}</td>
+                        <td>{session.GetLastUsedAt().Format("2006-01-02 15:04:05 Z07:00")}</td>
+                        <td class="flex" style="padding: 0.5rem !important;">
+                            <button class="relative group" disabled?={isCurrent} hx-delete={"/components/player/sessions/"+ session.GetId()} hx-target="#sessionsHolder" hx-swap="innerHTML" hx-confirm="Are you sure you want to delete this session?">
+                                <div class="relative w-6 h-6">
+                                    <svg class="absolute w-6 h-6 text-black top-[1px]" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M5 3h16v4h-2V5H5v14h14v-2h2v4H3V3h2zm16 8h-2V9h-2V7h-2v2h2v2H7v2h10v2h-2v2h2v-2h2v-2h2v-2z" fill="currentColor"/> </svg>
+                                    <svg class={"absolute w-6 h-6", templ.KV("text-white", !isCurrent), templ.KV("text-dark-gray", isCurrent)} fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M5 3h16v4h-2V5H5v14h14v-2h2v4H3V3h2zm16 8h-2V9h-2V7h-2v2h2v2H7v2h10v2h-2v2h2v-2h2v-2h2v-2z" fill="currentColor"/> </svg>
+                                </div>
+                                if isCurrent {
+                                    <span class="absolute right-0 z-50 px-2 py-1 transition-opacity bg-black rounded opacity-0 pointer-events-none -top-4 w-max group-hover:opacity-100">
+                                        This is your current session
+                                    </span>
+                                }
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

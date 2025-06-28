@@ -8,14 +8,18 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.48.4
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.48.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.211.0
+	github.com/dustin/go-humanize v1.0.1
 	github.com/gin-gonic/gin v1.10.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.24
+	github.com/mileusna/useragent v1.3.5
 	github.com/pressly/goose/v3 v3.24.2
 	github.com/shopspring/decimal v1.4.0
 	github.com/stretchr/testify v1.10.0
+	github.com/yusufthedragon/exchange-rates-go v1.0.0
 	golang.org/x/net v0.38.0
 )
 

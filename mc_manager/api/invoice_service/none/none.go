@@ -2,6 +2,9 @@ package none
 
 import (
 	"mc_manager/model"
+
+	"github.com/a-h/templ"
+	"github.com/gin-gonic/gin"
 )
 
 type NoInvoiceService struct {
@@ -22,6 +25,10 @@ func (s *NoInvoiceService) Status() model.InvoiceServiceStatus {
 func (s *NoInvoiceService) SyncBills() error {
 	return nil
 }
-func (s *NoInvoiceService) GetUsers() ([]*model.InvoiceServiceUser, error) {
-	return []*model.InvoiceServiceUser{}, nil
+
+func (s *NoInvoiceService) Routes(route *gin.Engine, app *model.App) {
+}
+
+func (s *NoInvoiceService) WebLoader() templ.Component {
+	return templ.NopComponent
 }

@@ -22,9 +22,9 @@ func TestGetMutableConfig(t *testing.T) {
 	config := getConfigNoError(t, DB)
 	assert.Equal(t, 25565, config.MCServerPort)
 	assert.Nil(t, config.OnlineImage)
-	assert.Equal(t, []byte("\u00A7r\n                    \u00A7a(running)"), config.OnlineMOTD)
+	assert.Equal(t, []byte("\\n                    \\u00A7a(running)"), config.OnlineMOTD)
 	assert.Nil(t, config.OfflineImage)
-	assert.Equal(t, []byte("\u00A7r\n                \u00A78(not started yet)"), config.OfflineMOTD)
+	assert.Equal(t, []byte("\\n                \\u00A78(not started yet)"), config.OfflineMOTD)
 
 	// Test updating the config
 	onlineImage := "test_online_image"
@@ -181,6 +181,46 @@ func TestGetMutableConfig(t *testing.T) {
 	assert.Contains(t, err.Error(), "CHECK constraint failed")
 	config = getConfigNoError(t, DB)
 	assert.True(t, decimal.NewFromFloat(0.0).Equal(config.TaxRate))
+
+	taxDec = decimal.NewFromFloat(1.1)
+	err = queries.UpdateTaxRate(DB, taxDec)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CHECK constraint failed")
+	config = getConfigNoError(t, DB)
+	assert.True(t, decimal.NewFromFloat(0.0).Equal(config.TaxRate))
+
+	// Test if update network ratio works
+	networkRatioDec := decimal.NewFromFloat(0.2)
+	err = queries.UpdateNetworkRatio(DB, networkRatioDec)
+	assert.NoError(t, err)
+	config = getConfigNoError(t, DB)
+	assert.True(t, networkRatioDec.Equal(config.NetworkRatio))
+
+	networkRatioDec = decimal.NewFromFloat(0.5)
+	err = queries.UpdateNetworkRatio(DB, networkRatioDec)
+	assert.NoError(t, err)
+	config = getConfigNoError(t, DB)
+	assert.True(t, networkRatioDec.Equal(config.NetworkRatio))
+
+	networkRatioDec = decimal.NewFromFloat(0.0)
+	err = queries.UpdateNetworkRatio(DB, networkRatioDec)
+	assert.NoError(t, err)
+	config = getConfigNoError(t, DB)
+	assert.True(t, networkRatioDec.Equal(config.NetworkRatio))
+
+	networkRatioDec = decimal.NewFromFloat(-0.1)
+	err = queries.UpdateNetworkRatio(DB, networkRatioDec)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CHECK constraint failed")
+	config = getConfigNoError(t, DB)
+	assert.True(t, decimal.NewFromFloat(0.0).Equal(config.NetworkRatio))
+
+	networkRatioDec = decimal.NewFromFloat(1.1)
+	err = queries.UpdateNetworkRatio(DB, networkRatioDec)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CHECK constraint failed")
+	config = getConfigNoError(t, DB)
+	assert.True(t, decimal.NewFromFloat(0.0).Equal(config.NetworkRatio))
 }
 
 func getConfigNoError(t *testing.T, DB *db.DB) *model.MutableConfig {

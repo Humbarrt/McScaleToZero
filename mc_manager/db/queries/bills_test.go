@@ -219,4 +219,10 @@ func TestBills(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, billRes.Id, notLatestBill.Id)
 	assert.NotEqual(t, latestBill.Id, notLatestBill.Id)
+
+	// Test GetBillingMonths
+	billingMonths, err := queries.GetBillingMonths(DB)
+	assert.NoError(t, err)
+	assert.Len(t, billingMonths, 3)
+	assert.Contains(t, billingMonths, ym)
 }

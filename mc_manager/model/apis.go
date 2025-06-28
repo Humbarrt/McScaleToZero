@@ -3,8 +3,10 @@ package model
 import (
 	"time"
 
+	"github.com/a-h/templ"
 	ceTypes "github.com/aws/aws-sdk-go-v2/service/costexplorer/types"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
 )
 
@@ -43,11 +45,11 @@ type AWSAPI interface {
 	GetLogsSince(startTime time.Time, limit int) ([]*Log, error)
 }
 
-type InvoiceService string
+type InvoiceServiceType string
 
 const (
-	InvoiceServiceNone      InvoiceService = "none"
-	InvoiceServiceSplitwise InvoiceService = "splitwise"
+	InvoiceServiceNone      InvoiceServiceType = "none"
+	InvoiceServiceSplitwise InvoiceServiceType = "splitwise"
 )
 
 type InvoiceServiceStatus int
@@ -60,10 +62,9 @@ const (
 	StatusInvoiceServiceError
 )
 
-type InvoiceServiceAPI interface {
+type InvoiceService interface {
 	Init() error
-	Status() InvoiceServiceStatus
-
 	SyncBills() error
-	GetUsers() ([]*InvoiceServiceUser, error)
+	Routes(route *gin.Engine, app *App)
+	WebLoader() templ.Component
 }

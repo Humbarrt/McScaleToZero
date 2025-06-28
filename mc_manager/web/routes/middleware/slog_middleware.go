@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"log/slog"
+	"mc_manager/logging"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,12 +16,13 @@ func SlogMiddleware(logger *slog.Logger) gin.HandlerFunc {
 		c.Next()
 
 		// Log request details
-		logger.Info("HTTP Request",
-			slog.String("method", c.Request.Method),
-			slog.String("path", c.Request.URL.Path),
-			slog.Int("status", c.Writer.Status()),
-			slog.Duration("duration", time.Since(start)),
-			slog.String("client_ip", c.ClientIP()),
+
+		logging.Debug("HTTP Request",
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"status", c.Writer.Status(),
+			"duration", time.Since(start),
+			"client_ip", c.ClientIP(),
 		)
 	}
 }

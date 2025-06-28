@@ -362,6 +362,9 @@ func (aws *awsAPI) GetCostForTimeframe(timeframe model.Timeframe) ([]*model.Mont
 		"endDate", endDateString,
 	)
 
+	//Taxes and network costs are not included in the cost explorer API. Thus the calculation.
+	networkCostStandInLabel := "BoxUsage"
+	networkCostRatio := aws.app.Config.GetNetworkRatio()
 	fixedLabels := []string{
 		"VolumeUsage",
 		"APIRequest",
@@ -468,6 +471,20 @@ func (aws *awsAPI) GetCostForTimeframe(timeframe model.Timeframe) ([]*model.Mont
 				}
 			}
 
+			//calculate network cost (ugly workaround, ik)
+			if !isFixed && strings.Contains(label, networkCostStandInLabel) {
+				networkCost := amount.Mul(networkCostRatio)
+				networkCostItem := model.CostItem{
+					Label:   "Network Cost",
+					Amount:  networkCost,
+					IsFixed: false,
+				}
+
+				items = append(items, networkCostItem)
+				variableAmount = variableAmount.Add(networkCost)
+				totalAmount = totalAmount.Add(networkCost)
+			}
+
 			item := model.CostItem{
 				Label:   label,
 				Amount:  amount,
@@ -487,15 +504,17 @@ func (aws *awsAPI) GetCostForTimeframe(timeframe model.Timeframe) ([]*model.Mont
 		taxRate := aws.app.Config.GetTaxRate()
 		if !taxRate.Equal(decimal.Zero) {
 			fixedTax := fixedAmount.Mul(taxRate)
+			fixedTaxLabel := fmt.Sprintf("Fixed VAT (%s%%)", taxRate.Mul(decimal.NewFromInt(100)).StringFixed(2))
 			fixedTaxItem := model.CostItem{
-				Label:   "Fixed Tax",
+				Label:   fixedTaxLabel,
 				Amount:  fixedTax,
 				IsFixed: true,
 			}
 
 			variableTax := variableAmount.Mul(taxRate)
+			variableTaxLabel := fmt.Sprintf("Variable VAT (%s%%)", taxRate.Mul(decimal.NewFromInt(100)).StringFixed(2))
 			variableTaxItem := model.CostItem{
-				Label:   "Variable Tax",
+				Label:   variableTaxLabel,
 				Amount:  variableTax,
 				IsFixed: false,
 			}
