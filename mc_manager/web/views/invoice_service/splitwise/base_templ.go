@@ -70,7 +70,7 @@ func Loader(swapEvents []model.EB_EventType) templ.Component {
 	})
 }
 
-func Select(isAdmin bool, label string, name string, options []struct {
+func Select(isAdmin bool, label string, name string, url string, options []struct {
 	Value string
 	Label string
 }, selected string) templ.Component {
@@ -94,7 +94,7 @@ func Select(isAdmin bool, label string, name string, options []struct {
 			templ_7745c5c3_Var3 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = settings.HelperLabel(label, name, "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#motd-mode").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = settings.HelperLabel(label, name, url).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -337,11 +337,11 @@ func UpdateSplitwiseUsers(isAdmin bool) templ.Component {
 			templ_7745c5c3_Var15 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = settings.HelperLabel("Splitwise Users", "_", "safkasf").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = settings.HelperLabel("Splitwise Users", "updateSplitwiseUsers", "https://github.com/Humbarrt/McScaleToZero/wiki/Splitwise#splitwise-users-update").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<div class=\"relative w-full col-span-1 group\"><button class=\"px-2 text-center raised-slot-button\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<div class=\"relative w-full col-span-1 group\" name=\"updateSplitwiseUsers\"><button class=\"px-2 text-center raised-slot-button\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -388,7 +388,7 @@ func IsSynced(isSynced bool) templ.Component {
 			templ_7745c5c3_Var16 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = settings.HelperLabel("Is Synced", "isSynced", "safkasf").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = settings.HelperLabel("Is Synced", "isSynced", "https://github.com/Humbarrt/McScaleToZero/wiki/Splitwise#is-synced").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -529,7 +529,7 @@ func Overview(isAdmin bool, hasSaved bool, players []*model.Player, splitwiseUse
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = Select(isAdmin, "Invoice Currency", "invoiceCurrency", currencyOptions, currentCurrency).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Select(isAdmin, "Invoice Currency", "invoiceCurrency", "https://github.com/Humbarrt/McScaleToZero/wiki/Splitwise#invoice-currency", currencyOptions, currentCurrency).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

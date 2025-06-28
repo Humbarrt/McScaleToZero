@@ -30,8 +30,8 @@ templ Loader(swapEvents []model.EB_EventType) {
     </div>
 }
 
-templ Select(isAdmin bool, label string, name string, options []struct{ Value string; Label string }, selected string) {
-    @settings.HelperLabel(label, name, "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#motd-mode")
+templ Select(isAdmin bool, label string, name string, url string, options []struct{ Value string; Label string }, selected string) {
+    @settings.HelperLabel(label, name, url)
     <div class={"w-full col-span-2 custom-select", templ.KV("disabled", !isAdmin)}>
         <select 
             class="w-full px-2 text-white slot text-shadow-xs sm:max-w-96 h-7 disabled:text-black disabled:text-shadow-none"
@@ -64,8 +64,8 @@ templ TableSelect(isAdmin bool, name string, options []struct{ Value string; Lab
 }
 
 templ UpdateSplitwiseUsers(isAdmin bool) {
-    @settings.HelperLabel("Splitwise Users", "_", "safkasf")
-    <div class="relative w-full col-span-1 group">
+    @settings.HelperLabel("Splitwise Users", "updateSplitwiseUsers", "https://github.com/Humbarrt/McScaleToZero/wiki/Splitwise#splitwise-users-update")
+    <div class="relative w-full col-span-1 group" name="updateSplitwiseUsers">
         <button
             class="px-2 text-center raised-slot-button" 
             disabled?={!isAdmin}
@@ -88,7 +88,7 @@ templ UpdateSplitwiseUsers(isAdmin bool) {
 }
 
 templ IsSynced(isSynced bool) {
-    @settings.HelperLabel("Is Synced", "isSynced", "safkasf")
+    @settings.HelperLabel("Is Synced", "isSynced", "https://github.com/Humbarrt/McScaleToZero/wiki/Splitwise#is-synced")
     <div class="col-span-2" name="isSynced">
         if isSynced {
             <span class="text-green">synced</span>
@@ -139,7 +139,7 @@ templ Overview(isAdmin bool, hasSaved bool, players []*model.Player, splitwiseUs
             }
         }}
         @IsSynced(isSynced)
-        @Select(isAdmin, "Invoice Currency", "invoiceCurrency", currencyOptions, currentCurrency)
+        @Select(isAdmin, "Invoice Currency", "invoiceCurrency", "https://github.com/Humbarrt/McScaleToZero/wiki/Splitwise#invoice-currency", currencyOptions, currentCurrency)
         @UpdateSplitwiseUsers(isAdmin)
     </div>
     <div class="mt-1 text-dark-red" id="splitwiseErrorLabel"></div>

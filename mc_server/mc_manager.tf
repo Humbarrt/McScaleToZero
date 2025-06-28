@@ -30,11 +30,17 @@ data "aws_iam_policy_document" "mc_manager_policy_doc" {
     sid    = "ViewBilling"
     effect = "Allow"
     actions = [
-      "ce:GetCostAndUsage",
+      "ce:ListCostAllocationTags",
+      "ce:DescribeCostCategoryDefinition",
+      "ce:GetCostAndUsageWithResources",
       "ce:GetCostForecast",
-      "ce:GetDimensionValues",
-      "ce:GetReservationUtilization",
-      "ce:GetRightsizingRecommendation"
+      "ce:GetCostAndUsage",
+      "ce:DescribeReport",
+      "ce:ListCostAllocationTagBackfillHistory",
+      "ce:GetTags",
+      "ce:StartCostAllocationTagBackfill",
+      "ce:GetCostCategories",
+      "ce:GetDimensionValues"
     ]
     resources = ["*"]
     condition {
@@ -48,9 +54,9 @@ data "aws_iam_policy_document" "mc_manager_policy_doc" {
     sid    = "CloudWatchLogsAccess"
     effect = "Allow"
     actions = [
-      "logs:DescribeLogGroups",
+      "logs:GetLogEvents",
       "logs:DescribeLogStreams",
-      "logs:GetLogEvents"
+      "logs:DescribeLogGroups"
     ]
     resources = [
       "${aws_cloudwatch_log_group.mc_log_group.arn}",
