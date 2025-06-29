@@ -1,0 +1,9 @@
+FROM alpine:latest
+
+WORKDIR /app
+
+COPY mc_manager .
+
+EXPOSE 8080 25565
+
+CMD ["./mc_manager"]

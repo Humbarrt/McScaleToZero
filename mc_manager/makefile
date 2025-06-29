@@ -4,3 +4,5 @@ build:
 	pnpm run build && templ generate && GOOS=linux GOARCH=amd64 go build -o mc_manager -ldflags="-X 'main.version=1.0'" .
 test:
 	go test -v ./...
+dockerize:
+	make build && docker build -t humbarrt/mc_manager:latest .

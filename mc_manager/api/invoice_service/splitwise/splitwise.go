@@ -201,6 +201,7 @@ func (s *SplitwiseAPI) createInvoice(bill *model.Bill) error {
 		return fmt.Errorf("error getting current Splitwise user: %w", err)
 	}
 
+	totalExpense := 0.0
 	expenseUsersMap := map[string]*spw.ExpenseUser{}
 	for _, billedPlayer := range billedPlayers {
 		if billedPlayer == nil {
@@ -225,35 +226,36 @@ func (s *SplitwiseAPI) createInvoice(bill *model.Bill) error {
 		}
 		invoiceServiceUserId := resources.UserID(invoiceServiceUserIdInt)
 		convertedAmount := billedPlayer.TotalAmount.Mul(currencyRate).RoundCeil(2).InexactFloat64()
+		totalExpense += convertedAmount
 
 		_, exists = expenseUsersMap[*player.InvoiceServiceUserId]
 		if exists {
 			expenseUsersMap[*player.InvoiceServiceUserId].OwedShare += convertedAmount
-			if currentUser.ID == invoiceServiceUserId {
-				expenseUsersMap[*player.InvoiceServiceUserId].PaidShare = expenseUsersMap[*player.InvoiceServiceUserId].OwedShare
-			}
 			continue
 		}
 
-		paidShare := 0.0
-		if currentUser.ID == invoiceServiceUserId {
-			paidShare = convertedAmount
-		}
 		expenseUsersMap[*player.InvoiceServiceUserId] = &spw.ExpenseUser{
 			Id:        invoiceServiceUserId,
-			PaidShare: paidShare,
+			PaidShare: 0.0,
 			OwedShare: convertedAmount,
 		}
 	}
 
-	totalExpense := 0.0
 	expenseUsers := []spw.ExpenseUser{}
 	for _, user := range expenseUsersMap {
 		if user == nil {
 			continue
 		}
-		totalExpense += user.OwedShare
-		expenseUsers = append(expenseUsers, *user)
+		paidShare := 0.0
+		if currentUser.ID == user.Id {
+			paidShare = totalExpense
+		}
+
+		expenseUsers = append(expenseUsers, spw.ExpenseUser{
+			Id:        user.Id,
+			PaidShare: paidShare,
+			OwedShare: user.OwedShare,
+		})
 	}
 
 	invoices, err := s._client.CreateExpenseByShares(context.Background(), totalExpense, description, s.groupId, expenseParams, expenseUsers)

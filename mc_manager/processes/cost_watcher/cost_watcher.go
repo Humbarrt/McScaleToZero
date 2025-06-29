@@ -197,10 +197,10 @@ func (cs *CostWatcher) createBill(unbilledMonth model.YearMonth) error {
 				playerPlaytime = 0
 			}
 
-			playerFixedCost := cost.Fixed.Div(decimal.NewFromInt(int64(len(activePlayers))))
-			playerVariableCost := cost.Variable.Div(decimal.NewFromInt(int64(len(activePlayers))))
+			playerFixedCost := cost.Fixed.Div(decimal.Max(decimal.NewFromInt(1), decimal.NewFromInt(int64(len(activePlayers)))))
+			playerVariableCost := cost.Variable.Div(decimal.Max(decimal.NewFromInt(1), decimal.NewFromInt(int64(len(activePlayers)))))
 			if totalCPUTime > 0 {
-				playerCPUShare := decimal.NewFromFloat(playerCPUTime.Seconds()).Div(decimal.NewFromFloat(totalCPUTime.Seconds()))
+				playerCPUShare := decimal.NewFromFloat(playerCPUTime.Seconds()).Div(decimal.Max(decimal.NewFromInt(1), decimal.NewFromFloat(totalCPUTime.Seconds())))
 				playerVariableCost = cost.Variable.Mul(playerCPUShare)
 			}
 
@@ -319,8 +319,8 @@ func (cs *CostWatcher) updateCostEstimate() error {
 	}
 	if lastFixedCostBill != nil || lastVariableCostBill != nil {
 		hoursInFixedMonth := lastFixedCostBill.BillingMonth.EndTime().Sub(lastFixedCostBill.BillingMonth.StartTime()).Hours()
-		hourlyFixedCost = lastFixedCostBill.FixedAmount.Div(decimal.NewFromFloat(hoursInFixedMonth))
-		hourlyVariableCost = lastVariableCostBill.VariableAmount.Div(decimal.NewFromFloat(lastVariableCostBill.ServerUptime.Hours()))
+		hourlyFixedCost = lastFixedCostBill.FixedAmount.Div(decimal.Max(decimal.NewFromInt(1), decimal.NewFromFloat(hoursInFixedMonth)))
+		hourlyVariableCost = lastVariableCostBill.VariableAmount.Div(decimal.Max(decimal.NewFromInt(1), decimal.NewFromFloat(lastVariableCostBill.ServerUptime.Hours())))
 	}
 
 	serverUptime, err := queries.CalculateServerUptime(cs.App.Db, timeframe)
@@ -389,10 +389,10 @@ func (cs *CostWatcher) updateCostEstimate() error {
 			continue
 		}
 
-		playerFixedCost := fixedCost.Div(decimal.NewFromInt(int64(len(activePlayers))))
-		playerVariableCost := variableCost.Div(decimal.NewFromInt(int64(len(activePlayers))))
+		playerFixedCost := fixedCost.Div(decimal.Max(decimal.NewFromInt(1), decimal.NewFromInt(int64(len(activePlayers)))))
+		playerVariableCost := variableCost.Div(decimal.Max(decimal.NewFromInt(1), decimal.NewFromInt(int64(len(activePlayers)))))
 		if serverUptime > 0 {
-			playerCPUShare := decimal.NewFromFloat(playerCPUTime.Seconds()).Div(decimal.NewFromFloat(totalCPUTime.Seconds()))
+			playerCPUShare := decimal.NewFromFloat(playerCPUTime.Seconds()).Div(decimal.Max(decimal.NewFromInt(1), decimal.NewFromFloat(totalCPUTime.Seconds())))
 			playerVariableCost = variableCost.Mul(playerCPUShare)
 		}
 

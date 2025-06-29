@@ -1,0 +1,9 @@
+# Exclude files and directories not needed in container
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+*.pem
+*.txt
+*.md
+data/*
