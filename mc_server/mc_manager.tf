@@ -57,7 +57,8 @@ data "aws_iam_policy_document" "mc_manager_policy_doc" {
       "logs:DescribeLogStreams",
       "logs:DescribeLogGroups",
       "logs:StartQuery",
-      "logs:GetQueryResults"
+      "logs:GetQueryResults",
+      "logs:FilterLogEvents"
     ]
     resources = [
       "${aws_cloudwatch_log_group.mc_log_group.arn}",

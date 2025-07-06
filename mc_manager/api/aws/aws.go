@@ -10,7 +10,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
-	cwlTypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	ceTypes "github.com/aws/aws-sdk-go-v2/service/costexplorer/types"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/shopspring/decimal"
@@ -553,83 +552,36 @@ func (aws *awsAPI) GetCostForTimeframe(timeframe model.Timeframe) ([]*model.Mont
 func (aws *awsAPI) GetLogsSince(startTime time.Time, limit int) ([]*model.Log, error) {
 	logging.Info("Getting logs since", "startTime", startTime, "limit", limit)
 	logGroupName := "/mc-server/logs"
-	//query log insights
-	query := "fields @timestamp, @message, @logStream, @log | sort @timestamp asc"
-	startTimestamp := startTime.Unix()
-	endTimestamp := time.Now().Unix()
-	limitInt := int32(limit)
-	input := &cloudwatchlogs.StartQueryInput{
+	startTimestamp := startTime.UnixMilli()
+	endTimestamp := time.Now().UnixMilli()
+
+	output, err := aws.cwl.FilterLogEvents(context.Background(), &cloudwatchlogs.FilterLogEventsInput{
 		LogGroupName: &logGroupName,
 		StartTime:    &startTimestamp,
 		EndTime:      &endTimestamp,
-		QueryString:  &query,
-		Limit:        &limitInt,
-	}
-	resp, err := aws.cwl.StartQuery(context.Background(), input)
+	})
 	if err != nil {
-		logging.Error("Failed to start query", "error", err)
+		logging.Error("Failed to filter log events", "error", err)
 		return nil, err
 	}
 
-	logging.Debug("Started query", "queryId", *resp.QueryId)
-	var queryResults *cloudwatchlogs.GetQueryResultsOutput
-	for {
-		queryResults, err = aws.cwl.GetQueryResults(context.Background(), &cloudwatchlogs.GetQueryResultsInput{
-			QueryId: resp.QueryId,
-		})
-		if err != nil {
-			logging.Error("Failed to get query results", "error", err)
-			return nil, err
-		}
-		if queryResults.Status == cwlTypes.QueryStatusComplete {
-			break
-		}
-
-		if queryResults.Status == cwlTypes.QueryStatusRunning || queryResults.Status == cwlTypes.QueryStatusScheduled {
-			logging.Debug("Query is still running", "queryId", *resp.QueryId, "status", queryResults.Status)
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		return nil, fmt.Errorf("cloudwatch query failed with status: %s", queryResults.Status)
-	}
-
-	if queryResults.Results == nil {
+	if len(output.Events) == 0 {
 		logging.Error("Query results are nil")
 		return nil, fmt.Errorf("query results are nil")
 	}
 
-	logging.Debug("Query completed", "queryId", *resp.QueryId, "resultsCount", len(queryResults.Results))
-	logging.Info("Query completed", "results", len(queryResults.Results), "matches", queryResults.Statistics.RecordsMatched)
-	logging.Info("Stats", "stats", queryResults.Statistics)
+	logging.Debug("Logs returned", "count", len(output.Events))
 
 	events := make([]*model.Log, 0)
-	for _, fields := range queryResults.Results {
-		var timestampString *string
-		var message *string
-		for _, field := range fields {
-			if field.Field == nil {
-				continue
-			}
-			switch *field.Field {
-			case "@timestamp":
-				timestampString = field.Value
-			case "@message":
-				message = field.Value
-			}
-		}
-
-		if timestampString == nil || message == nil {
+	for _, event := range output.Events {
+		timestampInt := event.Timestamp
+		message := event.Message
+		if timestampInt == nil || message == nil {
 			logging.Error("Timestamp or message is nil")
 			continue
 		}
 
-		timestampTime, err := time.Parse("2006-01-02 15:04:05.999999999", *timestampString)
-		if err != nil {
-			logging.Error("Failed to parse timestamp", "error", err)
-			continue
-		}
-
+		timestampTime := time.UnixMilli(*timestampInt).UTC()
 		events = append(events, &model.Log{
 			Timestamp: timestampTime,
 			Message:   *message,
