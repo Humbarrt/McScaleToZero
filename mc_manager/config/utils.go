@@ -12,6 +12,7 @@ import (
 
 func getenv(key, fallback string) string {
 	value := os.Getenv(key)
+	logging.Debug("Getenv", "key", key, "value", value)
 	if len(value) == 0 {
 		return fallback
 	}

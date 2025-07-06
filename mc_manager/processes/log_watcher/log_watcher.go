@@ -48,15 +48,19 @@ func (lw *logWatcher) parseLog(log *model.Log) {
 		return
 	}
 
+	logging.Debug("LogWatcher: Parsing log", "message", log.Message, "timestamp", log.Timestamp, "joinedGame", lw.reJoindedGame.FindStringSubmatch(log.Message))
+
 	var playerName *string
 	var hasJoinedGame *bool
 	var chatToken *string
 	if matches := lw.reJoindedGame.FindStringSubmatch(log.Message); matches != nil {
+		logging.Info("LogWatcher: Player joined game", "player", matches[1])
 		playerName = &matches[1]
 		_hasJoined := true
 		hasJoinedGame = &_hasJoined
 		lw.App.EB.Broadcast(model.EB_EVENT_PLAYER_JOINED)
 	} else if matches := lw.reLeftGame.FindStringSubmatch(log.Message); matches != nil {
+		logging.Info("LogWatcher: Player left game", "player", matches[1])
 		playerName = &matches[1]
 		_hasJoined := false
 		hasJoinedGame = &_hasJoined
@@ -127,6 +131,7 @@ func (lw *logWatcher) catchupLogs() {
 		hasFoundLog := false
 		for _, log := range logs {
 			if log.Timestamp.Before(startTime) || !hasFoundLog && log.Timestamp.Equal(startTime) {
+				logging.Info("LogWatcher: Found log before start time", "log", log)
 				if lw.lastLog != nil && lw.lastLog.Timestamp.Equal(log.Timestamp) && lw.lastLog.Message == log.Message {
 					logging.Info("LogWatcher found lastLog, skipping", "log", log)
 					hasFoundLog = true
@@ -201,6 +206,9 @@ func (lw *logWatcher) StartLogWatcher() {
 			logging.Error("LogWatcher: Error getting last log, last Try failed", "error", err)
 			return
 		}
+	}
+	if lastLog != nil {
+		logging.Info("LogWatcher: Got last log", "lastLog message", lastLog.Message, "lastLog timestamp", lastLog.Timestamp)
 	}
 	lw.lastLog = lastLog
 

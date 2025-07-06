@@ -3,6 +3,7 @@ package model
 import "github.com/shopspring/decimal"
 
 type Config interface {
+	GetAWSRegion() string
 	GetAWSAccessKeyId() string
 	GetAWSSecretAccessKey() string
 	GetAWSProjectName() string

@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
     golang-app:
-        build: .
+        image: humbarrt/mc_manager:latest
         ports:
             - "8080:8080"
             - "25565:25565"
@@ -13,15 +13,16 @@ services:
             - SPLITWISE_GROUP_ID=SPLITWISE_GROUP_ID
 
             # AWS credentials (env or file-based)
+            - AWS_REGION=YOUR_AWS_REGION
             - AWS_ACCESS_KEY_ID=YOUR_AWS_ACCESS_KEY_ID
             - AWS_SECRET_ACCESS_KEY=YOUR_AWS_SECRET_ACCESS_KEY
-            - AWS_ACCESS_KEY_ID_FILE=mc-access-key-id.txt
-            - AWS_SECRET_ACCESS_KEY_FILE=mc-secret-access-key.txt
+            - AWS_ACCESS_KEY_ID_FILE=aws-access-key-id.txt
+            - AWS_SECRET_ACCESS_KEY_FILE=aws-secret-access-key.txt
 
             # Other optional envs with defaults
-            - AWS_PROJECT_NAME=Minecraft
+            - AWS_PROJECT_NAME=minecraft
             - MC_SERVER_SSH_USER=ec2-user
-            - MC_SERVER_SSH_KEY_FILE=mc-server-key.pem
+            - MC_SERVER_SSH_KEY_FILE=aws-server-key.pem
             - DATA_PATH=/app/data
             - DASHBOARD_PORT=8080
             - TRANSFER_SERVER_PORT=25565

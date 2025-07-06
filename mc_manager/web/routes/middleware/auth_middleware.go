@@ -22,6 +22,7 @@ func IsAuthenticated(app *model.App) gin.HandlerFunc {
 
 		cookie, err := ctx.Cookie("session")
 		if err != nil {
+			logging.Debug("No session cookie found", "error", err)
 			ctx.SetCookie("session", "", 0, "/", "", false, true)
 			ctx.Next()
 			return
@@ -37,6 +38,7 @@ func IsAuthenticated(app *model.App) gin.HandlerFunc {
 		})
 
 		if err != nil {
+			logging.Error("Error parsing JWT", "error", err)
 			ctx.SetCookie("session", "", 0, "/", "", false, true)
 			ctx.Next()
 			return

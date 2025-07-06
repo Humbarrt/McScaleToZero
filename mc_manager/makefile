@@ -5,4 +5,4 @@ build:
 test:
 	go test -v ./...
 dockerize:
-	make build && docker build -t humbarrt/mc_manager:latest .
+	docker buildx build --platform linux/amd64 -t humbarrt/mc_manager:latest .

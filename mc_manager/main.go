@@ -27,12 +27,13 @@ import (
 var fs embed.FS
 
 func main() {
+	config := _config.NewConfig()
 	logging.Info("Starting MC Manager")
-	database, err := db.NewDatabase()
+	database, err := db.NewDatabase(config.GetDataPath())
 	if err != nil {
 		logging.Fatal("Error creating database connection", "error", err)
 	}
-	config := _config.Load(database)
+	config.Load(database)
 
 	//generate jwt secret
 	secret := make([]byte, 64)

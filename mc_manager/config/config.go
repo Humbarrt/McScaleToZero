@@ -19,6 +19,7 @@ import (
 var version = "development"
 
 type config struct {
+	awsRegion          string
 	awsAccessKeyId     string
 	awsSecretAccessKey string
 	awsProjectName     string
@@ -50,6 +51,10 @@ type config struct {
 	_networkRatio         decimal.Decimal
 	_fallbackFixedCost    decimal.Decimal
 	_fallbackVariableCost decimal.Decimal
+}
+
+func (c *config) GetAWSRegion() string {
+	return c.awsRegion
 }
 
 func (c *config) GetAWSAccessKeyId() string {
@@ -385,7 +390,7 @@ func (c *config) SetFallbackVariableCost(fallbackVariableCost decimal.Decimal) e
 	return nil
 }
 
-func Load(db *db.DB) *config {
+func NewConfig() *config {
 	logging.Info("Version", "version", version)
 	currentPath, err := os.Executable()
 	if err != nil {
@@ -396,36 +401,55 @@ func Load(db *db.DB) *config {
 	if version != "development" {
 		envPath = path.Join(path.Dir(currentPath), ".env")
 	}
-	if err := godotenv.Load(envPath); err != nil {
-		logging.Fatal("Error loading .env file:", "error", err)
+	if _, err := os.Stat(envPath); !os.IsNotExist(err) {
+		if err := godotenv.Load(envPath); err != nil {
+			logging.Fatal("Error loading .env file:", "error", err)
+		}
 	}
 
+	dataPath := getenv("DATA_PATH", path.Join(path.Dir(currentPath), "data"))
+	return &config{
+		dataPath: dataPath,
+		version:  version,
+	}
+}
+
+func (c *config) Load(db *db.DB) {
 	mutConfig, err := queries.GetMutableConfig(db)
 	if err != nil || mutConfig == nil {
 		logging.Fatal("Error getting config", "error", err, "config", mutConfig)
 	}
 
-	dataPath := getenv("DATA_PATH", path.Join(path.Dir(currentPath), "data"))
 	mcServerSSHUser := getenv("MC_SERVER_SSH_USER", "ec2-user")
-	mcServerSSHKeyFile := getenv("MC_SERVER_SSH_KEY_FILE", "mc-server-key.pem")
-	mcServerSSHKey, err := os.ReadFile(path.Join(dataPath, mcServerSSHKeyFile))
+	mcServerSSHKeyFile := getenv("MC_SERVER_SSH_KEY_FILE", "aws-server-key.pem")
+	mcServerSSHKey, err := os.ReadFile(path.Join(c.dataPath, mcServerSSHKeyFile))
 	if err != nil {
 		logging.Fatal("unable to read private key:", "error", err)
 	} else if len(mcServerSSHKey) == 0 {
 		logging.Fatal("private key is empty")
 	}
 
+	awsRegion := getenv("AWS_REGION", "")
 	awsAccessKeyId := getenv("AWS_ACCESS_KEY_ID", "")
 	awsSecretAccessKey := getenv("AWS_SECRET_ACCESS_KEY", "")
-	awsAccessKeyIdFile := getenv("AWS_ACCESS_KEY_ID_FILE", "mc-access-key-id.txt")
-	awsSecretAccessKeyFile := getenv("AWS_SECRET_ACCESS_KEY_FILE", "mc-secret-access-key.txt")
+	awsRegionFile := getenv("AWS_REGION_FILE", "aws-region.txt")
+	awsAccessKeyIdFile := getenv("AWS_ACCESS_KEY_ID_FILE", "aws-access-key-id.txt")
+	awsSecretAccessKeyFile := getenv("AWS_SECRET_ACCESS_KEY_FILE", "aws-secret-access-key.txt")
 
-	if awsAccessKeyId != "" && awsSecretAccessKey != "" {
+	if awsRegion != "" && awsAccessKeyId != "" && awsSecretAccessKey != "" {
 		logging.Debug("Using AWS credentials from environment variables")
-	} else if awsAccessKeyId == "" && awsSecretAccessKey == "" {
+	} else if awsRegion == "" && awsAccessKeyId == "" && awsSecretAccessKey == "" {
 		logging.Debug("Using AWS credentials from file")
 
-		awsAccessKeyIdBytes, err := os.ReadFile(path.Join(dataPath, awsAccessKeyIdFile))
+		awsRegionBytes, err := os.ReadFile(path.Join(c.dataPath, awsRegionFile))
+		if err != nil {
+			logging.Fatal("unable to read AWS region file:", "error", err)
+		} else if len(awsRegionBytes) == 0 {
+			logging.Fatal("AWS region file is empty")
+		}
+		awsRegion = string(awsRegionBytes)
+
+		awsAccessKeyIdBytes, err := os.ReadFile(path.Join(c.dataPath, awsAccessKeyIdFile))
 		if err != nil {
 			logging.Fatal("unable to read AWS access key ID file:", "error", err)
 		} else if len(awsAccessKeyIdBytes) == 0 {
@@ -433,7 +457,7 @@ func Load(db *db.DB) *config {
 		}
 		awsAccessKeyId = string(awsAccessKeyIdBytes)
 
-		awsSecretAccessKeyBytes, err := os.ReadFile(path.Join(dataPath, awsSecretAccessKeyFile))
+		awsSecretAccessKeyBytes, err := os.ReadFile(path.Join(c.dataPath, awsSecretAccessKeyFile))
 		if err != nil {
 			logging.Fatal("unable to read AWS secret access key file:", "error", err)
 		} else if len(awsSecretAccessKeyBytes) == 0 {
@@ -442,7 +466,7 @@ func Load(db *db.DB) *config {
 
 		awsSecretAccessKey = string(awsSecretAccessKeyBytes)
 	} else {
-		logging.Fatal("You need to provide AWS credentials. Either put them in DATA_PATH and specify AWS_ACCESS_KEY_ID_FILE & AWS_SECRET_ACCESS_KEY_FILE or set them in environment variables with AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY")
+		logging.Fatal("You need to provide AWS credentials. Either put them in DATA_PATH and specify AWS_REGION_FILE & AWS_ACCESS_KEY_ID_FILE & AWS_SECRET_ACCESS_KEY_FILE or set them in environment variables with AWS_REGION & AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY")
 	}
 
 	awsProjectName := getenv("AWS_PROJECT_NAME", "minecraft")
@@ -476,37 +500,34 @@ func Load(db *db.DB) *config {
 		logging.Fatal("Invalid invoice service:", "service", invoiceService)
 	}
 
-	config := &config{
-		awsAccessKeyId:     awsAccessKeyId,
-		awsSecretAccessKey: awsSecretAccessKey,
-		awsProjectName:     awsProjectName,
-		mcServerSSHUser:    mcServerSSHUser,
-		mcServerSSHKeyFile: mcServerSSHKeyFile,
-		mcServerSSHKey:     mcServerSSHKey,
-		dashboardPort:      dashboardPort,
-		transferServerPort: transferServerPort,
-		invoiceService:     invoiceService,
-		dataPath:           dataPath,
-		version:            version,
-		db:                 db,
+	c.awsRegion = awsRegion
+	c.awsAccessKeyId = awsAccessKeyId
+	c.awsSecretAccessKey = awsSecretAccessKey
+	c.awsProjectName = awsProjectName
+	c.mcServerSSHUser = mcServerSSHUser
+	c.mcServerSSHKeyFile = mcServerSSHKeyFile
+	c.mcServerSSHKey = mcServerSSHKey
+	c.dashboardPort = dashboardPort
+	c.transferServerPort = transferServerPort
+	c.invoiceService = invoiceService
+	c.version = version
+	c.db = db
 
-		_mcServerPort:         mutConfig.MCServerPort,
-		_mcOnlineImage:        mutConfig.OnlineImage,
-		_mcOnlineMOTD:         mutConfig.OnlineMOTD,
-		_mcOfflineImage:       mutConfig.OfflineImage,
-		_mcOfflineMOTD:        mutConfig.OfflineMOTD,
-		_replaceMOTD:          mutConfig.ReplaceMOTD,
-		_lastImage:            mutConfig.LastImage,
-		_lastMOTD:             mutConfig.LastMOTD,
-		_protocolVersion:      mutConfig.ProtocolVersion,
-		_maxPlayers:           mutConfig.MaxPlayers,
-		_backupsToKeep:        mutConfig.BackupsToKeep,
-		_taxRate:              mutConfig.TaxRate,
-		_networkRatio:         mutConfig.NetworkRatio,
-		_fallbackFixedCost:    mutConfig.FallbackFixedCost,
-		_fallbackVariableCost: mutConfig.FallbackVariableCost,
-	}
+	c._mcServerPort = mutConfig.MCServerPort
+	c._mcOnlineImage = mutConfig.OnlineImage
+	c._mcOnlineMOTD = mutConfig.OnlineMOTD
+	c._mcOfflineImage = mutConfig.OfflineImage
+	c._mcOfflineMOTD = mutConfig.OfflineMOTD
+	c._replaceMOTD = mutConfig.ReplaceMOTD
+	c._lastImage = mutConfig.LastImage
+	c._lastMOTD = mutConfig.LastMOTD
+	c._protocolVersion = mutConfig.ProtocolVersion
+	c._maxPlayers = mutConfig.MaxPlayers
+	c._backupsToKeep = mutConfig.BackupsToKeep
+	c._taxRate = mutConfig.TaxRate
+	c._networkRatio = mutConfig.NetworkRatio
+	c._fallbackFixedCost = mutConfig.FallbackFixedCost
+	c._fallbackVariableCost = mutConfig.FallbackVariableCost
 
 	logging.Debug("Config loaded")
-	return config
 }

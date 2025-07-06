@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	cwlTypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	ceTypes "github.com/aws/aws-sdk-go-v2/service/costexplorer/types"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
@@ -42,7 +44,13 @@ type InstanceStatus struct {
 }
 
 func NewAWSAPI(app *model.App, tagKey string) (*awsAPI, error) {
-	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithAppID("mc_manager"), config.WithRetryMaxAttempts(2))
+	credentials := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
+		app.Config.GetAWSAccessKeyId(),     // access key ID
+		app.Config.GetAWSSecretAccessKey(), // secret access key
+		"",                                 // session token, leave empty if not using temporary credentials
+	))
+
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithAppID("mc_manager"), config.WithRetryMaxAttempts(2), config.WithCredentialsProvider(credentials), config.WithRegion(app.Config.GetAWSRegion()))
 	if err != nil {
 		logging.Error("Unable to load SDK config", "error", err)
 		return nil, err
@@ -591,6 +599,10 @@ func (aws *awsAPI) GetLogsSince(startTime time.Time, limit int) ([]*model.Log, e
 		return nil, fmt.Errorf("query results are nil")
 	}
 
+	logging.Debug("Query completed", "queryId", *resp.QueryId, "resultsCount", len(queryResults.Results))
+	logging.Info("Query completed", "results", len(queryResults.Results), "matches", queryResults.Statistics.RecordsMatched)
+	logging.Info("Stats", "stats", queryResults.Statistics)
+
 	events := make([]*model.Log, 0)
 	for _, fields := range queryResults.Results {
 		var timestampString *string
@@ -599,9 +611,10 @@ func (aws *awsAPI) GetLogsSince(startTime time.Time, limit int) ([]*model.Log, e
 			if field.Field == nil {
 				continue
 			}
-			if *field.Field == "@timestamp" {
+			switch *field.Field {
+			case "@timestamp":
 				timestampString = field.Value
-			} else if *field.Field == "@message" {
+			case "@message":
 				message = field.Value
 			}
 		}

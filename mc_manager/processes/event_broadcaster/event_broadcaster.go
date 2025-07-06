@@ -56,11 +56,11 @@ func (stream *EventBroadcaster) Start() {
 				select {
 				case clientMessageChan <- eventMsg:
 					// Message sent successfully
-				default:
+					/* default:
 					logging.Error("EventBroadcaster", "error", "failed to send message to client", "client", clientMessageChan)
 					delete(stream.TotalClients, clientMessageChan)
 					close(clientMessageChan)
-					log.Printf("Client closed. %d registered clients", len(stream.TotalClients))
+					log.Printf("Client closed. %d registered clients", len(stream.TotalClients)) */
 				}
 			}
 		}

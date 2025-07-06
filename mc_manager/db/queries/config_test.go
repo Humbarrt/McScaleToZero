@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"mc_manager/db"
 	"mc_manager/db/queries"
+	"mc_manager/logging"
 	"mc_manager/model"
 	"path"
 	"strings"
@@ -98,6 +99,7 @@ func TestGetMutableConfig(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "error protocol version is nil")
 	config = getConfigNoError(t, DB)
+	logging.Debug("ProtocolVersion", "version", string(*config.ProtocolVersion))
 	assert.True(t, bytes.Equal(*config.ProtocolVersion, protocolVersion))
 
 	emptyProtocolVersion := []byte("")

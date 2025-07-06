@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io/fs"
 	"mc_manager/logging"
+	"path"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pressly/goose/v3"
+	//_ "modernc.org/sqlite"
 )
 
 //go:embed sql/*
@@ -20,8 +22,10 @@ type DB struct {
 	statement_cache map[string]*sql.Stmt
 }
 
-func NewDatabase() (*DB, error) {
-	return InitializeDatabase("main.db")
+func NewDatabase(dataPath string) (*DB, error) {
+	dbPath := path.Join(dataPath, "main.db")
+	logging.Debug("Database path", "path", dbPath)
+	return InitializeDatabase(dbPath)
 }
 
 func InitializeDatabase(file_name string) (*DB, error) {
@@ -36,7 +40,7 @@ func InitializeDatabase(file_name string) (*DB, error) {
 	}
 	goose.SetBaseFS(embed_migrations)
 
-	if err := goose.SetDialect("sqlite3"); err != nil {
+	if err := goose.SetDialect("sqlite"); err != nil {
 		return nil, err
 	}
 

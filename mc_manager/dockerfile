@@ -1,8 +1,26 @@
-FROM alpine:latest
+# syntax=docker/dockerfile:1
+
+# --- Stage 1: Build ---
+FROM --platform=linux/amd64 golang:1.24.3 AS builder
+
+# Install compiler and libc headers
+RUN apt-get update && apt-get install -y gcc libc6-dev
+RUN apt-get install libsqlite3-dev
+
+WORKDIR /app
+COPY . .
+
+RUN CGO_ENABLED=1 go build -o mc_manager -ldflags="-X 'main.version=1.0'" .
+
+# --- Stage 2: Runtime ---
+FROM golang:1.24.3
+
+RUN apt-get update && apt-get install -y ca-certificates sqlite3 libsqlite3-0 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY mc_manager .
+# Copy only the built binary from the builder stage
+COPY --from=builder /app/mc_manager .
 
 EXPOSE 8080 25565
 
