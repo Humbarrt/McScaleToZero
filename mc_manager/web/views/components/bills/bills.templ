@@ -1,0 +1,117 @@
+package bills
+
+import (
+    "mc_manager/web/views/utils"
+    "mc_manager/model"
+    "fmt"
+)
+
+
+templ billsHolder(month string, isLoading bool, isPlayerMode bool) {
+    {{
+        trigger := ""
+        if isLoading {
+            trigger = "load"
+        } else if month == "latest" {
+            trigger = fmt.Sprintf("sse:%d[document.getElementById('billsSelector')==null],sse:%d[document.getElementById('billsSelector')==null],custom-event", model.EB_EVENT_NEW_BILL, model.EB_EVENT_NEW_COST_ESTIMATE)
+        }
+    }}
+    <div class="flex flex-col w-full p-4 pt-0 rounded-lg gap-4 shadow-md panel max-w-[1024px] self-center relative"
+        hx-vals={fmt.Sprintf(`{"isPlayerMode": %t}`, isPlayerMode)}
+        id="BillsHolder"
+        if trigger != "" {
+            hx-get={fmt.Sprintf("/components/bills/%s", month)}
+            hx-trigger={trigger}
+            hx-swap="outerHTML"
+        }
+    >
+        {children...}
+    </div>
+}
+
+templ BillsLoader() {
+    <div class="flex flex-col w-full">
+        <div class="relative flex flex-row items-center gap-1 text-white group">
+            <h2 class="">Bills</h2>
+        </div>    
+        @billsHolder("latest", true, true) {
+            <div class="flex items-center justify-center mt-4 w-full h-[768px]">
+                @utils.StaticIndicator("")
+            </div>
+        }
+    </div>
+}
+
+templ PlayModeToggle(month model.YearMonth, isLatest bool, isPlayerMode bool, classes string) {
+    <button 
+            class={"items-center justify-center p-[1px] slot", classes, templ.KV("hidden invisible", isLatest)}
+            disabled?={isLatest}
+            hx-get={fmt.Sprintf("/components/bills/%s", month)}
+            hx-vals={fmt.Sprintf(`{"isPlayerMode": %t}`, !isPlayerMode)}
+            hx-trigger="click"
+            hx-target="#BillsHolder"
+            hx-swap="outerHTML"
+        >
+            <div class={"px-2 py-1", templ.KV("text-white text-shadow-xs raised-slot-hover", isPlayerMode), templ.KV("text-black", !isPlayerMode)}>
+                Players
+            </div>
+            <div class={"px-2 py-1", templ.KV("text-white text-shadow-xs raised-slot-hover", !isPlayerMode), templ.KV("text-black", isPlayerMode)}>
+                Items
+            </div>
+        </button>
+}
+
+templ BillHeader(month model.YearMonth, isLatest bool, isPlayerMode bool) {
+    {{
+        label := fmt.Sprintf("%d %s", month.Year(), model.MonthsLabels[month.Month()-1])
+    }}
+    <div class="flex flex-col items-center justify-center w-full gap-2 pt-2 sm:flex-row sm:justify-between">
+        <div class="flex justify-between w-full gap-2 sm:w-auto">
+            <div class="flex flex-col w-full sm:w-auto">
+                <button
+                    class="w-full h-full px-2 py-1 font-semibold sm:font-normal text-md raised-slot-button"
+                    hx-get="/components/bills/selector"
+                    hx-target="#billsSelectorHolder"
+                    hx-swap="outerHTML"
+                    hx-trigger="click"
+                    hx-disabled-elt="this"
+                >
+                    {label}
+                    if isLatest {
+                        (latest)
+                    }
+                </button>
+                <span id="billsSelectorHolder"/>
+            </div>
+            @PlayModeToggle(month, isLatest, isPlayerMode, "flex sm:hidden")
+        </div>
+        if isLatest {
+            <div class="w-full text-center sm:w-auto">
+                *This is a live cost estimate*
+            </div>
+        }
+
+        @PlayModeToggle(month, isLatest, isPlayerMode, "hidden sm:flex")
+    </div>
+}
+
+templ billStats(bill model.BillResponse) {
+    <div class="grid grid-cols-2 gap-2 px-1 sm:grid-cols-4">
+        <div class="border-r-2 border-gray">
+            <h1 class="text-black">Server Uptime</h1>
+            <p class="text-xl text-[#3d3c3d]">{utils.HumanizeDuration(bill.ServerUptime)}</p>
+        </div>
+        <div class="sm:border-r-2 border-gray">
+            <h1 class="text-black">Total Cost</h1>
+            <p class="text-xl text-[#3d3c3d]">${utils.HumanizeMoney(bill.TotalAmount)}</p>
+        </div>
+        <div class="border-r-2 border-gray">
+            <h1 class="text-black">Fixed Cost</h1>
+            <p class="text-xl text-[#3d3c3d]">${utils.HumanizeMoney(bill.FixedAmount)}</p>
+        </div>
+        <div class="">
+            <h1 class="text-black">Variable Cost</h1>
+            <p class="text-xl text-[#3d3c3d]">${utils.HumanizeMoney(bill.VariableAmount)}</p>
+        </div>
+    </div>
+}

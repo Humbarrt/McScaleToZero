@@ -1,0 +1,31 @@
+package auth
+
+import (
+    "mc_manager/web/views/layout"
+)
+
+templ Index() {
+    @layout.Base(false) {
+        <div class="flex flex-col items-center justify-center h-full p-4 sm:p-8">
+            <div class="w-full h-auto p-6 rounded-lg shadow-md panel sm:w-96" id="auth">
+               @AliasForm(nil)
+            </div>
+        </div>
+        <style>
+            .form-error {
+                outline-color: darkred !important;
+                outline-style: solid !important;
+                outline-width: calc((var(--block-size) / var(--zoom)));
+                outline-offset: 0px;
+            }
+        </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+        <script>
+            function hashPasswordWithKey(password, key) {
+                let combined = password + key;
+                let hash = CryptoJS.SHA256(combined);
+                return hash.toString(CryptoJS.enc.Base64);
+            }
+        </script>
+    }
+}

@@ -11,46 +11,54 @@ resource "aws_iam_access_key" "mc_manager_key" {
 # Create an IAM policy allowing start/stop and cost viewing
 data "aws_iam_policy_document" "mc_manager_policy_doc" {
   statement {
+    sid    = "EC2DescribeInstances"
+    effect = "Allow"
+    actions = [
+      "ec2:DescribeInstances"
+    ]
+    resources = ["*"]
+  }
+  statement {
     sid    = "EC2Control"
     effect = "Allow"
     actions = [
       "ec2:StartInstances",
-      "ec2:StopInstances",
-      "ec2:DescribeInstances"
+      "ec2:StopInstances"
     ]
-    resources = ["*"]
-    condition {
-      test     = "StringEquals"
-      variable = "aws:RequestTag/Project"
-      values   = ["minecraft"]
-    }
+    resources = [
+        aws_instance.mc_server.arn
+    ]
   }
 
   statement {
     sid    = "ViewBilling"
     effect = "Allow"
     actions = [
-      "ce:GetCostAndUsage",
+      "ce:ListCostAllocationTags",
+      "ce:ListCostAllocationTagBackfillHistory",
+      "ce:DescribeCostCategoryDefinition",
+      "ce:GetCostAndUsageWithResources",
       "ce:GetCostForecast",
-      "ce:GetDimensionValues",
-      "ce:GetReservationUtilization",
-      "ce:GetRightsizingRecommendation"
+      "ce:GetCostAndUsage",
+      "ce:DescribeReport",
+      "ce:GetTags",
+      "ce:StartCostAllocationTagBackfill",
+      "ce:GetCostCategories",
+      "ce:GetDimensionValues"
     ]
     resources = ["*"]
-    condition {
-      test     = "StringEquals"
-      variable = "aws:RequestTag/Project"
-      values   = ["minecraft"]
-    }
   }
 
   statement {
     sid    = "CloudWatchLogsAccess"
     effect = "Allow"
     actions = [
-      "logs:DescribeLogGroups",
+      "logs:GetLogEvents",
       "logs:DescribeLogStreams",
-      "logs:GetLogEvents"
+      "logs:DescribeLogGroups",
+      "logs:StartQuery",
+      "logs:GetQueryResults",
+      "logs:FilterLogEvents"
     ]
     resources = [
       "${aws_cloudwatch_log_group.mc_log_group.arn}",
@@ -68,11 +76,19 @@ resource "aws_iam_user_policy" "mc_manager_user_policy" {
 
 # Output the access key and secret
 resource "local_file" "mc_manager_user_access_key_id" {
-  filename = "./data/mc-access-key-id.txt"
+  filename = "./data/aws-access-key-id.txt"
   content  = aws_iam_access_key.mc_manager_key.id
 }
 
 resource "local_file" "mc_manager_user_secret_access_key" {
-  filename = "./data/mc-secret-access-key.txt"
+  filename = "./data/aws-secret-access-key.txt"
   content  = aws_iam_access_key.mc_manager_key.secret
+}
+
+data "aws_region" "current" {}
+
+# Output the AWS Region as local file
+resource "local_file" "aws_region" {
+  filename = "./data/aws-region.txt"
+  content  = data.aws_region.current.name
 }

@@ -1,0 +1,56 @@
+package settings
+
+import (
+    "mc_manager/model"
+    "fmt"
+)
+
+templ serverInfoLoader() {
+    @sectionLoader("info", []model.EB_EventType{
+        model.EB_EVENT_SERVER_INFO_UPDATE,
+    }, 475)
+}
+
+templ ServerInfoText(label string, value string, url string) {
+    @HelperLabel(label, "", url)
+    <p class="w-full col-span-2 break-all text-dark-gray sm:max-w-96">
+        { value }
+    </p>
+}
+
+templ ServerInfoImage(label string, image string, url string) {
+    @HelperLabel(label, "", url)
+    <img class="w-16 h-16 col-span-2 text-black" src={ image } alt="No Image"/>
+}
+
+templ ServerInfo(lastMOTD []byte, lastImage *string, protocolVersion []byte, maxPlayers int) {
+    {{
+        serverInfoLoader()
+        if lastMOTD == nil {
+            lastMOTD = []byte("No MOTD set")
+        }
+        if lastImage == nil {
+            lastImage = new(string)
+            *lastImage = ""
+        }
+        if protocolVersion == nil {
+            protocolVersion = []byte("Unknown")
+        }
+    }}
+    <div class="relative flex flex-row items-center justify-start w-full gap-1 mb-3 group">
+        <h3 class="">Server Info</h3>
+        <div class="relative w-5 h-5">
+            <svg fill="none" class="absolute w-5 h-5 text-black top-[1px]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M3 3h2v18H3V3zm16 0H5v2h14v14H5v2h16V3h-2zm-8 6h2V7h-2v2zm2 8h-2v-6h2v6z" fill="currentColor"/> </svg>
+            <svg fill="none" class="absolute w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M3 3h2v18H3V3zm16 0H5v2h14v14H5v2h16V3h-2zm-8 6h2V7h-2v2zm2 8h-2v-6h2v6z" fill="currentColor"/> </svg>
+        </div>
+        <span class="absolute left-0 px-2 py-1 text-white transition-opacity bg-black rounded opacity-0 pointer-events-none -top-4 w-max group-hover:opacity-100">
+            This information is not editable.
+        </span>
+    </div>
+    <div class="grid w-full grid-cols-[auto,auto] gap-4 sm:grid-cols-[auto,auto,auto] sm:max-w-max">
+        @ServerInfoText("Server MOTD", string(lastMOTD), "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#server-motd")
+        @ServerInfoImage("Server Icon", *lastImage, "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#server-icon")
+        @ServerInfoText("Protocol Version", string(protocolVersion), "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#protocol-version")
+        @ServerInfoText("Max Players", fmt.Sprintf("%d", maxPlayers), "https://github.com/Humbarrt/McScaleToZero/wiki/Settings#max-players")
+    </div>
+}

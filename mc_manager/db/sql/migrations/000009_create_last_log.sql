@@ -1,0 +1,6 @@
+-- +goose Up
+CREATE TABLE IF NOT EXISTS "last_log" (
+    "id" INTEGER PRIMARY KEY,
+    "timestamp" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "message" BLOB NOT NULL
+);

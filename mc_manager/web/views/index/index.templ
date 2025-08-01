@@ -1,0 +1,23 @@
+package index
+
+import (
+    "mc_manager/web/views/layout"
+	"mc_manager/web/views/components/widgets"
+	"mc_manager/web/views/components/settings"
+	"mc_manager/web/views/components/playtime"
+	"mc_manager/web/views/components/bills"
+	"mc_manager/web/views/components/player"
+	"mc_manager/model"
+)
+
+templ Index(isAdmin bool, invoiceService model.InvoiceService) {
+    @layout.Base(true) {
+        <div class="flex flex-col items-center w-full gap-4 p-4" hx-ext="sse, response-targets" sse-connect="/events">
+            @widgets.Loader()
+            @playtime.PlaytimeLoader()
+            @bills.BillsLoader()
+            @settings.Loader(isAdmin, invoiceService)
+            @player.Loader()
+        </div>
+    }
+}

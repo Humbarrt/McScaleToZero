@@ -1,0 +1,33 @@
+package widgets
+
+import (
+    "github.com/shopspring/decimal"
+    "mc_manager/model"
+	"mc_manager/web/views/utils"
+)
+
+templ totalCostLoader() {
+    @widgetLoader("total-cost", []model.EB_EventType{
+        model.EB_EVENT_NEW_BILL,
+        model.EB_EVENT_NEW_COST_ESTIMATE,
+    })
+}
+
+templ totalCostIcon() {
+    <svg fill="none" xmlns="http://www.w3.org/2000/svg" class="min-w-12 min-h-12" viewBox="0 0 24 24"> <path d="M11 2h2v4h6v2H7v3H5V6h6V2zM5 18h6v4h2v-4h6v-2H5v2zm14-7H5v2h12v3h2v-5z" fill="currentColor"/> </svg>
+}
+
+templ TotalCost(totalCost *decimal.Decimal) {
+    {{
+        content := ""
+        if totalCost == nil {
+            content = "N/A"
+        } else {
+            content = utils.HumanizeMoney(*totalCost)
+        }
+    }}
+
+    @baseWidgetContent(totalCostIcon(), "Total Cost"){
+        {content}
+    }
+}

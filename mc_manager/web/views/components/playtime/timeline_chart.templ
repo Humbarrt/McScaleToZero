@@ -1,0 +1,56 @@
+package playtime
+
+import (
+    "mc_manager/model"
+    //"mc_manager/web/views/utils"
+    "fmt"
+    "time"
+)
+
+templ TimelineChart(chartId string, isLive bool, label string, playerTimelines []*model.PlayerTimelineResponse, timeframe model.Timeframe, eventList *model.EventListResponse, usingLocalTime bool) {
+    {{
+        maxDuration := timeframe.End.Sub(timeframe.Start)
+        if maxDuration.Seconds() == 0 {
+            maxDuration = time.Second // Avoid division by zero
+        }
+    }}
+    @playtimeHolder(chartId, false, isLive) {
+        @PlaytimeHeader(chartId, label, usingLocalTime, true)
+        <table class="charts-css bar multiple stacked show-labels show-primary-axis show-data-axes data-spacing-2 !h-min" style="--labels-size: 4rem;">
+            <tbody>
+                for _, player := range playerTimelines {
+                    {{
+                        alias := "Unknown Player"
+                        if len(player.Aliases) > 0 {
+                            alias = player.Aliases[0]
+                        }
+                    }}
+                    <tr class="min-h-12">
+                        <th scope="row" class="relative group">
+                            <span class="absolute left-0 z-50 px-2 py-1 font-normal text-white transition-opacity bg-black rounded opacity-0 pointer-events-none -top-4 w-max group-hover:opacity-100">{alias}</span>
+                            <image class="w-12 h-12" src={fmt.Sprintf("/player/%d/avatar/head", player.PlayerId)}/>
+                        </th>
+
+                        for i, event := range player.Events {
+                            if i == 0 {
+                                <td style={fmt.Sprintf("--size: calc( %f / %f )", event.Timestamp.Sub(timeframe.Start).Seconds(), maxDuration.Seconds()), templ.KV("visibility: hidden;", event.IsOnline), templ.KV("background: var(--color,var(--color-4));", !event.IsOnline)}>
+                                </td>
+                            } else {
+                                <td style={fmt.Sprintf("--size: calc( %f / %f )", event.Timestamp.Sub(player.Events[i-1].Timestamp).Seconds(), maxDuration.Seconds()), templ.KV("visibility: hidden;", event.IsOnline), templ.KV("background: var(--color,var(--color-4));", !event.IsOnline)}>
+                                    <span class="tooltip">{fmt.Sprintf("%s", event.Timestamp.Format("15:04"))}</span>
+                                </td>
+                            }
+                        }
+                        if len(player.Events) == 0 {
+                            <td style="--size: 0;"></td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        if eventList != nil && len(eventList.Events) > 0 {
+            @EventList(eventList.Players, eventList.Events)
+        }
+    }
+}

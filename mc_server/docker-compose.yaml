@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+    golang-app:
+        image: humbarrt/mc_manager:latest
+        platform: linux/amd64
+        ports:
+            - "8080:8080"
+            - "25565:25565"
+        environment:
+            # Optional: Splitwise integration
+            - INVOICE_SERVICE=SPLITWISE
+            - SPLITWISE_API_TOKEN=mdU5aHMn6B7lXcQOkov5P3TS4qYSycXDDDK8fjpc
+            - SPLITWISE_GROUP_ID=79373407
+
+            # Other optional envs with defaults
+            - DATA_PATH=/app/data
+
+        restart: unless-stopped
+        volumes:
+            - ./data:/app/data

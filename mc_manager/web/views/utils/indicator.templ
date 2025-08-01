@@ -1,0 +1,24 @@
+package utils
+
+import "fmt"
+
+
+css IndicatorClass(color string, size string, spacing string) {
+	width: {templ.SafeCSSProperty(fmt.Sprintf(`calc((%s * 3) + (%s * 2) + 2px)`, size, spacing))};
+	height: {size};
+	background: {templ.SafeCSSProperty(fmt.Sprintf(`linear-gradient(%s 0 0) 0%% center / %s %s no-repeat, linear-gradient(%s 0 0) 50%% center / %s %s no-repeat, linear-gradient(%s 0 0) 100%% center / %s %s no-repeat;`, color, size, size, color, size, size, color, size, size))};
+	background-repeat: no-repeat;
+	aspect-ratio: 4;
+	background-position: {templ.SafeCSSProperty(fmt.Sprintf(`calc(0%% + 0 * (%s + %s)) center, calc(0%% + 1 * (%s + %s)) center, calc(0%% + 2 * (%s + %s)) center`, size, spacing, size, spacing, size, spacing))};
+	clip-path: inset(0 100% -100% 0);
+	filter: drop-shadow(1.5px 1.5px #000);
+	animation: indicatorAnimation 1s steps(4) infinite;
+}
+
+templ Indicator(id string, classes string) {
+	<div class={"htmx-indicator indicator " + classes} id={ id }></div>
+}
+
+templ StaticIndicator(classes string) {
+	<div class={"indicator " + classes}></div>
+}

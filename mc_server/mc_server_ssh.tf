@@ -12,6 +12,6 @@ resource "aws_key_pair" "mc_ssh_key" {
 
 # Output the private key to a local file (ensure this is stored securely)
 resource "local_file" "mc_private_key" {
-  filename = "./data/mc-server-key.pem"
+  filename = "./data/aws-server-key.pem"
   content  = tls_private_key.mc_ssh_key.private_key_pem
 }

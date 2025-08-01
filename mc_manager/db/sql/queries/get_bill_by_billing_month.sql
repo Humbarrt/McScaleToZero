@@ -1,0 +1,11 @@
+SELECT "id",
+    "created_at",
+    "billing_month",
+    "total_amount",
+    "fixed_amount",
+    "variable_amount",
+    "server_uptime",
+    "currency",
+    "invoice_service_invoice_id"
+FROM "bills"
+WHERE "billing_month" = ?;

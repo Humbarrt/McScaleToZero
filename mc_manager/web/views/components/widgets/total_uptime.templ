@@ -1,0 +1,33 @@
+package widgets
+
+import (
+    "time"
+	"mc_manager/model"
+	"mc_manager/web/views/utils"
+)
+
+templ totalUptimeLoader() {
+   @widgetLoader("total-uptime", []model.EB_EventType{
+        model.EB_EVENT_NEW_COST_ESTIMATE,
+        model.EB_EVENT_NEW_BILL,
+    })
+}
+
+templ totalUptimeIcon() {
+    <svg fill="none" xmlns="http://www.w3.org/2000/svg" class="min-w-12 min-h-12" viewBox="0 0 24 24"> <path d="M19 3H5v2H3v14h2v2h14v-2h2V5h-2V3zm0 2v14H5V5h14zm-8 2h2v6h4v2h-6V7z" fill="currentColor"/> </svg>
+}
+
+templ TotalUptime(uptime *time.Duration) {
+    {{
+        content := ""
+        if uptime == nil {
+            content = "N/A"
+        } else {
+            content = utils.HumanizeDuration(*uptime)
+        }
+    }}
+
+    @baseWidgetContent(totalUptimeIcon(), "Total Uptime"){
+        {content}
+    }
+}

@@ -1,0 +1,44 @@
+package selector
+
+import (
+    "mc_manager/web/views/utils"
+    "mc_manager/model"
+    "fmt"
+)
+
+
+
+templ Selector(id string, options []model.SelectorOption, description string, holderId string, style string) {
+    <span id={id+"Holder"} class="z-[99]">
+        <div class="fixed sm:absolute -top-[4px] -bottom-[4px] -left-[4px] -right-[4px] bg-black opacity-20 z-[99]"
+            onclick="event.stopPropagation(); this.parentElement.classList.toggle('hidden'); htmx.trigger('#'+this.getAttribute('holderId'), 'custom-event');"
+            holderId={holderId}
+        />
+        <div class="fixed top-0 bottom-0 left-0 right-0 flex items-center justify-center pointer-events-none sm:block sm:top-1 sm:bottom-auto sm:left-auto sm:right-auto sm:relative z-[100] font-normal">
+            <div class="pointer-events-auto sm:absolute w-max achievement-panel">
+                @utils.Indicator(id+"Indicator", "absolute fixed top-1/2 left-1/2 transform -translate-x-1/2")
+
+                <h4 class="w-full p-2 text-2xl text-center text-white border-b border-double text-shadow-xs sm:hidden border-panel htmx-inverse-indicator-opacity" id={id+"Description"}>{description}</h4>
+                <div class="grid grid-cols-3 htmx-inverse-indicator-opacity" id={id} style={style}>
+                    for _, option := range options {
+                        <button
+                            if !option.Disabled {
+                                hx-get={option.Url}
+                                hx-target={option.Target}
+                                hx-swap={option.Swap}
+                                hx-trigger="click"
+                                hx-indicator={fmt.Sprintf("#%sIndicator, #%sDescription, #%s", id, id, id)}
+                                hx-disabled-elt={fmt.Sprintf("#%s",id)}
+                            }
+                            disabled?={option.Disabled}
+                            style={option.Style}
+                            class="w-full px-5 py-4 text-2xl text-white sm:px-4 sm:py-2 sm:text-lg sm:text-panel hover:text-white disabled:text-dark-gray disabled:sm:text-dark-gray disabled:hover:text-dark-gray"
+                        >
+                            {option.Label}
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </span>
+}
