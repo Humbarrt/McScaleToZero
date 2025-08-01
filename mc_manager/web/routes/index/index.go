@@ -7,6 +7,7 @@ import (
 	"mc_manager/web/routes/middleware"
 	"mc_manager/web/views/index"
 	utils "mc_manager/web/web_utils"
+	"runtime"
 
 	"net/http"
 
@@ -24,6 +25,8 @@ func indexPageHandler(app *model.App) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		_, cancel := context.WithTimeout(context.Background(), app.WebTimeout)
 		defer cancel()
+
+		logging.Debug("Runtime Status", "Goroutines", runtime.NumGoroutine())
 
 		isAdmin, err := utils.IsAdmin(ctx)
 		if err != nil {

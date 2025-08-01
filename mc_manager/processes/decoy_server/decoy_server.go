@@ -22,134 +22,139 @@ func handleServerListPing(clientConn *conn.McConn, app *model.App) {
 	logging.Info("Player is pinging the server", "remoteAddr", clientConn.RemoteAddr().String())
 
 	for clientConn.IsConnected() {
-		// receive packet
 		packet, err := mcp.ReadPacket(clientConn)
 		if err != nil {
 			clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading packet:", err)
 			return
 		}
 
-		if packet.PacketID == 0x00 {
-			motd := []byte("")
-			replaceMOTD := app.Config.GetReplaceMOTD()
-			offlineMotdEscaped := app.Config.GetMCOfflineMOTD()
-			offlineMotd, err := strconv.Unquote(`"` + string(offlineMotdEscaped) + `"`)
+		if packet.PacketID == 0x01 {
+			mc.WritePongResponse(clientConn, packet.Data)
+			clientConn.Close()
+			return
+		} else if packet.PacketID != 0x00 {
+			logging.Error("Received unexpected packet ID", "packetID", packet.PacketID)
+			clientConn.Close()
+			return
+		}
+
+		//if packet.PacketID == 0x00
+		motd := []byte("")
+		replaceMOTD := app.Config.GetReplaceMOTD()
+		offlineMotdEscaped := app.Config.GetMCOfflineMOTD()
+		offlineMotd, err := strconv.Unquote(`"` + string(offlineMotdEscaped) + `"`)
+		if err != nil {
+			offlineMotd = "error parsing motd"
+		}
+		onlineMotdEscaped := app.Config.GetMCOnlineMOTD()
+		onlineMotd, err := strconv.Unquote(`"` + string(onlineMotdEscaped) + `"`)
+		if err != nil {
+			onlineMotd = "error parsing motd"
+		}
+		lastMotd := app.Config.GetLastMOTD()
+
+		lastImage := app.Config.GetLastImage()
+		protocolVersion := json.RawMessage(app.Config.GetProtocolVersion())
+		maxPlayers := app.Config.GetMaxPlayers()
+		statusResponse := &model.McStatusResponse{
+			Version:            protocolVersion,
+			Favicon:            "",
+			EnforcesSecureChat: true,
+			Description:        "",
+			Players: struct {
+				Max    int `json:"max"`
+				Online int `json:"online"`
+			}{
+				Max:    maxPlayers,
+				Online: 0,
+			},
+		}
+
+		isServerReady := app.SW.IsServerReady()
+		if isServerReady {
+			logging.Debug("MC Server is ready, sending status response")
+			ipv4, err := app.SW.IPv4()
 			if err != nil {
-				offlineMotd = "error parsing motd"
-			}
-			onlineMotdEscaped := app.Config.GetMCOnlineMOTD()
-			onlineMotd, err := strconv.Unquote(`"` + string(onlineMotdEscaped) + `"`)
-			if err != nil {
-				onlineMotd = "error parsing motd"
-			}
-			lastMotd := app.Config.GetLastMOTD()
-
-			lastImage := app.Config.GetLastImage()
-			protocolVersion := json.RawMessage(app.Config.GetProtocolVersion())
-			maxPlayers := app.Config.GetMaxPlayers()
-			statusResponse := &model.McStatusResponse{
-				Version:            protocolVersion,
-				Favicon:            "",
-				EnforcesSecureChat: true,
-				Description:        "",
-				Players: struct {
-					Max    int `json:"max"`
-					Online int `json:"online"`
-				}{
-					Max:    maxPlayers,
-					Online: 0,
-				},
-			}
-
-			isServerReady := app.SW.IsServerReady()
-			if isServerReady {
-				logging.Debug("MC Server is ready, sending status response")
-				ipv4, err := app.SW.IPv4()
-				if err != nil {
-					clientConn.CloseWithError(model.ReasonInternalServerError, "Error getting server IP:", err)
-					return
-				}
-
-				status, err := mc.ReadServerStatus(ipv4, app.Config.GetMCServerPort())
-				if err != nil || status == nil {
-					logging.Error("Error reading server status:", "error", err)
-				} else {
-					statusResponse = status
-					if !bytes.Equal(status.Version, protocolVersion) {
-						err := app.Config.SetProtocolVersion(status.Version)
-						if err != nil {
-							logging.Error("Error setting protocol version:", "error", err)
-						}
-					}
-
-					if lastImage == nil || (len(status.Favicon) != 0 && status.Favicon != *lastImage) {
-						lastImage = &status.Favicon
-						err := app.Config.SetLastImage(lastImage)
-						if err != nil {
-							logging.Error("Error setting last image:", "error", err)
-						}
-					}
-
-					if len(status.Description) != 0 && !bytes.Equal([]byte(status.Description), lastMotd) {
-						lastMotd = []byte(status.Description)
-						err := app.Config.SetLastMOTD(lastMotd)
-						if err != nil {
-							logging.Error("Error setting last motd:", "error", err)
-						}
-					}
-
-					if status.Players.Max != 0 && status.Players.Max != maxPlayers {
-						maxPlayers = status.Players.Max
-						err := app.Config.SetMaxPlayers(status.Players.Max)
-						if err != nil {
-							logging.Error("Error setting max players:", "error", err)
-						}
-					}
-
-					app.EB.Broadcast(model.EB_EVENT_SERVER_INFO_UPDATE)
-				}
-			}
-
-			var favicon *string
-			if isServerReady {
-				favicon = app.Config.GetMCOnlineImage()
-			} else {
-				favicon = app.Config.GetMCOfflineImage()
-			}
-
-			faviconString := ""
-			if (favicon == nil || *favicon == "") && lastImage != nil {
-				faviconString = string(*lastImage)
-			} else if favicon != nil {
-				faviconString = string(*favicon)
-			}
-
-			statusResponse.Favicon = faviconString
-
-			switch {
-			case !replaceMOTD && !isServerReady:
-				motd = append(lastMotd, offlineMotd...)
-			case replaceMOTD && !isServerReady:
-				motd = []byte(offlineMotd)
-			case !replaceMOTD && isServerReady:
-				motd = append(lastMotd, onlineMotd...)
-			case replaceMOTD && isServerReady:
-				motd = []byte(onlineMotd)
-			}
-			statusResponse.Description = string(motd)
-			statusResponse.Players.Max = maxPlayers
-
-			statusResponseBytes, err := json.Marshal(statusResponse)
-			if err != nil {
-				clientConn.CloseWithError(model.ReasonInternalServerError, "Error marshalling status response:", err)
+				clientConn.CloseWithError(model.ReasonInternalServerError, "Error getting server IP:", err)
 				return
 			}
 
-			mc.WriteStatusResponse(clientConn, string(statusResponseBytes))
-		} else if packet.PacketID == 0x01 {
-			mc.WritePongResponse(clientConn, packet.Data)
-			clientConn.Close()
+			status, err := mc.ReadServerStatus(ipv4, app.Config.GetMCServerPort())
+			if err != nil || status == nil {
+				logging.Error("Error reading server status:", "error", err)
+			} else {
+				statusResponse = status
+				if !bytes.Equal(status.Version, protocolVersion) {
+					err := app.Config.SetProtocolVersion(status.Version)
+					if err != nil {
+						logging.Error("Error setting protocol version:", "error", err)
+					}
+				}
+
+				if lastImage == nil || (len(status.Favicon) != 0 && status.Favicon != *lastImage) {
+					lastImage = &status.Favicon
+					err := app.Config.SetLastImage(lastImage)
+					if err != nil {
+						logging.Error("Error setting last image:", "error", err)
+					}
+				}
+
+				if len(status.Description) != 0 && !bytes.Equal([]byte(status.Description), lastMotd) {
+					lastMotd = []byte(status.Description)
+					err := app.Config.SetLastMOTD(lastMotd)
+					if err != nil {
+						logging.Error("Error setting last motd:", "error", err)
+					}
+				}
+
+				if status.Players.Max != 0 && status.Players.Max != maxPlayers {
+					maxPlayers = status.Players.Max
+					err := app.Config.SetMaxPlayers(status.Players.Max)
+					if err != nil {
+						logging.Error("Error setting max players:", "error", err)
+					}
+				}
+
+				app.EB.Broadcast(model.EB_EVENT_SERVER_INFO_UPDATE)
+			}
 		}
+
+		var favicon *string
+		if isServerReady {
+			favicon = app.Config.GetMCOnlineImage()
+		} else {
+			favicon = app.Config.GetMCOfflineImage()
+		}
+
+		faviconString := ""
+		if (favicon == nil || *favicon == "") && lastImage != nil {
+			faviconString = string(*lastImage)
+		} else if favicon != nil {
+			faviconString = string(*favicon)
+		}
+
+		statusResponse.Favicon = faviconString
+
+		switch {
+		case !replaceMOTD && !isServerReady:
+			motd = append(lastMotd, offlineMotd...)
+		case replaceMOTD && !isServerReady:
+			motd = []byte(offlineMotd)
+		case !replaceMOTD && isServerReady:
+			motd = append(lastMotd, onlineMotd...)
+		case replaceMOTD && isServerReady:
+			motd = []byte(onlineMotd)
+		}
+		statusResponse.Description = string(motd)
+		statusResponse.Players.Max = maxPlayers
+
+		statusResponseBytes, err := json.Marshal(statusResponse)
+		if err != nil {
+			clientConn.CloseWithError(model.ReasonInternalServerError, "Error marshalling status response:", err)
+			return
+		}
+
+		mc.WriteStatusResponse(clientConn, string(statusResponseBytes))
 	}
 }
 
@@ -361,14 +366,17 @@ func handleConnection(clientConn *conn.McConn, app *model.App) {
 	}
 	logging.Info("Player handshake received", "handshake", handshake)
 
-	if handshake.NextState == 1 {
+	switch handshake.NextState {
+	case 1:
 		handleServerListPing(clientConn, app)
-	} else if handshake.NextState == 2 {
+	case 2:
 		handlePlayerLogin(clientConn, app)
-	} else {
+	default:
 		logging.Error("Unknown handshake state", "state", handshake.NextState)
 		clientConn.Close()
 	}
+
+	defer logging.Info("Player connection closed", "remoteAddr", clientConn.RemoteAddr().String())
 }
 
 func Start(app *model.App) {

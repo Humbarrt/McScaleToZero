@@ -20,7 +20,6 @@ const (
 
 type EventBroadcaster interface {
 	Broadcast(event EB_EventType)
-	Start()
 	Middleware() gin.HandlerFunc
 }
 

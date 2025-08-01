@@ -24,7 +24,7 @@ func (p *Packet) ToBytes() []byte {
 	WriteVarInt(&packetBytes, p.PacketID)
 	packetBytes = append(packetBytes, p.Data...)
 
-	logging.Debug("Packet bytes", "packetID", p.PacketID, "length", p.Length, "data", packetBytes)
+	//logging.Debug("Packet bytes", "packetID", p.PacketID, "length", p.Length, "data", packetBytes)
 	return packetBytes
 }
 
@@ -34,9 +34,14 @@ func readPacketLength(conn net.Conn) (int, error) {
 
 	var byteRead byte
 	maxPacketSize := 10 * 1024 // 10 KB
+	startedAt := time.Now()
 	for {
 		if num > maxPacketSize {
 			return 0, fmt.Errorf("packet size exceeds maximum limit")
+		}
+
+		if time.Since(startedAt) > 1*time.Second {
+			return 0, fmt.Errorf("timeout while reading packet length")
 		}
 
 		buf := make([]byte, 1)

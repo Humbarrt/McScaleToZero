@@ -17,6 +17,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/mileusna/useragent v1.3.5
 	github.com/pressly/goose/v3 v3.24.2
+	github.com/r3labs/sse/v2 v2.10.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/stretchr/testify v1.10.0
 	github.com/yusufthedragon/exchange-rates-go v1.0.0
@@ -28,6 +29,7 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
+	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 

@@ -19,6 +19,7 @@ import (
 	lw "mc_manager/processes/log_watcher"
 	sw "mc_manager/processes/server_watcher"
 	sm "mc_manager/processes/session_manager"
+	_ "net/http/pprof"
 
 	"github.com/gin-gonic/gin"
 )
@@ -80,7 +81,6 @@ func main() {
 	}
 
 	app.EB = eb.NewEventBroadcaster()
-	go app.EB.Start()
 
 	app.SW = sw.NewServerWatcher(&app)
 	go app.SW.StartWatchingServer()
@@ -101,7 +101,3 @@ func main() {
 	}
 	logging.Info("Analyser started")
 }
-
-/*
-TODO: Web: make docs for splitwise
-*/

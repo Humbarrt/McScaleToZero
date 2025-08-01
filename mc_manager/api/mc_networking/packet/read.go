@@ -5,11 +5,13 @@ import (
 	"mc_manager/logging"
 	"mc_manager/model"
 	"net"
+	"time"
 )
 
 func ReadPacket(conn net.Conn) (*Packet, error) {
 	var p Packet
 	// Read the packet length
+	conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 	length, err := readPacketLength(conn)
 	if err != nil {
 		return &Packet{}, fmt.Errorf("error reading packet length: %v", err)
@@ -24,6 +26,9 @@ func ReadPacket(conn net.Conn) (*Packet, error) {
 	for totalBytesRead < length {
 		var bytesRead int
 		bytesRead, err = conn.Read(p.Data[totalBytesRead:])
+		if err != nil {
+			return &Packet{}, fmt.Errorf("error reading packet data: %v", err)
+		}
 		totalBytesRead += bytesRead
 	}
 
