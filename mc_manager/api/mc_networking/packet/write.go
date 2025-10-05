@@ -26,6 +26,12 @@ func WriteUnsignedShort(data *[]byte, num uint16) {
 	*data = append(*data, byte(num>>8), byte(num))
 }
 
+func WriteLong(data *[]byte, num int64) {
+	for i := range 8 {
+		*data = append(*data, byte(num>>(56-i*8)))
+	}
+}
+
 func WriteString(data *[]byte, str string) {
 	WriteVarInt(data, len(str))
 	*data = append(*data, str...)

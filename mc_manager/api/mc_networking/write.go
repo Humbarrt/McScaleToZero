@@ -2,6 +2,7 @@ package mc_networking
 
 import (
 	"encoding/json"
+	"math/rand/v2"
 	"mc_manager/api/mc_networking/packet"
 	"mc_manager/logging"
 	"mc_manager/model"
@@ -119,6 +120,20 @@ func WriteEncryptionRequest(conn model.McConn) error {
 	packetBytes := p.ToBytes()
 	_, err = conn.Write(packetBytes)
 	return err
+}
+
+func WriteKeepAlive(conn net.Conn) (int64, error) {
+	randomID := rand.Int64()
+	p := packet.Packet{
+		PacketID: 0x04,
+		Data:     make([]byte, 0),
+	}
+
+	packet.WriteLong(&p.Data, randomID)
+
+	packetBytes := p.ToBytes()
+	_, err := conn.Write(packetBytes)
+	return randomID, err
 }
 
 func WriteDisconnect(conn net.Conn, reason string) error {

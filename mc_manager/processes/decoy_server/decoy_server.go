@@ -310,18 +310,45 @@ func handlePlayerLogin(clientConn *conn.McConn, app *model.App) {
 	go app.AWS.StartInstance()
 	go app.SW.StartWatchingServer()
 
+stallingPlayer:
 	for {
-		if app.SW.IsServerReady() {
-			break
+		for range 5 {
+			if app.SW.IsServerReady() {
+				break stallingPlayer
+			}
+			time.Sleep(1 * time.Second)
 		}
 
-		logging.Debug("Server not ready, stalling player...")
-		_, err = clientConn.Write([]byte{0x00})
+		logging.Info("Server is still not ready, sending keep alive to player", "username", loginStart.Username)
+		randomID, err := mc.WriteKeepAlive(clientConn)
 		if err != nil {
-			clientConn.CloseWithError(model.ReasonInternalServerError, "Error writing stall packet:", err)
+			clientConn.CloseWithError(model.ReasonInternalServerError, "Error writing keep alive:", err)
 			return
 		}
-		time.Sleep(1 * time.Second)
+
+		for range 10 {
+			packet, err = mcp.ReadPacket(clientConn)
+			if err != nil {
+				clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading packet:", err)
+				return
+			}
+
+			logging.Debug("Received packet while waiting for the stalling packet", "packetID", packet.PacketID)
+			if packet.PacketID == 0x04 {
+				break
+			}
+		}
+		keepAliveID, err := mc.ParseKeepAlive(packet)
+		if err != nil {
+			clientConn.CloseWithError(model.ReasonInternalServerError, "Error reading keep alive:", err)
+			return
+		}
+		if keepAliveID != randomID {
+			clientConn.CloseWithError(model.ReasonInternalServerError, "Error keep alive ID does not match:", fmt.Errorf("%d != %d", keepAliveID, randomID))
+			return
+		}
+
+		logging.Info("Processed KeepAlive", "id", keepAliveID)
 	}
 
 	// Send Transfer packet

@@ -47,6 +47,16 @@ func ReadPacket(conn net.Conn) (*Packet, error) {
 	return &p, nil
 }
 
+func ConsumeLong(data *[]byte) (int64, error) {
+	if len(*data) < 8 {
+		return 0, fmt.Errorf("not enough data to read long")
+	}
+	value := int64((*data)[0])<<56 | int64((*data)[1])<<48 | int64((*data)[2])<<40 | int64((*data)[3])<<32 |
+		int64((*data)[4])<<24 | int64((*data)[5])<<16 | int64((*data)[6])<<8 | int64((*data)[7])
+	*data = (*data)[8:]
+	return value, nil
+}
+
 func ConsumeVarInt(data *[]byte) (int, error) {
 	var num int
 	var numRead int
