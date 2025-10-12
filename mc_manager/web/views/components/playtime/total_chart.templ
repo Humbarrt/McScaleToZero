@@ -33,12 +33,24 @@ templ TotalChart(chartId string, isLive bool, label string, response []model.Tot
                             <image class="w-12 h-12" src={fmt.Sprintf("/player/%d/avatar/head", player.PlayerId)}/>
                         </th>
                         <td style={fmt.Sprintf("--size: calc( %f / %f )", player.Playtime.Seconds(), math.Max(player.Playtime.Seconds(), maxDuration.Seconds()))}>
-                            <span class="data"> {renderIfElse(player.Playtime.Seconds()>0, utils.HumanizeDuration(player.Playtime), "")}</span>
-                            <span class="tooltip">{fmt.Sprintf("%s's playtime", alias)}</span>
+                            <span class="flex overflow-hidden">
+                                <span class="data text-ellipsis whitespace-nowrap"> 
+                                    if player.Playtime.Seconds() > math.Max(player.Playtime.Seconds(), maxDuration.Seconds())*0.1 {
+                                        {renderIfElse(player.Playtime.Seconds()>0, utils.HumanizeDuration(player.Playtime), "")}
+                                    }
+                                </span>
+                            </span>
+                            <span class="tooltip">{fmt.Sprintf("%s's playtime: %s", alias, utils.HumanizeDuration(player.Playtime))}</span>
                         </td>
                         <td style={fmt.Sprintf("--size: calc( %f / %f )", player.CPUTime.Seconds(), math.Max(player.CPUTime.Seconds(), maxDuration.Seconds()))}>
-                            <span class="data"> {renderIfElse(player.CPUTime.Seconds()>0, utils.HumanizeDuration(player.CPUTime), "")}</span>
-                            <span class="tooltip">{fmt.Sprintf("%s's CPU time", alias)}</span>
+                            <span class="flex overflow-hidden">
+                                <span class="data text-ellipsis whitespace-nowrap"> 
+                                    if player.CPUTime.Seconds() > math.Max(player.CPUTime.Seconds(), maxDuration.Seconds())*0.1 {
+                                        {renderIfElse(player.CPUTime.Seconds()>0, utils.HumanizeDuration(player.CPUTime), "")}
+                                    }
+                                </span>
+                            </span>
+                            <span class="tooltip">{fmt.Sprintf("%s's CPU time: %s", alias, utils.HumanizeDuration(player.CPUTime))}</span>
                         </td>
                     </tr>
                 }
