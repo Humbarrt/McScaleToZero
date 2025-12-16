@@ -38,6 +38,5 @@ func InitRoutes(app *model.App) error {
 	events.Routes(app.Router, app)
 	player.Routes(app.Router, app)
 	app.IS.Routes(app.Router, app)
-	app.Router.Run(fmt.Sprintf(":%d", app.Config.GetDashboardPort()))
-	return nil
+	return app.Router.Run(fmt.Sprintf(":%d", app.Config.GetDashboardPort()))
 }

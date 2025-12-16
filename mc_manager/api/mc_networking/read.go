@@ -86,6 +86,13 @@ func ParseLoginAcknowledged(p *packet.Packet) (bool, error) {
 	return true, nil
 }
 
+func ParseKeepAlive(p *packet.Packet) (int64, error) {
+	if p.PacketID != 0x04 {
+		return 0, fmt.Errorf("invalid packet ID: expected 0x04, got %d", p.PacketID)
+	}
+	return packet.ConsumeLong(&p.Data)
+}
+
 func ParseStatusResponse(p *packet.Packet) (string, error) {
 	if p.PacketID != 0x00 {
 		logging.Error("Invalid packet ID for StatusResponse:", "expected", 0x00, "got", p.PacketID)
