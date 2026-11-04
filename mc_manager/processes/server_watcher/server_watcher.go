@@ -114,7 +114,19 @@ func (sw *serverWatcher) StartWatchingServer() {
 			sw.mutex.Unlock()
 
 			go UpdateWhitelistAndAdmins(sw.App)
-			go BackupWorld(sw.App)
+			go (func() {
+				err := BackupWorld(sw.App)
+				if err != nil {
+					logging.Error("Error backing up world: ", "error", err)
+					return
+				}
+
+				err = UpdatePlayerStats(sw.App)
+				if err != nil {
+					logging.Error("Error updating player stats: ", "error", err)
+					return
+				}
+			})()
 			go sw.App.LW.StartLogWatcher()
 
 			sw.App.EB.Broadcast(model.EB_EVENT_SERVER_ONLINE)

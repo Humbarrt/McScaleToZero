@@ -51,12 +51,12 @@ type config struct {
 	_networkRatio         decimal.Decimal
 	_fallbackFixedCost    decimal.Decimal
 	_fallbackVariableCost decimal.Decimal
+	_lastInvoiceService   model.InvoiceServiceType
 }
 
 func (c *config) GetAWSRegion() string {
 	return c.awsRegion
 }
-
 func (c *config) GetAWSAccessKeyId() string {
 	return c.awsAccessKeyId
 }
@@ -390,6 +390,12 @@ func (c *config) SetFallbackVariableCost(fallbackVariableCost decimal.Decimal) e
 	return nil
 }
 
+func (c *config) GetLastInvoiceService() model.InvoiceServiceType {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._lastInvoiceService
+}
+
 func NewConfig() *config {
 	logging.Info("Version", "version", version)
 	currentPath, err := os.Executable()
@@ -500,6 +506,19 @@ func (c *config) Load(db *db.DB) {
 		logging.Fatal("Invalid invoice service:", "service", invoiceService)
 	}
 
+	if invoiceService != mutConfig.LastInvoiceService {
+		logging.Info("Invoice service changed, updating database", "old", mutConfig.LastInvoiceService, "new", invoiceService)
+		err = queries.UpdateLastInvoiceService(c.db, invoiceService)
+		if err != nil {
+			logging.Fatal("Error updating invoice service in database:", "error", err)
+		}
+
+		err = queries.ResetInvoiceService(c.db)
+		if err != nil {
+			logging.Fatal("Error resetting invoice service in database:", "error", err)
+		}
+	}
+
 	c.awsRegion = awsRegion
 	c.awsAccessKeyId = awsAccessKeyId
 	c.awsSecretAccessKey = awsSecretAccessKey
@@ -528,6 +547,7 @@ func (c *config) Load(db *db.DB) {
 	c._networkRatio = mutConfig.NetworkRatio
 	c._fallbackFixedCost = mutConfig.FallbackFixedCost
 	c._fallbackVariableCost = mutConfig.FallbackVariableCost
+	c._lastInvoiceService = mutConfig.LastInvoiceService
 
 	logging.Debug("Config loaded")
 }

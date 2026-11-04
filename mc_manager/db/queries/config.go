@@ -173,6 +173,15 @@ func UpdateFallbackVariableCost(DB *db.DB, fallbackVariableCost decimal.Decimal)
 	return updateConfig(DB, config)
 }
 
+func UpdateLastInvoiceService(DB *db.DB, invoiceService model.InvoiceServiceType) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.LastInvoiceService = invoiceService
+	return updateConfig(DB, config)
+}
+
 func updateConfig(DB *db.DB, config *model.MutableConfig) error {
 	stmt, err := DB.GetStmt("update_config")
 	if err != nil {

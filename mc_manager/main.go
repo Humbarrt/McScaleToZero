@@ -27,6 +27,41 @@ import (
 //go:embed web/static/*
 var fs embed.FS
 
+/* func test() error {
+	backupFilePath := "/Users/humpert/Projects/McServer/world.zip"
+	_, backupFileName := path.Split(backupFilePath)
+	read, err := zip.OpenReader(backupFilePath)
+	if err != nil {
+		logging.Error("Error reading world zip", "error", err)
+		return err
+	}
+	defer read.Close()
+
+	backupFileName = strings.Split(backupFileName, ".")[0]
+	statsPath := path.Join(backupFileName, "stats")
+	logging.Info("Searching for", "path", statsPath)
+	for _, f := range read.File {
+		currPath, currName := path.Split(f.Name)
+		if (currPath != statsPath && currPath != statsPath+"/") || currName == "" {
+			continue
+		}
+		logging.Info("FOUND STATS FILE", "path", currPath, "name", currName)
+
+		playerUUID := strings.Split(currName, ".")
+		queries.Get
+
+		v, err := f.Open()
+		if err != nil {
+			logging.Error("Error reading stat file from zip", "error", err)
+			return err
+		}
+		defer v.Close()
+
+	}
+
+	return nil
+} */
+
 func main() {
 	config := _config.NewConfig()
 	logging.Info("Starting MC Manager")

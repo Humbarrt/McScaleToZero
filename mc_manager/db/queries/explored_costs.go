@@ -27,8 +27,5 @@ func AddExploredCost(DB *db.DB, month model.YearMonth) error {
 	}
 
 	_, err = stmt.Exec(month)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
