@@ -1,23 +1,24 @@
 package auth
 
-import (
-    "mc_manager/web/views/utils"
-)
+import "mc_manager/web/views/utils"
 
 templ AliasForm(err error) {
-    <form hx-get="/auth/signin" hx-target="#auth" hx-swap="innerHTML">
-        <label for="alias" class="block mb-2 text-dark-gray">Minecraft Username</label>
-        <input type="text" id="alias" name="alias"
-            class={"w-full mb-1 input", templ.KV("form-error", err != nil)}
-            placeholder="Enter your username"
-            required
-        />
-        if err != nil {
-            <div class="mt-1 text-dark-red">{err.Error()}</div>
-        }
-        <button class="w-full px-4 py-2 mt-5 text-lg btn raised-slot-button h-1-block whitespace-nowrap" type="submit">
-            <span class="htmx-inverse-indicator">Continue</span>
-            @utils.Indicator("aliasIndicator", "m-auto")
-        </button>
-    </form>
+	<form hx-get="/auth/signin" hx-target="#auth" hx-swap="innerHTML" id="signInFormStep1">
+		<label for="alias" class="block mb-2 text-dark-gray">Minecraft Username</label>
+		<input
+			type="text"
+			id="alias"
+			name="alias"
+			class={ "w-full mb-1 input", templ.KV("form-error", err != nil) }
+			placeholder="Enter your username"
+			required
+		/>
+		if err != nil {
+			<div class="mt-1 text-dark-red">{ err.Error() }</div>
+		}
+		<button class="w-full px-4 py-2 mt-5 text-lg btn raised-slot-button h-1-block whitespace-nowrap" type="submit">
+			<span class="htmx-inverse-indicator">Continue</span>
+			@utils.Indicator("aliasIndicator", "m-auto")
+		</button>
+	</form>
 }

@@ -52,7 +52,7 @@ func NewUUIDFromString(s string) (*UUID, error) {
 		return nil, fmt.Errorf("UUID must be 32 characters long")
 	}
 
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		//parse 2 characters from the string
 		b, err := fmt.Sscanf(s[i*2:i*2+2], "%x", &u.raw[i])
 		if err != nil {

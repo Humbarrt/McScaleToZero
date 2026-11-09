@@ -42,6 +42,14 @@ func updatePlayersInDB(db *db.DB, players []*mcPlayer) (*[]int64, error) {
 		}
 		playerIds = append(playerIds, dbPlayer.Id)
 	}
+
+	if addedNewPlayer {
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			app.EB.Broadcast(model.EB_EVENT_NEW_PLAYER)
+		}()
+	}
+
 	return &playerIds, nil
 }
 
