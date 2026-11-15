@@ -1,45 +1,39 @@
 package widgets
 
 import (
-    "mc_manager/web/views/utils"
-    "mc_manager/model"
-    "fmt"
+	"mc_manager/model"
+	"mc_manager/web/views/utils"
 )
 
 templ baseWidgetContent(icon templ.Component, title string) {
-    <div class="flex items-center justify-center w-16 h-16 rounded-full">
-        @icon
-    </div>
-
-    <div class="flex flex-col items-start self-center justify-center w-full h-full text-nowrap">
-        <h1 class="text-black">{title}</h1>
-        <p class="text-xl text-[#3d3c3d]">{children...}</p>
-    </div>
+	<div class="flex items-center justify-center w-16 h-16 rounded-full">
+		@icon
+	</div>
+	<div class="flex flex-col items-start self-center justify-center w-full h-full text-nowrap">
+		<h1 class="text-black">{ title }</h1>
+		<p class="text-xl text-[#3d3c3d]">{ children... }
+</p>
+	</div>
 }
 
 templ widgetLoader(name string, swapEvents []model.EB_EventType) {
-    {{
-        swapEventsString := ""
-        for _, event := range swapEvents {
-            swapEventsString += fmt.Sprintf(",sse:%d", event)
-        }
-    }}
-    <div class="flex flex-row w-full gap-4 px-3 py-2 rounded-lg shadow-md sm:w-auto panel min-w-min max-w-96"
-        hx-get={"/components/widgets/" + name}
-        hx-trigger={"load" + swapEventsString}
-        hx-swap="innerHTML"
-    >
-        <div class="flex items-center justify-center w-full h-16 sm:w-48">
-            @utils.StaticIndicator("")
-        </div>
-    </div>
+	<div
+		class="flex flex-row w-full gap-4 px-3 py-2 rounded-lg shadow-md sm:w-auto panel min-w-min max-w-96"
+		hx-get={ "/components/widgets/" + name }
+		hx-trigger={ "load" + utils.EventsFormatter(swapEvents) }
+		hx-swap="innerHTML"
+	>
+		<div class="flex items-center justify-center w-full h-16 sm:w-48">
+			@utils.StaticIndicator("")
+		</div>
+	</div>
 }
 
 templ Loader() {
-    <div class="flex flex-col items-center w-full gap-4 sm:grid sm:w-max sm:grid-cols-2 lg:grid-cols-4">
-        @serverStatusLoader()
-        @activePlayersLoader()
-        @totalUptimeLoader()
-        @totalCostLoader()
-    </div>
+	<div class="flex flex-col items-center w-full gap-4 sm:grid sm:w-max sm:grid-cols-2 lg:grid-cols-4">
+		@serverStatusLoader()
+		@activePlayersLoader()
+		@totalUptimeLoader()
+		@totalCostLoader()
+	</div>
 }

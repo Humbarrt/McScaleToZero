@@ -23,7 +23,7 @@ func getServerConfigHandler(app *model.App) gin.HandlerFunc {
 		isAdmin, err := utils.IsAdmin(ctx)
 		if err != nil {
 			logging.Error("Error checking admin status", "error", err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			utils.RenderError(ctx, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 
@@ -37,7 +37,7 @@ func getServerConfigHandler(app *model.App) gin.HandlerFunc {
 		offlineImage := app.Config.GetMCOfflineImage()
 		onlineImage := app.Config.GetMCOnlineImage()
 
-		utils.Render(ctx, http.StatusOK, settings_view.ServerConfig(isAdmin, serverPort, backupsToKeep, replaceMOTD, offlineMOTD, onlineMOTD, offlineImage, onlineImage, hasSaved))
+		utils.Render(ctx, http.StatusOK, settings_view.ServerConfig(isAdmin, serverPort, backupsToKeep, replaceMOTD, offlineMOTD, onlineMOTD, offlineImage, onlineImage, hasSaved, app.SW.IsUpdatingWhitelist(), app.SW.IsServerReady()))
 	}
 }
 
@@ -57,13 +57,13 @@ func postServerConfigHandler(app *model.App) gin.HandlerFunc {
 		}
 		if err := ctx.ShouldBind(&form); err != nil {
 			logging.Error("Error binding form", "error", err)
-			ctx.String(http.StatusBadRequest, "Invalid form")
+			utils.RenderError(ctx, http.StatusBadRequest, "Invalid form")
 			return
 		}
 
 		if form.ReplaceMOTD != "true" && form.ReplaceMOTD != "false" {
 			logging.Error("Invalid replaceMOTD value", "replaceMOTD", form.ReplaceMOTD)
-			ctx.String(http.StatusBadRequest, "Invalid replaceMOTD value")
+			utils.RenderError(ctx, http.StatusBadRequest, "Invalid replaceMOTD value")
 			return
 		}
 		replaceMOTD := form.ReplaceMOTD == "true"
@@ -74,7 +74,7 @@ func postServerConfigHandler(app *model.App) gin.HandlerFunc {
 			err := config.ValidateImage(offlineImage)
 			if err != nil {
 				logging.Error("Error validating offline image", "error", err)
-				ctx.String(http.StatusBadRequest, "Invalid offline icon")
+				utils.RenderError(ctx, http.StatusBadRequest, "Invalid offline icon")
 				return
 			}
 		}
@@ -85,7 +85,7 @@ func postServerConfigHandler(app *model.App) gin.HandlerFunc {
 			err := config.ValidateImage(onlineImage)
 			if err != nil {
 				logging.Error("Error validating online image", "error", err)
-				ctx.String(http.StatusBadRequest, "Invalid online icon")
+				utils.RenderError(ctx, http.StatusBadRequest, "Invalid online icon")
 				return
 			}
 		}
@@ -93,81 +93,81 @@ func postServerConfigHandler(app *model.App) gin.HandlerFunc {
 		serverPort, err := strconv.Atoi(form.ServerPort)
 		if err != nil {
 			logging.Error("Error converting serverPort to int", "error", err)
-			ctx.String(http.StatusBadRequest, "Invalid serverPort value")
+			utils.RenderError(ctx, http.StatusBadRequest, "Invalid serverPort value")
 			return
 		}
 		if serverPort < 0 || serverPort > 65535 {
 			logging.Error("Invalid serverPort value", "serverPort", serverPort)
-			ctx.String(http.StatusBadRequest, "Invalid serverPort value")
+			utils.RenderError(ctx, http.StatusBadRequest, "Invalid serverPort value")
 			return
 		}
 
 		backupsToKeep, err := strconv.Atoi(form.BackupsToKeep)
 		if err != nil {
 			logging.Error("Error converting backupsToKeep to int", "error", err)
-			ctx.String(http.StatusBadRequest, "Invalid backupsToKeep value")
+			utils.RenderError(ctx, http.StatusBadRequest, "Invalid backupsToKeep value")
 			return
 		}
 		if backupsToKeep < 0 || backupsToKeep > 15 {
 			logging.Error("Invalid backupsToKeep value", "backupsToKeep", backupsToKeep)
-			ctx.String(http.StatusBadRequest, "Invalid backupsToKeep value")
+			utils.RenderError(ctx, http.StatusBadRequest, "Invalid backupsToKeep value")
 			return
 		}
 
 		offlineMOTD := []byte(form.OfflineMOTD)
 		if len(offlineMOTD) > 1024 {
 			logging.Error("Offline MOTD is too long", "length", len(offlineMOTD))
-			ctx.String(http.StatusBadRequest, "Offline MOTD is too long")
+			utils.RenderError(ctx, http.StatusBadRequest, "Offline MOTD is too long")
 			return
 		}
 
 		onlineMOTD := []byte(form.OnlineMOTD)
 		if len(onlineMOTD) > 1024 {
 			logging.Error("Online MOTD is too long", "length", len(onlineMOTD))
-			ctx.String(http.StatusBadRequest, "Online MOTD is too long")
+			utils.RenderError(ctx, http.StatusBadRequest, "Online MOTD is too long")
 			return
 		}
 
 		err = app.Config.SetMCServerPort(serverPort)
 		if err != nil {
 			logging.Error("Error setting server port", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error setting server port")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error setting server port")
 			return
 		}
 		err = app.Config.SetBackupsToKeep(backupsToKeep)
 		if err != nil {
 			logging.Error("Error setting backups to keep", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error setting backups to keep")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error setting backups to keep")
 			return
 		}
 		err = app.Config.SetReplaceMOTD(replaceMOTD)
 		if err != nil {
 			logging.Error("Error setting replace MOTD", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error setting replace MOTD")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error setting replace MOTD")
 			return
 		}
 		err = app.Config.SetMCOfflineMOTD(offlineMOTD)
 		if err != nil {
 			logging.Error("Error setting offline MOTD", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error setting offline MOTD")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error setting offline MOTD")
 			return
 		}
 		err = app.Config.SetMCOnlineMOTD(onlineMOTD)
 		if err != nil {
 			logging.Error("Error setting online MOTD", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error setting online MOTD")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error setting online MOTD")
 			return
 		}
 		err = app.Config.SetMCOfflineImage(offlineImage)
 		if err != nil {
 			logging.Error("Error setting offline image", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error setting offline icon")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error setting offline icon")
 			return
 		}
 		err = app.Config.SetMCOnlineImage(onlineImage)
 		if err != nil {
 			logging.Error("Error setting online image", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error setting online icon")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error setting online icon")
 			return
 		}
 
@@ -179,11 +179,32 @@ func postServerConfigHandler(app *model.App) gin.HandlerFunc {
 		newOfflineImage := app.Config.GetMCOfflineImage()
 		newOnlineImage := app.Config.GetMCOnlineImage()
 
-		utils.Render(ctx, http.StatusOK, settings_view.ServerConfig(true, newServerPort, newBackupsToKeep, newReplaceMOTD, newOfflineMOTD, newOnlineMOTD, newOfflineImage, newOnlineImage, true))
+		utils.Render(ctx, http.StatusOK, settings_view.ServerConfig(true, newServerPort, newBackupsToKeep, newReplaceMOTD, newOfflineMOTD, newOnlineMOTD, newOfflineImage, newOnlineImage, true, app.SW.IsUpdatingWhitelist(), app.SW.IsServerReady()))
 
 		go func() {
 			time.Sleep(100 * time.Millisecond)
 			app.EB.Broadcast(model.EB_EVENT_SERVER_CONFIG_UPDATE)
 		}()
+	}
+}
+
+func postWhitelistUpdateHandler(app *model.App) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		_, cancel := context.WithTimeout(context.Background(), app.WebTimeout)
+		defer cancel()
+
+		go func() {
+			err := app.SW.UpdateWhitelistAndAdmins()
+			if err != nil {
+				logging.Error("Error updating whitelist", "error", err)
+				utils.RenderError(ctx, http.StatusInternalServerError, "Internal server error")
+				return
+			}
+		}()
+
+		time.Sleep(100 * time.Millisecond) // Give the goroutine a moment to start
+
+		//then render getServerConfigHandler
+		getServerConfigHandler(app)(ctx)
 	}
 }

@@ -37,6 +37,9 @@ func InitRoutes(app *model.App) error {
 	components.Routes(app.Router, app)
 	events.Routes(app.Router, app)
 	player.Routes(app.Router, app)
-	app.IS.Routes(app.Router, app)
+
+	invoiceService := app.Router.Group("/is")
+	invoiceService.Use(middleware.BlockIfUnauthenticated())
+	app.IS.Routes(invoiceService, app)
 	return app.Router.Run(fmt.Sprintf(":%d", app.Config.GetDashboardPort()))
 }

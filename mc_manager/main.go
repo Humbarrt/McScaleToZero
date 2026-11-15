@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"embed"
 	"mc_manager/api/aws"
+	"mc_manager/api/invoice_service/local"
 	"mc_manager/api/invoice_service/none"
 	"mc_manager/api/invoice_service/splitwise"
 	"mc_manager/db"
@@ -89,8 +90,10 @@ func main() {
 		SW:         nil,
 		CW:         nil,
 		IS:         nil,
+		EB:         nil,
 		LW:         nil,
 	}
+	app.EB = eb.NewEventBroadcaster()
 
 	switch app.Config.GetInvoiceService() {
 	case model.InvoiceServiceSplitwise:
@@ -106,6 +109,13 @@ func main() {
 	case model.InvoiceServiceNone:
 		logging.Info("Invoice service not configured")
 		app.IS = none.NewNoInvoiceService(&app)
+	case model.InvoiceServiceLocal:
+		logging.Info("Invoice service configured to Local")
+		app.IS = local.NewLocalInvoiceService(&app)
+		err = app.IS.Init()
+		if err != nil {
+			logging.Fatal("Error initializing invoice service", "error", err)
+		}
 	default:
 		logging.Fatal("Unknown invoice service")
 	}
@@ -114,8 +124,6 @@ func main() {
 	if err != nil {
 		logging.Fatal("Error creating AWS API", "error", err)
 	}
-
-	app.EB = eb.NewEventBroadcaster()
 
 	app.SW = sw.NewServerWatcher(&app)
 	go app.SW.StartWatchingServer()
@@ -134,5 +142,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	logging.Info("Analyser started")
+	logging.Info("MC Manager started")
 }

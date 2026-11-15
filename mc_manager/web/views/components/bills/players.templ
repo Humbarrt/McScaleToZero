@@ -1,62 +1,61 @@
 package bills
 
 import (
-    "mc_manager/model"
-    "mc_manager/web/views/utils"
+	"mc_manager/model"
+	"mc_manager/web/views/utils"
 )
 
-
 templ BillPlayers(bill model.BillResponse, billPlayers []model.BillPlayerResponse, isLatest bool) {
-    {{
-        monthString := bill.Month.String()
-        if isLatest {
-            monthString = "latest"
-        }
-    }}
-    @billsHolder(monthString, false, true) {
-        @BillHeader(bill.Month, isLatest, true)
-        @billStats(bill)
-        <div class="overflow-x-auto">
-            <table class="table w-full !p-0 min-w-min whitespace-nowrap" style="border: none;">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Total Cost ($)</th>
-                        <th>Fixed Cost ($)</th>
-                        <th>Variable Cost ($)</th>
-                        <th>Playtime</th>
-                        <th>CPU time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    for _, player := range billPlayers {
-                        <tr>
-                            <td>
-                                if len(player.Aliases) > 0 {
-                                    {player.Aliases[0]}
-                                } else {
-                                    Unknown Name
-                                }
-                            </td>
-                            <td>
-                                {utils.HumanizeMoney(player.TotalAmount)}
-                            </td>
-                            <td>
-                                {utils.HumanizeMoney(player.FixedAmount)}
-                            </td>
-                            <td>
-                                {utils.HumanizeMoney(player.VariableAmount)}
-                            </td>
-                            <td>
-                                {utils.HumanizeDuration(player.Playtime)}
-                            </td>
-                            <td>
-                                {utils.HumanizeDuration(player.CPUTime)}
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
+	{{
+		monthString := bill.Month.String()
+		if isLatest {
+			monthString = "latest"
+		}
+	}}
+	@billsHolder(monthString, false, true) {
+		@BillHeader(bill.Month, isLatest, true)
+		@billStats(bill)
+		<div class="overflow-x-auto">
+			<table class="table w-full !p-0 min-w-min whitespace-nowrap" style="border: none;">
+				<thead>
+					<tr>
+						<th>Name</th>
+						<th>Total Cost ($)</th>
+						<th>Fixed Cost ($)</th>
+						<th>Variable Cost ($)</th>
+						<th>Playtime</th>
+						<th>CPU time</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, player := range billPlayers {
+						<tr>
+							<td>
+								if len(player.Aliases) > 0 {
+									{ player.Aliases[0] }
+								} else {
+									Unknown
+								}
+							</td>
+							<td>
+								{ utils.HumanizeMoney(player.TotalAmount) }
+							</td>
+							<td>
+								{ utils.HumanizeMoney(player.FixedAmount) }
+							</td>
+							<td>
+								{ utils.HumanizeMoney(player.VariableAmount) }
+							</td>
+							<td>
+								{ utils.HumanizeDuration(player.Playtime) }
+							</td>
+							<td>
+								{ utils.HumanizeDuration(player.CPUTime) }
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
 }

@@ -26,7 +26,7 @@ func (s *NoInvoiceService) SyncBills() error {
 	return nil
 }
 
-func (s *NoInvoiceService) Routes(route *gin.Engine, app *model.App) {
+func (s *NoInvoiceService) Routes(route *gin.RouterGroup, app *model.App) {
 }
 
 func (s *NoInvoiceService) WebLoader() templ.Component {

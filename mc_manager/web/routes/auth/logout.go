@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mc_manager/logging"
 	"mc_manager/model"
+	utils "mc_manager/web/web_utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,7 @@ func getLogoutHandler(app *model.App) gin.HandlerFunc {
 		playerId, ok := playerIdAny.(int64)
 		if !ok {
 			logging.Error("Player ID is not an int64")
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			utils.RenderError(ctx, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 
@@ -37,7 +38,7 @@ func getLogoutHandler(app *model.App) gin.HandlerFunc {
 		sessionId, ok := sessionIdAny.(string)
 		if !ok {
 			logging.Error("Session ID is not a string")
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			utils.RenderError(ctx, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 		app.SM.RemoveUserSession(playerId, fmt.Sprintf("%v", sessionId))

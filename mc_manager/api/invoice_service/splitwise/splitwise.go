@@ -123,6 +123,8 @@ func (s *SplitwiseAPI) SyncBills() error {
 		}
 	}
 
+	s.app.EB.Broadcast(model.EB_EVENT_BILLS_SYNCED)
+
 	return nil
 }
 
@@ -411,7 +413,7 @@ func (s *SplitwiseAPI) SetCurrency(currency string) error {
 	return nil
 }
 
-func (s *SplitwiseAPI) Routes(route *gin.Engine, app *model.App) {
+func (s *SplitwiseAPI) Routes(route *gin.RouterGroup, app *model.App) {
 	splitwise := route.Group("/splitwise")
 	{
 		splitwise.GET("/", getSplitwiseConfigHandler(app, s))
@@ -421,5 +423,5 @@ func (s *SplitwiseAPI) Routes(route *gin.Engine, app *model.App) {
 }
 
 func (s *SplitwiseAPI) WebLoader() templ.Component {
-	return splitwise_view.Loader([]model.EB_EventType{model.EB_EVENT_INVOICE_CONFIG_UPDATE, model.EB_EVENT_NEW_BILL})
+	return splitwise_view.Loader([]model.EB_EventType{model.EB_EVENT_INVOICE_CONFIG_UPDATE, model.EB_EVENT_NEW_BILL, model.EB_EVENT_NEW_PLAYER, model.EB_EVENT_BILLS_SYNCED})
 }

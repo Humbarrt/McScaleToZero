@@ -26,3 +26,8 @@ func IsAdmin(ctx *gin.Context) (bool, error) {
 	}
 	return isAdmin, nil
 }
+
+func RenderError(ctx *gin.Context, status int, message string) {
+	ctx.Header("HX-Reswap", "innerHTML")
+	ctx.String(status, message)
+}

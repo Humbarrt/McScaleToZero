@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/a-h/templ"
@@ -50,7 +51,21 @@ type InvoiceServiceType string
 const (
 	InvoiceServiceNone      InvoiceServiceType = "none"
 	InvoiceServiceSplitwise InvoiceServiceType = "splitwise"
+	InvoiceServiceLocal     InvoiceServiceType = "local"
 )
+
+func StringToInvoiceServiceType(invoiceServiceString string) (InvoiceServiceType, error) {
+	switch invoiceServiceString {
+	case string(InvoiceServiceNone):
+		return InvoiceServiceNone, nil
+	case string(InvoiceServiceSplitwise):
+		return InvoiceServiceSplitwise, nil
+	case string(InvoiceServiceLocal):
+		return InvoiceServiceLocal, nil
+	default:
+		return "", fmt.Errorf("invalid invoice service type: %s", invoiceServiceString)
+	}
+}
 
 type InvoiceServiceStatus int
 
@@ -65,6 +80,6 @@ const (
 type InvoiceService interface {
 	Init() error
 	SyncBills() error
-	Routes(route *gin.Engine, app *App)
+	Routes(route *gin.RouterGroup, app *App)
 	WebLoader() templ.Component
 }

@@ -1,85 +1,83 @@
 package playtime
 
 import (
-    "mc_manager/web/views/utils"
-    "mc_manager/model"
-    "fmt"
+	"fmt"
+	"mc_manager/model"
+	"mc_manager/web/views/utils"
 	"strings"
 )
 
-
 templ playtimeHolder(chartId string, isLoading bool, isLive bool) {
-    {{
-        trigger := ""
-        if isLoading {
-            trigger = "load"
-        } else if isLive {
-            
-            trigger = fmt.Sprintf(strings.Repeat("sse:%d[document.getElementById('playtimeSelector')==null],",3)+"custom-event", model.EB_EVENT_NEW_COST_ESTIMATE, model.EB_EVENT_PLAYER_JOINED, model.EB_EVENT_PLAYER_LEFT)
-        }
-    }}
-    <div class="flex flex-col w-full p-4 pt-0 rounded-lg gap-4 shadow-md panel max-w-[1024px] self-center relative"
-        id="PlaytimeHolder"
-        hx-vals="js:{tz: Intl?.DateTimeFormat()?.resolvedOptions()?.timeZone || 'UTC'}"
-        if trigger != "" {
-            hx-get={fmt.Sprintf("/components/playtime/%s", chartId)}
-            hx-trigger={trigger}
-            hx-swap="outerHTML"
-        }
-    >
-        {children...}
-    </div>
+	{{
+		trigger := ""
+		if isLoading {
+			trigger = "load"
+		} else if isLive {
+			trigger = fmt.Sprintf(strings.Repeat("sse:%d[document.getElementById('playtimeSelector')==null],", 4)+"custom-event", model.EB_EVENT_NEW_COST_ESTIMATE, model.EB_EVENT_PLAYER_JOINED, model.EB_EVENT_PLAYER_LEFT, model.EB_EVENT_NEW_PLAYER)
+		}
+	}}
+	<div
+		class="flex flex-col w-full p-4 pt-0 rounded-lg gap-4 shadow-md panel max-w-[1024px] self-center relative"
+		id="PlaytimeHolder"
+		hx-vals="js:{tz: Intl?.DateTimeFormat()?.resolvedOptions()?.timeZone || 'UTC'}"
+		if trigger != "" {
+			hx-get={ fmt.Sprintf("/components/playtime/%s", chartId) }
+			hx-trigger={ trigger }
+			hx-swap="outerHTML"
+		}
+	>
+		{ children... }
+	</div>
 }
 
 templ TimezoneToggle(chartId string, usingLocalTime bool) {
-    <button 
-            class="flex flex-row items-center justify-center p-[1px] slot"
-            hx-get={fmt.Sprintf("/components/playtime/%s", chartId)}
-            hx-vals={fmt.Sprintf(`{"usingLocalTime": %t}`, !usingLocalTime)}
-            hx-trigger="click"
-            hx-target="#PlaytimeHolder"
-            hx-swap="outerHTML"
-        >
-            <div class={"px-2 py-1", templ.KV("text-white text-shadow-xs raised-slot-hover", !usingLocalTime), templ.KV("text-black", usingLocalTime)}>
-                UTC
-            </div>
-            <div class={"px-2 py-1", templ.KV("text-white text-shadow-xs raised-slot-hover", usingLocalTime), templ.KV("text-black", !usingLocalTime)}>
-                Local
-            </div>
-        </button>
+	<button
+		class="flex flex-row items-center justify-center p-[1px] slot"
+		hx-get={ fmt.Sprintf("/components/playtime/%s", chartId) }
+		hx-vals={ fmt.Sprintf(`{"usingLocalTime": %t}`, !usingLocalTime) }
+		hx-trigger="click"
+		hx-target="#PlaytimeHolder"
+		hx-swap="outerHTML"
+	>
+		<div class={ "px-2 py-1", templ.KV("text-white text-shadow-xs raised-slot-hover", !usingLocalTime), templ.KV("text-black", usingLocalTime) }>
+			UTC
+		</div>
+		<div class={ "px-2 py-1", templ.KV("text-white text-shadow-xs raised-slot-hover", usingLocalTime), templ.KV("text-black", !usingLocalTime) }>
+			Local
+		</div>
+	</button>
 }
 
 templ PlaytimeLoader() {
-    <div class="flex flex-col w-full">
-        <div class="relative flex flex-row items-center gap-1 text-white group">
-            <h2 class="">Playtime</h2>
-        </div>    
-        @playtimeHolder("total", true, false) {
-            <div class="flex items-center justify-center mt-4 w-full h-[768px]">
-                @utils.StaticIndicator("")
-            </div>
-        }
-    </div>
+	<div class="flex flex-col w-full">
+		<div class="relative flex flex-row items-center gap-1 text-white group">
+			<h2 class="">Playtime</h2>
+		</div>
+		@playtimeHolder("total", true, false) {
+			<div class="flex items-center justify-center mt-4 w-full h-[768px]">
+				@utils.StaticIndicator("")
+			</div>
+		}
+	</div>
 }
 
 templ PlaytimeHeader(chartId string, label string, usingLocalTime bool, showTimezoneToggle bool) {
-    <div class="flex justify-between w-full gap-2 pt-2 sm:w-auto sm:items-center">
-        <div class="flex flex-col w-full sm:w-auto">
-            <button
-                class="w-full h-full px-2 py-1 font-semibold sm:h-auto sm:font-normal text-md raised-slot-button"
-                hx-get="/components/playtime/selector"
-                hx-target="#playtimeSelectorHolder"
-                hx-swap="outerHTML"
-                hx-trigger="click"
-                hx-disabled-elt="this"
-            >
-                {label}
-            </button>
-            <span id="playtimeSelectorHolder"/>
-        </div>
-
-        if showTimezoneToggle {
-            @TimezoneToggle(chartId, usingLocalTime)
-        }
-    </div>
+	<div class="flex justify-between w-full gap-2 pt-2 sm:w-auto sm:items-center">
+		<div class="flex flex-col w-full sm:w-auto">
+			<button
+				class="w-full h-full px-2 py-1 font-semibold sm:h-auto sm:font-normal text-md raised-slot-button"
+				hx-get="/components/playtime/selector"
+				hx-target="#playtimeSelectorHolder"
+				hx-swap="outerHTML"
+				hx-trigger="click"
+				hx-disabled-elt="this"
+			>
+				{ label }
+			</button>
+			<span id="playtimeSelectorHolder"></span>
+		</div>
+		if showTimezoneToggle {
+			@TimezoneToggle(chartId, usingLocalTime)
+		}
+	</div>
 }

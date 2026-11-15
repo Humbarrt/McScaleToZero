@@ -31,7 +31,7 @@ func indexPageHandler(app *model.App) gin.HandlerFunc {
 		isAdmin, err := utils.IsAdmin(ctx)
 		if err != nil {
 			logging.Error("Error checking admin status", "error", err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			utils.RenderError(ctx, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 

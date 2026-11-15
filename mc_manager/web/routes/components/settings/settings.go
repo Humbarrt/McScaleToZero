@@ -12,6 +12,7 @@ func Routes(route *gin.RouterGroup, app *model.App) {
 	{
 		settings.GET("/server", getServerConfigHandler(app))
 		settings.POST("/server", middleware.BlockIfNotAdmin(), postServerConfigHandler(app))
+		settings.POST("/whitelist", middleware.BlockIfNotAdmin(), postWhitelistUpdateHandler(app))
 
 		settings.GET("/billing", getBillingConfigHandler(app))
 		settings.POST("/billing", middleware.BlockIfNotAdmin(), postBillingConfigHandler(app))

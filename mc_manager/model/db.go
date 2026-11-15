@@ -87,3 +87,38 @@ type BilledPlayerTime struct {
 	Playtime time.Duration `json:"playtime"`
 	CPUTime  time.Duration `json:"cpu_time"`
 }
+
+type LocalInvoiceServiceConfig struct {
+	InvoiceCurrency string `json:"invoice_currency"`
+	PayingPlayerId  *int64 `json:"paying_player_id"`
+}
+
+type LocalInvoiceServicePayment struct {
+	Id          int64           `json:"id"`
+	PlayerId    int64           `json:"player_id"`
+	Amount      decimal.Decimal `json:"amount"`
+	Description string          `json:"description"`
+	EditedAt    *time.Time      `json:"edited_at"`
+	CreatedAt   time.Time       `json:"created"`
+}
+
+type LocalInvoiceServiceInvoice struct {
+	Id          int64           `json:"id"`
+	Amount      decimal.Decimal `json:"amount"`
+	Description string          `json:"description"`
+	CreatedAt   time.Time       `json:"created_at"`
+}
+
+type LocalInvoiceServiceInvoiceItem struct {
+	Id        int64           `json:"id"`
+	InvoiceId int64           `json:"invoice_id"`
+	PlayerId  int64           `json:"player_id"`
+	Amount    decimal.Decimal `json:"amount"`
+}
+
+type ExtendedLocalInvoiceServiceInvoiceItem struct {
+	Id          int64           `json:"id"`
+	Amount      decimal.Decimal `json:"amount"`
+	Description string          `json:"description"`
+	CreatedAt   time.Time       `json:"created_at"`
+}

@@ -10,7 +10,6 @@ import (
 	"mc_manager/logging"
 	"mc_manager/model"
 	"slices"
-	"time"
 )
 
 type mcPlayer struct {
@@ -30,6 +29,7 @@ func updatePlayersInDB(db *db.DB, players []*mcPlayer) (*[]int64, error) {
 			if err != nil {
 				return &playerIds, err
 			}
+
 			dbPlayer, err = queries.GetPlayerByUUID(db, mcPlayer.UUID)
 			if err != nil {
 				return &playerIds, err
@@ -42,14 +42,6 @@ func updatePlayersInDB(db *db.DB, players []*mcPlayer) (*[]int64, error) {
 		}
 		playerIds = append(playerIds, dbPlayer.Id)
 	}
-
-	if addedNewPlayer {
-		go func() {
-			time.Sleep(100 * time.Millisecond)
-			app.EB.Broadcast(model.EB_EVENT_NEW_PLAYER)
-		}()
-	}
-
 	return &playerIds, nil
 }
 
@@ -143,27 +135,4 @@ func RemoveSessionsFromNonWhitelistedPlayers(app *model.App) error {
 		}
 	}
 	return nil
-}
-
-func UpdateWhitelistAndAdmins(app *model.App) error {
-	whitelist, admins, err := downloadMcFiles(app)
-	if err != nil {
-		logging.Warn("Error downloading player files, trying again.", "error", err)
-
-		time.Sleep(5 * time.Second)
-		whitelist, admins, err = downloadMcFiles(app)
-		if err != nil {
-			logging.Error("Error downloading player files, giving up.", "error", err)
-			return err
-		}
-	}
-
-	logging.Debug("Whitelist and Admins loaded", "whitelist", whitelist, "admins", admins)
-	err = processMcPlayers(app.Db, whitelist, admins)
-	if err != nil {
-		logging.Error("Error processing players", "error", err)
-		return err
-	}
-
-	return RemoveSessionsFromNonWhitelistedPlayers(app)
 }

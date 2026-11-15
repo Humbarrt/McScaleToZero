@@ -17,13 +17,14 @@ type serverWatcher struct {
 	retries int
 
 	//protected
-	mutex       sync.Mutex
-	_try        int
-	_isWatching bool
-	_lastSeen   time.Time
-	_isOnline   bool
-	_isReady    bool
-	_ipv4       *string
+	mutex                sync.Mutex
+	_try                 int
+	_isWatching          bool
+	_lastSeen            time.Time
+	_isOnline            bool
+	_isReady             bool
+	_ipv4                *string
+	_isUpdatingWhitelist bool
 }
 
 func NewServerWatcher(app *model.App) *serverWatcher {
@@ -58,6 +59,12 @@ func (sw *serverWatcher) LastSeen() time.Time {
 	sw.mutex.Lock()
 	defer sw.mutex.Unlock()
 	return sw._lastSeen
+}
+
+func (sw *serverWatcher) IsUpdatingWhitelist() bool {
+	sw.mutex.Lock()
+	defer sw.mutex.Unlock()
+	return sw._isUpdatingWhitelist
 }
 
 func (sw *serverWatcher) StartWatchingServer() {
@@ -113,7 +120,7 @@ func (sw *serverWatcher) StartWatchingServer() {
 			sw._isOnline = true
 			sw.mutex.Unlock()
 
-			go UpdateWhitelistAndAdmins(sw.App)
+			go sw.UpdateWhitelistAndAdmins()
 			go (func() {
 				err := BackupWorld(sw.App)
 				if err != nil {
@@ -208,4 +215,68 @@ func (sw *serverWatcher) StartWatchingServer() {
 	}
 
 	logging.Info("ServerWatcher stopped")
+}
+
+func (sw *serverWatcher) UpdateWhitelistAndAdmins() error {
+	sw.mutex.Lock()
+	if sw._isUpdatingWhitelist {
+		sw.mutex.Unlock()
+		logging.Info("Whitelist and Admins update already in progress")
+		return nil
+	}
+	sw._isUpdatingWhitelist = true
+	sw.App.EB.Broadcast(model.EB_EVENT_UPDATING_WHITELIST)
+	sw.mutex.Unlock()
+
+	defer func() {
+		sw.mutex.Lock()
+		sw._isUpdatingWhitelist = false
+		sw.App.EB.Broadcast(model.EB_EVENT_UPDATED_WHITELIST)
+		sw.mutex.Unlock()
+	}()
+
+	logging.Info("Updating whitelist and admins")
+	if !sw.App.SW.IsServerReady() {
+		return fmt.Errorf("server is not ready, cannot update whitelist and admins")
+	}
+
+	players, err := queries.GetPlayers(sw.App.Db)
+	if err != nil {
+		logging.Error("Error getting players from database", "error", err)
+		return err
+	}
+
+	whitelist, admins, err := downloadMcFiles(sw.App)
+	if err != nil {
+		logging.Warn("Error downloading player files, trying again.", "error", err)
+
+		time.Sleep(5 * time.Second)
+		whitelist, admins, err = downloadMcFiles(sw.App)
+		if err != nil {
+			logging.Error("Error downloading player files, giving up.", "error", err)
+			return err
+		}
+	}
+
+	logging.Debug("Whitelist and Admins loaded", "whitelist", whitelist, "admins", admins)
+	err = processMcPlayers(sw.App.Db, whitelist, admins)
+	if err != nil {
+		logging.Error("Error processing players", "error", err)
+		return err
+	}
+
+	newPlayers, err := queries.GetPlayers(sw.App.Db)
+	if err != nil {
+		logging.Error("Error getting players from database", "error", err)
+		return err
+	}
+
+	if len(newPlayers) != len(players) {
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			sw.App.EB.Broadcast(model.EB_EVENT_NEW_PLAYER)
+		}()
+	}
+
+	return RemoveSessionsFromNonWhitelistedPlayers(sw.App)
 }
