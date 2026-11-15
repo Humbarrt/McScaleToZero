@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Stage 1: Build ---
-FROM --platform=linux/amd64 golang:1.24.3 AS builder
+FROM golang:1.27.4 AS builder
 
 # Install compiler and libc headers
 RUN apt-get update && apt-get install -y gcc libc6-dev
@@ -13,9 +13,10 @@ COPY . .
 RUN CGO_ENABLED=1 go build -o mc_manager -ldflags="-X 'main.version=1.0'" .
 
 # --- Stage 2: Runtime ---
-FROM golang:1.24.3
+FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y ca-certificates sqlite3 libsqlite3-0 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates sqlite3 libsqlite3-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
