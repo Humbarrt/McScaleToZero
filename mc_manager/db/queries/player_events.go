@@ -104,8 +104,8 @@ func GetPlayersEvents(DB *db.DB, timeframe model.Timeframe) ([]*model.PlayerEven
 	}
 
 	result, err := stmt.Query(
-		sql.Named("start_time", timeframe.Start),
-		sql.Named("end_time", timeframe.End),
+		sql.Named("start_time", timeframe.Start.UTC()),
+		sql.Named("end_time", timeframe.End.UTC()),
 	)
 	if err != nil {
 		return nil, err
@@ -131,8 +131,8 @@ func CalculatePlaytime(DB *db.DB, timeframe model.Timeframe) (map[int64]time.Dur
 	}
 
 	result, err := stmt.Query(
-		sql.Named("start_time", timeframe.Start),
-		sql.Named("end_time", timeframe.End),
+		sql.Named("start_time", timeframe.Start.UTC()),
+		sql.Named("end_time", timeframe.End.UTC()),
 	)
 	if err != nil {
 		return nil, err

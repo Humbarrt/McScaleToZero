@@ -11,11 +11,20 @@ import (
 	"time"
 )
 
-func BackupWorld(app *model.App) error {
-	backupPath := path.Join(app.Config.GetDataPath(), "backups")
+func getBackupPath(dataPath string) (string, error) {
+	backupPath := path.Join(dataPath, "backups")
 	err := os.MkdirAll(backupPath, 0755)
 	if err != nil {
 		logging.Error("Error creating backup path:", "error", err)
+		return "", err
+	}
+	return backupPath, nil
+}
+
+func BackupWorld(app *model.App) error {
+	backupPath, err := getBackupPath(app.Config.GetDataPath())
+	if err != nil {
+		logging.Error("Error getting backup path:", "error", err)
 		return err
 	}
 

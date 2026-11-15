@@ -13,5 +13,6 @@ SET "mc_port" = ?,
     "tax_rate" = ?,
     "network_ratio" = ?,
     "fallback_fixed_cost" = ?,
-    "fallback_variable_cost" = ?
+    "fallback_variable_cost" = ?,
+    "last_invoice_service" = ?
 WHERE "id" = 1;

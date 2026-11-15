@@ -47,6 +47,7 @@ type Config interface {
 	SetFallbackFixedCost(fallbackFixedCost decimal.Decimal) error
 	GetFallbackVariableCost() decimal.Decimal
 	SetFallbackVariableCost(fallbackVariableCost decimal.Decimal) error
+	GetLastInvoiceService() *InvoiceServiceType
 }
 
 type MutableConfig struct {
@@ -65,4 +66,5 @@ type MutableConfig struct {
 	NetworkRatio         decimal.Decimal
 	FallbackFixedCost    decimal.Decimal
 	FallbackVariableCost decimal.Decimal
+	LastInvoiceService   *InvoiceServiceType
 }

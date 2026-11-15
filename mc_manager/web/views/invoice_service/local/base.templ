@@ -1,0 +1,49 @@
+package local
+
+import (
+	"mc_manager/model"
+	"mc_manager/web/views/utils"
+)
+
+templ Loader(swapEvents []model.EB_EventType) {
+	<div
+		class="flex flex-col w-full p-4 pt-0 rounded-lg shadow-md sm:max-w-max panel sm:min-w-80"
+		hx-get="/is/local/config"
+		hx-trigger={ "load" + utils.EventsFormatter(swapEvents) }
+		hx-swap="innerHTML"
+		id="localConfigHolder"
+		hx-vals="js:{
+            localConfigSuccessIcon: document.getElementById('localConfigSuccessIcon')?.classList?.contains('hidden') == false || false,
+        }"
+	>
+		<div class="flex items-center justify-center h-32 mt-4 w-96">
+			@utils.StaticIndicator("")
+		</div>
+	</div>
+	<script>
+        function resetLocalConfigSaveIcons(event) {
+            setTimeout(function() {
+                let successIconElement = document.getElementById("localConfigSuccessIcon");
+                let saveIconElement = document.getElementById("localConfigSaveIcon");
+                if (successIconElement == null || saveIconElement == null) {
+                    console.error("Error: Could not find the success or copy icon element.");
+                    return;
+                }
+                successIconElement.classList.add("hidden");
+                saveIconElement.classList.remove("hidden");
+            }, 3000);
+        }
+        function resetLocalPaymentSaveIcon(event) {
+          console.log("Resetting local payment save icon");
+            setTimeout(function() {
+                let successIconElement = document.getElementById("localPaymentSuccessIcon");
+                if (successIconElement == null) {
+                    console.error("Error: Could not find the success or copy icon element.");
+                    return;
+                }
+                successIconElement.classList.add("hidden");
+            }, 3000);
+        }
+    </script>
+	@OverviewLoader(swapEvents)
+}

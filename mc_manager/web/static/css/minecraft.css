@@ -1,10 +1,10 @@
-/* 
+/*
 Fonts: Minecraft, Monocraft, Minecrafter, Minecraft Alt, Minecraft Evenings
 CSS Variables:
     --block-size: 48px; all sizing is relative to this property to keep everything tiled together
     --zoom: 1; Set indiviualy for each class use this property to control how 'zoomed' in or out you want your UI textures to be
     --( 1/16 | 1/8 | 1/4 | 1/2 )-block
-    --{1-32}-block 
+    --{1-32}-block
 Classes:
     text-shadow-(xs|sm|md|lg|xl)
     link
@@ -640,4 +640,40 @@ Classes:
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
+}
+
+.history-table {
+	display: block;
+}
+
+.history-table tbody {
+	display: grid;
+	grid-template-columns: max-content max-content max-content max-content max-content;
+}
+
+.history-table tr {
+	display: grid;
+	grid-column: 1 / -1;
+	grid-template-columns: subgrid;
+	grid-template-rows: auto;
+	grid-auto-flow: column;      /* extra cells go sideways, never onto a new line */
+	align-items: center;
+	column-gap: 1.5rem;
+	padding: 0 0.5rem;
+	box-sizing: border-box;
+}
+
+.history-table tr > td {
+	grid-row: 1;                 /* all cells stay on the first row of the tr */
+	display: block;
+	position: static;
+	margin: 0;
+	padding: 0;
+	border: none;
+	border-image: none;
+	min-width: 0;
+}
+
+.history-table tr > td:last-child {
+	text-align: right;
 }

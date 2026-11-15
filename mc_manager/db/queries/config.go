@@ -20,12 +20,21 @@ func GetMutableConfig(DB *db.DB) (*model.MutableConfig, error) {
 	var networkRatioInt int64
 	var fallbackFixedCostInt int64
 	var fallbackVariableCostInt int64
-	err = result.Scan(&config.MCServerPort, &config.OnlineImage, &config.OnlineMOTD, &config.OfflineImage, &config.OfflineMOTD, &config.ReplaceMOTD, &config.LastImage, &config.LastMOTD, &config.ProtocolVersion, &config.MaxPlayers, &config.BackupsToKeep, &taxRateInt, &networkRatioInt, &fallbackFixedCostInt, &fallbackVariableCostInt)
+	var lastInvoiceServiceString *string
+	err = result.Scan(&config.MCServerPort, &config.OnlineImage, &config.OnlineMOTD, &config.OfflineImage, &config.OfflineMOTD, &config.ReplaceMOTD, &config.LastImage, &config.LastMOTD, &config.ProtocolVersion, &config.MaxPlayers, &config.BackupsToKeep, &taxRateInt, &networkRatioInt, &fallbackFixedCostInt, &fallbackVariableCostInt, &lastInvoiceServiceString)
 	if err != nil {
 		return nil, err
 	}
 	if config.MCServerPort == 0 {
 		return nil, fmt.Errorf("MCServerPort is not set")
+	}
+
+	if lastInvoiceServiceString != nil && *lastInvoiceServiceString != "" {
+		invoiceService, err := model.StringToInvoiceServiceType(*lastInvoiceServiceString)
+		if err != nil {
+			return nil, err
+		}
+		config.LastInvoiceService = &invoiceService
 	}
 
 	config.TaxRate = intToDecimal(taxRateInt)
@@ -173,13 +182,22 @@ func UpdateFallbackVariableCost(DB *db.DB, fallbackVariableCost decimal.Decimal)
 	return updateConfig(DB, config)
 }
 
+func UpdateLastInvoiceService(DB *db.DB, invoiceService model.InvoiceServiceType) error {
+	config, err := GetMutableConfig(DB)
+	if err != nil {
+		return err
+	}
+	config.LastInvoiceService = &invoiceService
+	return updateConfig(DB, config)
+}
+
 func updateConfig(DB *db.DB, config *model.MutableConfig) error {
 	stmt, err := DB.GetStmt("update_config")
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(config.MCServerPort, config.OnlineImage, config.OnlineMOTD, config.OfflineImage, config.OfflineMOTD, config.ReplaceMOTD, config.LastImage, config.LastMOTD, config.ProtocolVersion, config.MaxPlayers, config.BackupsToKeep, decimalToInt(config.TaxRate), decimalToInt(config.NetworkRatio), decimalToInt(config.FallbackFixedCost), decimalToInt(config.FallbackVariableCost))
+	_, err = stmt.Exec(config.MCServerPort, config.OnlineImage, config.OnlineMOTD, config.OfflineImage, config.OfflineMOTD, config.ReplaceMOTD, config.LastImage, config.LastMOTD, config.ProtocolVersion, config.MaxPlayers, config.BackupsToKeep, decimalToInt(config.TaxRate), decimalToInt(config.NetworkRatio), decimalToInt(config.FallbackFixedCost), decimalToInt(config.FallbackVariableCost), config.LastInvoiceService)
 	if err != nil {
 		return err
 	}

@@ -68,16 +68,10 @@ func NewSplitwiseAPI(app *model.App) (*SplitwiseAPI, error) {
 	}, nil
 }
 
-func (s *SplitwiseAPI) updateState(state model.InvoiceServiceStatus) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	s._state = state
-}
-
 func (s *SplitwiseAPI) Init() error {
 	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if s._state == model.StatusInvoiceServicePending || s._state == model.StatusInvoiceServiceReady {
-		s.mutex.Unlock()
 		return nil
 	}
 
@@ -86,9 +80,6 @@ func (s *SplitwiseAPI) Init() error {
 		s._client = nil
 	}
 	s._state = model.StatusInvoiceServicePending
-	s.mutex.Unlock()
-	s.updateState(model.StatusInvoiceServicePending)
-
 	s._client = &spw.Client{
 		Token: s.token,
 	}
@@ -103,7 +94,7 @@ func (s *SplitwiseAPI) Init() error {
 	s._currencies = config.Currencies
 	s._users = config.Users
 
-	s.updateState(model.StatusInvoiceServiceReady)
+	s._state = model.StatusInvoiceServiceReady
 	return nil
 }
 
@@ -131,6 +122,8 @@ func (s *SplitwiseAPI) SyncBills() error {
 			return fmt.Errorf("error creating Splitwise invoice: %w", err)
 		}
 	}
+
+	s.app.EB.Broadcast(model.EB_EVENT_BILLS_SYNCED)
 
 	return nil
 }
@@ -420,7 +413,7 @@ func (s *SplitwiseAPI) SetCurrency(currency string) error {
 	return nil
 }
 
-func (s *SplitwiseAPI) Routes(route *gin.Engine, app *model.App) {
+func (s *SplitwiseAPI) Routes(route *gin.RouterGroup, app *model.App) {
 	splitwise := route.Group("/splitwise")
 	{
 		splitwise.GET("/", getSplitwiseConfigHandler(app, s))
@@ -430,5 +423,5 @@ func (s *SplitwiseAPI) Routes(route *gin.Engine, app *model.App) {
 }
 
 func (s *SplitwiseAPI) WebLoader() templ.Component {
-	return splitwise_view.Loader([]model.EB_EventType{model.EB_EVENT_INVOICE_CONFIG_UPDATE, model.EB_EVENT_NEW_BILL})
+	return splitwise_view.Loader([]model.EB_EventType{model.EB_EVENT_INVOICE_CONFIG_UPDATE, model.EB_EVENT_NEW_BILL, model.EB_EVENT_NEW_PLAYER, model.EB_EVENT_BILLS_SYNCED})
 }

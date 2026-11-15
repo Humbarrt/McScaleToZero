@@ -22,14 +22,14 @@ func getSplitwiseConfigHandler(app *model.App, s *SplitwiseAPI) gin.HandlerFunc 
 		isAdmin, err := utils.IsAdmin(ctx)
 		if err != nil {
 			logging.Error("Error checking admin status", "error", err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			utils.RenderError(ctx, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 
 		players, err := queries.GetPlayers(app.Db)
 		if err != nil {
 			logging.Error("Error fetching players", "error", err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			utils.RenderError(ctx, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 
@@ -50,7 +50,7 @@ func getSplitwiseConfigHandler(app *model.App, s *SplitwiseAPI) gin.HandlerFunc 
 		unsyncedBills, err := queries.GetUnsyncedBills(app.Db)
 		if err != nil {
 			logging.Error("Error fetching unsynced bills", "error", err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			utils.RenderError(ctx, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 
@@ -71,14 +71,14 @@ func postSplitwiseConfigHandler(app *model.App, s *SplitwiseAPI) gin.HandlerFunc
 		}
 		if err := ctx.ShouldBind(&form); err != nil {
 			logging.Error("Error binding form", "error", err)
-			ctx.String(http.StatusBadRequest, "Invalid form")
+			utils.RenderError(ctx, http.StatusBadRequest, "Invalid form")
 			return
 		}
 
 		players, err := queries.GetPlayers(app.Db)
 		if err != nil {
 			logging.Error("Error fetching players", "error", err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			utils.RenderError(ctx, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 
@@ -111,7 +111,7 @@ func postSplitwiseConfigHandler(app *model.App, s *SplitwiseAPI) gin.HandlerFunc
 			err := queries.UpdatePlayerInvoiceServiceUserId(app.Db, playerId, splitwiseUserId)
 			if err != nil {
 				logging.Error("Error updating player invoice service user ID", "playerId", playerId, "splitwiseUserId", splitwiseUserId, "error", err)
-				ctx.String(http.StatusInternalServerError, "Error updating player invoice service user ID")
+				utils.RenderError(ctx, http.StatusInternalServerError, "Error updating player invoice service user ID")
 				return
 			}
 		}
@@ -119,7 +119,7 @@ func postSplitwiseConfigHandler(app *model.App, s *SplitwiseAPI) gin.HandlerFunc
 		err = s.SetCurrency(form.InvoiceCurrency)
 		if err != nil {
 			logging.Error("Error setting splitwise currency", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error setting splitwise currency")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error setting splitwise currency")
 			return
 		}
 
@@ -139,7 +139,7 @@ func getSplitwiseUsersHandler(app *model.App, s *SplitwiseAPI) gin.HandlerFunc {
 		err := s.UpdateUsers()
 		if err != nil {
 			logging.Error("Error updating splitwise users", "error", err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			utils.RenderError(ctx, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 

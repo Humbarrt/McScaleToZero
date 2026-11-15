@@ -244,6 +244,8 @@ func GetBillingMonths(DB *db.DB) ([]model.YearMonth, error) {
 	rows, err := stmt.Query()
 	if err != nil {
 		return nil, err
+	} else if rows.Err() != nil {
+		return nil, rows.Err()
 	}
 	defer rows.Close()
 
@@ -268,6 +270,8 @@ func GetBilledPlayerTime(DB *db.DB) ([]*model.BilledPlayerTime, error) {
 	rows, err := stmt.Query()
 	if err != nil {
 		return nil, err
+	} else if rows.Err() != nil {
+		return nil, rows.Err()
 	}
 	defer rows.Close()
 
@@ -292,6 +296,8 @@ func GetBilledPlayerTimeForTimespan(DB *db.DB, start int, end int) ([]*model.Bil
 	rows, err := stmt.Query(start, end)
 	if err != nil {
 		return nil, err
+	} else if rows.Err() != nil {
+		return nil, rows.Err()
 	}
 	defer rows.Close()
 

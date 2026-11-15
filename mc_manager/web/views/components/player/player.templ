@@ -1,36 +1,32 @@
 package player
 
 import (
-    "mc_manager/web/views/utils"
-    "mc_manager/model"
-    "fmt"
+	"fmt"
+	"mc_manager/model"
+	"mc_manager/web/views/utils"
 )
+
 templ sectionLoader(name string, swapEvents []model.EB_EventType, height int) {
-    {{
-        swapEventsString := ""
-        for _, event := range swapEvents {
-            swapEventsString += fmt.Sprintf(",sse:%d", event)
-        }
-    }}
-    <div class="flex flex-col w-full p-4 pt-0 rounded-lg shadow-md sm:max-w-max panel sm:min-w-80"
-        hx-get={"/components/player/" + name}
-        hx-trigger={"load" + swapEventsString}
-        hx-swap="innerHTML"
-        id={name+"Holder"}
-    >
-        <div class="flex items-center justify-center w-full mt-4 sm:w-96" style={"height: " + fmt.Sprintf("%dpx", height - 40)}>
-            @utils.StaticIndicator("")
-        </div>
-    </div>
+	<div
+		class="flex flex-col w-full p-4 pt-0 rounded-lg shadow-md sm:max-w-max panel sm:min-w-80"
+		hx-get={ "/components/player/" + name }
+		hx-trigger={ "load" + utils.EventsFormatter(swapEvents) }
+		hx-swap="innerHTML"
+		id={ name + "Holder" }
+	>
+		<div class="flex items-center justify-center w-full mt-4 sm:w-96" style={ "height: " + fmt.Sprintf("%dpx", height-40) }>
+			@utils.StaticIndicator("")
+		</div>
+	</div>
 }
 
 templ Loader() {
-    <div class="w-full">
-        <div class="relative flex flex-row items-center gap-1 text-white group">
-            <h2 class="">Player</h2>
-        </div>
-        <div class="flex flex-col flex-wrap items-start w-full gap-4 sm:flex-row">
-            @playerSessionsLoader()
-        </div>
-    </div>
+	<div class="w-full">
+		<div class="relative flex flex-row items-center gap-1 text-white group">
+			<h2 class="">Player</h2>
+		</div>
+		<div class="flex flex-col flex-wrap items-start w-full gap-4 sm:flex-row">
+			@playerSessionsLoader()
+		</div>
+	</div>
 }

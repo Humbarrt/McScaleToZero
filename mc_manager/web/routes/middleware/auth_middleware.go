@@ -82,7 +82,7 @@ func BlockIfUnauthenticated() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		auth, exists := ctx.Get("auth")
 		if !exists || auth == false {
-			ctx.String(http.StatusForbidden, "You are not authorized to access this resource")
+			utils.RenderError(ctx, http.StatusForbidden, "You are not authorized to access this resource")
 			ctx.Abort()
 			return
 		}
@@ -101,13 +101,13 @@ func BlockIfNotAdmin() gin.HandlerFunc {
 		isAdminAny, exists := ctx.Get("isAdmin")
 		if !exists || isAdminAny == nil {
 			ctx.Abort()
-			ctx.String(http.StatusForbidden, "You are not authorized to access this resource")
+			utils.RenderError(ctx, http.StatusForbidden, "You are not authorized to access this resource")
 			return
 		}
 		isAdmin, ok := isAdminAny.(bool)
 		if !ok || !isAdmin {
 			ctx.Abort()
-			ctx.String(http.StatusForbidden, "You are not authorized to access this resource")
+			utils.RenderError(ctx, http.StatusForbidden, "You are not authorized to access this resource")
 			return
 		}
 

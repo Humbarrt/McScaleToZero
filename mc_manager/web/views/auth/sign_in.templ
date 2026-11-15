@@ -1,61 +1,65 @@
 package auth
 
 import (
-	"mc_manager/web/views/utils"
+	"fmt"
 	"mc_manager/model"
-    "fmt"
+	"mc_manager/web/views/utils"
 )
 
 templ SignInForm(player *model.Player, clientKey []byte, err error) {
-    {{  
-        playerIdString := ""
-        if player != nil {
-            playerIdString = fmt.Sprintf("%d", player.Id)
-        }
+	{{
+		playerIdString := ""
+		if player != nil {
+			playerIdString = fmt.Sprintf("%d", player.Id)
+		}
 
-        playerName := ""
-        if player != nil && len(player.Aliases) > 0 {
-            playerName = player.Aliases[0]
-        }
-
-    }}
-    <form 
-        hx-post="/auth/signin"
-        hx-target="#auth"
-        hx-swap="innerHTML"
-        hx-on:htmx:before-request="passwordProcess()"
-        hx-vals={ fmt.Sprintf(`{"playerId": %s}`, playerIdString) }
-    >
-        <div class="flex items-center justify-center mb-4">
-            <h3 class="text-2xl text-white text-shadow-md">Hi, {playerName}</h3>
-        </div>
-        <label for="password" class="block mb-2 text-dark-gray">Password</label>
-        <input type="password" id="password"
-            class="w-full mb-1 input"
-            placeholder="Enter your new password"
-            required
-        />
-        <label for="password" class="block w-full mb-1 text-right text-dark-gray">
-        <button class="hover:text-blue"
-            hx-targert="#auth"
-            hx-swap="innerHTML"
-            hx-get="/auth/forgot"
-            hx-vals={ fmt.Sprintf(`{"playerId": %s}`, playerIdString) }
-        >Forgot Password?</button></label>
-        if err != nil {
-            <div class="mt-1 text-dark-red" id="passwordErrorLabel">
-                    {err.Error()}
-            </div>
-        }
-        
-        <button class="w-full px-4 py-2 mt-5 text-lg btn raised-slot-button h-1-block whitespace-nowrap" type="submit">
-            <span class="htmx-inverse-indicator">Sign in</span>
-            @utils.Indicator("signInIndicator", "m-auto")
-        </button>
-    </form>
-    
-    @templ.JSONScript("clientKey", clientKey)
-    <script>
+		playerName := ""
+		if player != nil && len(player.Aliases) > 0 {
+			playerName = player.Aliases[0]
+		}
+	}}
+	<form
+		hx-post="/auth/signin"
+		hx-target="#auth"
+		hx-swap="innerHTML"
+		id="signInFormStep2"
+		hx-on:htmx:before-request="passwordProcess()"
+		hx-vals={ fmt.Sprintf(`{"playerId": %s}`, playerIdString) }
+	>
+		<div class="flex items-center justify-center mb-4">
+			<h3 class="text-2xl text-white text-shadow-md">Hi, { playerName }</h3>
+		</div>
+		<input type="text" name="username" autocomplete="username" value={ playerName } hidden/>
+		<label for="password" class="block mb-2 text-dark-gray">Password</label>
+		<input
+			type="password"
+			id="password"
+			class="w-full mb-1 input"
+			autocomplete="current-password"
+			placeholder="Enter your new password"
+			required
+		/>
+		<label for="password" class="block w-full mb-1 text-right text-dark-gray">
+			<button
+				class="hover:text-blue"
+				hx-targert="#auth"
+				hx-swap="innerHTML"
+				hx-get="/auth/forgot"
+				hx-vals={ fmt.Sprintf(`{"playerId": %s}`, playerIdString) }
+			>Forgot Password?</button>
+		</label>
+		if err != nil {
+			<div class="mt-1 text-dark-red" id="passwordErrorLabel">
+				{ err.Error() }
+			</div>
+		}
+		<button class="w-full px-4 py-2 mt-5 text-lg btn raised-slot-button h-1-block whitespace-nowrap" type="submit">
+			<span class="htmx-inverse-indicator">Sign in</span>
+			@utils.Indicator("signInIndicator", "m-auto")
+		</button>
+	</form>
+	@templ.JSONScript("clientKey", clientKey)
+	<script>
         function passwordProcess() {
             try {
                 clientKey = JSON.parse(document.getElementById('clientKey')?.textContent || "");
@@ -87,5 +91,4 @@ templ SignInForm(player *model.Player, clientKey []byte, err error) {
             }
         }
     </script>
-
 }

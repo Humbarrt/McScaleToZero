@@ -7,6 +7,7 @@ import (
 	"mc_manager/logging"
 	"mc_manager/model"
 	"mc_manager/web/routes/middleware"
+	utils "mc_manager/web/web_utils"
 	"net/http"
 	"strconv"
 	"time"
@@ -39,7 +40,7 @@ func getAvatarHeadHandler(app *model.App) gin.HandlerFunc {
 		avatarHead, lastDownloaded, err := queries.GetPlayerAvatarHead(app.Db, playerId)
 		if err != nil {
 			logging.Error("Error getting player avatar head", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error getting avatar head")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error getting avatar head")
 			return
 		}
 
@@ -56,19 +57,19 @@ func getAvatarHeadHandler(app *model.App) gin.HandlerFunc {
 		player, err := queries.GetPlayerById(app.Db, playerId)
 		if err != nil {
 			logging.Error("Error getting player", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error getting player")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error getting player")
 			return
 		}
 
 		if len(player.Aliases) == 0 {
-			ctx.String(http.StatusNotFound, "Player has no aliases")
+			utils.RenderError(ctx, http.StatusNotFound, "Player has no aliases")
 			return
 		}
 
 		err = queries.UpdatePlayerAvatarHead(app.Db, player.Id, nil, time.Now())
 		if err != nil {
 			logging.Error("Error updating avatar head", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error updating avatar head")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error updating avatar head")
 			return
 		}
 
@@ -77,34 +78,34 @@ func getAvatarHeadHandler(app *model.App) gin.HandlerFunc {
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			logging.Error("Error creating request", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error creating request")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error creating request")
 			return
 		}
 		req.Header.Set("User-Agent", "McScaleToZero/1.0 (+https://github.com/Humbarrt/McScaleToZero)")
 		resp, err := client.Do(req)
 		if err != nil {
 			logging.Error("Error downloading avatar head", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error downloading avatar head")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error downloading avatar head")
 			return
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			logging.Error("Avatar head not found", "status", resp.StatusCode, "url", url)
-			ctx.String(http.StatusNotFound, "Avatar head not found")
+			utils.RenderError(ctx, http.StatusNotFound, "Avatar head not found")
 			return
 		}
 
 		avatarHead, err = io.ReadAll(resp.Body)
 		if err != nil {
 			logging.Error("Error reading avatar head", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error reading avatar head")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error reading avatar head")
 			return
 		}
 
 		err = queries.UpdatePlayerAvatarHead(app.Db, player.Id, avatarHead, time.Now())
 		if err != nil {
 			logging.Error("Error updating avatar head", "error", err)
-			ctx.String(http.StatusInternalServerError, "Error updating avatar head")
+			utils.RenderError(ctx, http.StatusInternalServerError, "Error updating avatar head")
 			return
 		}
 

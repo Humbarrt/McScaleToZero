@@ -12,6 +12,8 @@ type ServerWatcher interface {
 	StartWatchingServer()
 	IPv4() (string, error)
 	LastSeen() time.Time
+	IsUpdatingWhitelist() bool
+	UpdateWhitelistAndAdmins() error
 }
 
 type LogWatcher interface {

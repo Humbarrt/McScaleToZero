@@ -1,0 +1,80 @@
+package local
+
+import (
+	"fmt"
+	"mc_manager/model"
+	"mc_manager/web/views/utils"
+)
+
+templ IsSynced(isSynced bool) {
+	@utils.HelperLabel("Is Synced", "isSynced", "https://github.com/Humbarrt/McScaleToZero/wiki/Local#is-synced")
+	<div class="col-span-2" name="isSynced">
+		if isSynced {
+			<span class="text-green">synced</span>
+		} else {
+			<span class="text-red">not synced</span>
+		}
+	</div>
+}
+
+templ Config(isAdmin bool, hasSaved bool, players []*model.Player, payingPlayerId *int64, currencies []string, currentCurrency string, isSynced bool) {
+	<div class="flex flex-row items-center justify-between w-full mb-3">
+		<h3 class="pr-2">Local Invoice Service</h3>
+		if isAdmin {
+			<div class="flex flex-row gap-2">
+				<button
+					class="flex items-center justify-center w-8 h-8 raised-slot-button"
+					disabled?={ !isAdmin }
+					hx-get="/is/local/config"
+					hx-target="#localConfigHolder"
+					hx-swap="innerHTML"
+					hx-trigger="click"
+				>
+					<svg fill="none" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 4h-2v2h2v2H6v2H4v8h2v2h6v-2H6v-8h10v2h-2v2h2v-2h2v-2h2V8h-2V6h-2V4z" fill="currentColor"></path> </svg>
+				</button>
+				<button
+					class="flex items-center justify-center w-8 h-8 raised-slot-button"
+					disabled?={ !isAdmin }
+					hx-post="/is/local/config"
+					hx-target-*="#localConfigErrorLabel"
+					hx-target="#localConfigHolder"
+					hx-swap="innerHTML"
+					hx-trigger="click"
+					hx-include="[name='invoiceCurrency'], [name='payingPlayerId']"
+					onmouseleave="resetLocalConfigSaveIcons()"
+				>
+					<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class={ "w-6 h-6", templ.KV("hidden", hasSaved) } id="localConfigSaveIcon"><path d="M4 2h14v2H4v16h2v-6h12v6h2V6h2v16H2V2h2zm4 18h8v-4H8v4zM20 6h-2V4h2v2zM6 6h9v4H6V6z" fill="currentColor"></path></svg>
+					<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class={ "w-6 h-6 text-green", templ.KV("hidden", !hasSaved) } id="localConfigSuccessIcon"><path d="M18 6h2v2h-2V6zm-2 4V8h2v2h-2zm-2 2v-2h2v2h-2zm-2 2h2v-2h-2v2zm-2 2h2v-2h-2v2zm-2 0v2h2v-2H8zm-2-2h2v2H6v-2zm0 0H4v-2h2v2z" fill="currentColor"></path></svg>
+				</button>
+			</div>
+		}
+	</div>
+	<div class="grid w-full grid-cols-[auto,auto] gap-4 sm:grid-cols-[auto,auto,auto] sm:max-w-max">
+		{{
+			//Currency Selection
+			currencyOptions := make([]utils.FormSelectOption, 0)
+			for _, currency := range currencies {
+				currencyOptions = append(currencyOptions, utils.FormSelectOption{Value: currency, Label: currency})
+			}
+
+			// PayingPlayer Selection
+			selectedPlayer := ""
+			if payingPlayerId != nil {
+				selectedPlayer = fmt.Sprintf("%d", *payingPlayerId)
+			}
+
+			payingPlayerOptions := make([]utils.FormSelectOption, 0)
+			for _, player := range players {
+				playerName := "Unknown"
+				if len(player.Aliases) > 0 {
+					playerName = player.Aliases[0]
+				}
+				payingPlayerOptions = append(payingPlayerOptions, utils.FormSelectOption{Value: fmt.Sprintf("%d", player.Id), Label: playerName})
+			}
+		}}
+		@IsSynced(isSynced)
+		@utils.FormSelect(isAdmin, "Invoice Currency", "invoiceCurrency", currencyOptions, currentCurrency, "https://github.com/Humbarrt/McScaleToZero/wiki/Local#invoice-currency")
+		@utils.FormSelect(isAdmin, "Paying Player", "payingPlayerId", payingPlayerOptions, selectedPlayer, "https://github.com/Humbarrt/McScaleToZero/wiki/Local#paying-player")
+	</div>
+	<div class="mt-1 text-dark-red" id="localConfigErrorLabel"></div>
+}

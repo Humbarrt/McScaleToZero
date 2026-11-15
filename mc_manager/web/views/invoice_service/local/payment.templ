@@ -1,0 +1,93 @@
+package local
+
+import (
+	"fmt"
+	"github.com/shopspring/decimal"
+	"mc_manager/model"
+	"mc_manager/web/views/utils"
+)
+
+templ Payment(paymentId *int64, cachePlayerResponse []*model.LocalInvoiceServicePlayerCacheResponse, currencySymbol string, initialPlayerId int64, initialAmount decimal.Decimal, initialDescription string) {
+	{{
+		// PayingPlayer Selection
+		selectedPlayer := fmt.Sprintf("%d", initialPlayerId)
+		playerPlayerOptions := make([]utils.FormSelectOption, 0)
+
+		canEditPlayer := paymentId == nil
+
+		for _, player := range cachePlayerResponse {
+			if player.IsPayingPlayer {
+				continue
+			}
+
+			playerName := "Unknown"
+			if len(player.Player.Aliases) > 0 {
+				playerName = player.Player.Aliases[0]
+			}
+			playerPlayerOptions = append(playerPlayerOptions, utils.FormSelectOption{Value: fmt.Sprintf("%d", player.Player.Id), Label: playerName})
+		}
+
+		title := "Create"
+		if paymentId != nil {
+			title = "Edit"
+		}
+	}}
+	<span id="localPaymentHolder" class="z-[99]">
+		<div class="fixed sm:absolute -top-[4px] -bottom-[4px] -left-[4px] -right-[4px] bg-black opacity-20 z-[99]"></div>
+		<div class="absolute top-0 bottom-0 left-0 right-0 flex items-center justify-center pointer-events-none z-[100] font-normal">
+			<div class="pointer-events-auto sm:absolute w-max">
+				@utils.Indicator("localPaymentIndicator", "absolute fixed top-1/2 left-1/2 transform -translate-x-1/2")
+				<div class="flex flex-col w-full p-4 pt-0 rounded-lg shadow-md sm:max-w-max panel sm:min-w-60 htmx-inverse-indicator-opacity" id="localPayment">
+					<h4 class="w-full px-2 text-center h-9 mb-2 mt-2">{ title } Payment</h4>
+					<div class="grid w-full grid-cols-[auto,auto] gap-4 sm:grid-cols-[auto,auto,auto] sm:max-w-max">
+						if canEditPlayer {
+							@utils.FormSelect(canEditPlayer, "Player", "paymentPlayer", playerPlayerOptions, selectedPlayer, "")
+						} else {
+							<input type="hidden" name="paymentPlayer" value={ selectedPlayer }/>
+							@utils.FormSelect(canEditPlayer, "Player", "paymentPlayerDisplay", playerPlayerOptions, selectedPlayer, "")
+						}
+						@utils.FormDecimalInput(true, "Amount ("+currencySymbol+")", "paymentAmount", initialAmount, "1", "100", "")
+						@utils.FormTextInput(true, "Description", "paymentDescription", initialDescription, 100, true, "")
+					</div>
+					<div class="mt-1 text-dark-red" id="localPaymentErrorLabel"></div>
+					<div class="flex flex-row w-full gap-2 h-min mt-2">
+						<button type="button" class="flex-1 text-center raised-slot-button" id="localPaymentCancelButton" onclick="event.stopPropagation(); document.getElementById('localPaymentHolder').innerHTML = '';">Cancel</button>
+						if paymentId == nil {
+							<button
+								class="flex-1 text-center raised-slot-button"
+								hx-post="/is/local/payment"
+								hx-target-*="#localPaymentErrorLabel"
+								hx-target="#localOverviewHolder"
+								hx-swap="outerHTML"
+								hx-trigger="click"
+								hx-indicator="#localInvoicePaymentCreateIndicator, #localInvoicePaymentCreateInverseIndicator"
+								hx-on-htmx-before-request="resetLocalPaymentSaveIcon();"
+								hx-disabled-elt="this, #localPaymentCancelButton"
+								hx-include="[name='paymentPlayer'], [name='paymentAmount'], [name='paymentDescription']"
+							>
+								<span id="localInvoicePaymentCreateInverseIndicator" class="htmx-inverse-indicator">Create</span>
+								@utils.Indicator("localInvoicePaymentCreateIndicator", "m-auto")
+							</button>
+						} else {
+							<button
+								class="flex-1 text-center raised-slot-button"
+								hx-patch={ fmt.Sprintf("/is/local/payment/%d", *paymentId) }
+								hx-target-*="#localPaymentErrorLabel"
+								hx-target="#localOverviewHolder"
+								hx-swap="outerHTML"
+								hx-trigger="click"
+								hx-indicator="#localInvoicePaymentConfirmIndicator, #localInvoicePaymentConfirmInverseIndicator"
+								hx-on-htmx-before-request="resetLocalPaymentSaveIcon();"
+								hx-disabled-elt="this, #localPaymentCancelButton"
+								hx-include="[name='paymentPlayer'], [name='paymentAmount'], [name='paymentDescription']"
+							>
+								<span id="localInvoicePaymentConfirmInverseIndicator" class="htmx-inverse-indicator">Confirm</span>
+								@utils.Indicator("localInvoicePaymentConfirmIndicator", "m-auto")
+							</button>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	</span>
+}

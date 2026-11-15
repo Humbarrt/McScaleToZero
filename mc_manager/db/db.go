@@ -78,6 +78,25 @@ func (db *DB) GetStmt(query_name string) (*sql.Stmt, error) {
 	return stmt, nil
 }
 
+func (db *DB) ExecScript(script_name string) error {
+	filePath := fmt.Sprintf("sql/scripts/%s.sql", script_name)
+	query, err := db.files.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	tx, err := db.Connection.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(string(query)); err != nil {
+		return fmt.Errorf("script %s failed: %w", script_name, err)
+	}
+	return tx.Commit()
+}
+
 func (db *DB) NewTx() (*Tx, error) {
 	tx, err := db.Connection.Begin()
 	if err != nil {

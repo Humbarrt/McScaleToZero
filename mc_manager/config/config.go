@@ -51,12 +51,12 @@ type config struct {
 	_networkRatio         decimal.Decimal
 	_fallbackFixedCost    decimal.Decimal
 	_fallbackVariableCost decimal.Decimal
+	_lastInvoiceService   *model.InvoiceServiceType
 }
 
 func (c *config) GetAWSRegion() string {
 	return c.awsRegion
 }
-
 func (c *config) GetAWSAccessKeyId() string {
 	return c.awsAccessKeyId
 }
@@ -390,6 +390,12 @@ func (c *config) SetFallbackVariableCost(fallbackVariableCost decimal.Decimal) e
 	return nil
 }
 
+func (c *config) GetLastInvoiceService() *model.InvoiceServiceType {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c._lastInvoiceService
+}
+
 func NewConfig() *config {
 	logging.Info("Version", "version", version)
 	currentPath, err := os.Executable()
@@ -488,16 +494,26 @@ func (c *config) Load(db *db.DB) {
 
 	//Check if invoice service is set
 	invoiceServiceString := strings.ToLower(getenv("INVOICE_SERVICE", string(model.InvoiceServiceNone)))
-	var invoiceService model.InvoiceServiceType
-	switch invoiceServiceString {
-	case string(model.InvoiceServiceNone):
-		invoiceService = model.InvoiceServiceNone
-		logging.Debug("Invoice service is set to none")
-	case string(model.InvoiceServiceSplitwise):
-		invoiceService = model.InvoiceServiceSplitwise
-		logging.Debug("Invoice service is set to splitwise")
-	default:
-		logging.Fatal("Invalid invoice service:", "service", invoiceService)
+	invoiceService, err := model.StringToInvoiceServiceType(invoiceServiceString)
+	if err != nil {
+		logging.Fatal("Error converting invoice service string to type:", "error", err)
+	}
+	logging.Debug("Invoice service is set to", "service", invoiceService)
+
+	if mutConfig.LastInvoiceService == nil || invoiceService != *mutConfig.LastInvoiceService {
+		logging.Info("Invoice service changed, updating database", "old", mutConfig.LastInvoiceService, "new", invoiceService)
+		err = queries.UpdateLastInvoiceService(db, invoiceService)
+		if err != nil {
+			logging.Fatal("Error updating invoice service in database:", "error", err)
+		}
+
+		if mutConfig.LastInvoiceService != nil {
+			logging.Info("Resetting invoice service data due to change")
+			err = queries.ResetInvoiceService(db)
+			if err != nil {
+				logging.Fatal("Error resetting invoice service in database:", "error", err)
+			}
+		}
 	}
 
 	c.awsRegion = awsRegion
@@ -528,6 +544,7 @@ func (c *config) Load(db *db.DB) {
 	c._networkRatio = mutConfig.NetworkRatio
 	c._fallbackFixedCost = mutConfig.FallbackFixedCost
 	c._fallbackVariableCost = mutConfig.FallbackVariableCost
+	c._lastInvoiceService = mutConfig.LastInvoiceService
 
 	logging.Debug("Config loaded")
 }

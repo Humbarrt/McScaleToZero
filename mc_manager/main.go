@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"embed"
 	"mc_manager/api/aws"
+	"mc_manager/api/invoice_service/local"
 	"mc_manager/api/invoice_service/none"
 	"mc_manager/api/invoice_service/splitwise"
 	"mc_manager/db"
@@ -26,6 +27,41 @@ import (
 
 //go:embed web/static/*
 var fs embed.FS
+
+/* func test() error {
+	backupFilePath := "/Users/humpert/Projects/McServer/world.zip"
+	_, backupFileName := path.Split(backupFilePath)
+	read, err := zip.OpenReader(backupFilePath)
+	if err != nil {
+		logging.Error("Error reading world zip", "error", err)
+		return err
+	}
+	defer read.Close()
+
+	backupFileName = strings.Split(backupFileName, ".")[0]
+	statsPath := path.Join(backupFileName, "stats")
+	logging.Info("Searching for", "path", statsPath)
+	for _, f := range read.File {
+		currPath, currName := path.Split(f.Name)
+		if (currPath != statsPath && currPath != statsPath+"/") || currName == "" {
+			continue
+		}
+		logging.Info("FOUND STATS FILE", "path", currPath, "name", currName)
+
+		playerUUID := strings.Split(currName, ".")
+		queries.Get
+
+		v, err := f.Open()
+		if err != nil {
+			logging.Error("Error reading stat file from zip", "error", err)
+			return err
+		}
+		defer v.Close()
+
+	}
+
+	return nil
+} */
 
 func main() {
 	config := _config.NewConfig()
@@ -54,8 +90,10 @@ func main() {
 		SW:         nil,
 		CW:         nil,
 		IS:         nil,
+		EB:         nil,
 		LW:         nil,
 	}
+	app.EB = eb.NewEventBroadcaster()
 
 	switch app.Config.GetInvoiceService() {
 	case model.InvoiceServiceSplitwise:
@@ -71,6 +109,13 @@ func main() {
 	case model.InvoiceServiceNone:
 		logging.Info("Invoice service not configured")
 		app.IS = none.NewNoInvoiceService(&app)
+	case model.InvoiceServiceLocal:
+		logging.Info("Invoice service configured to Local")
+		app.IS = local.NewLocalInvoiceService(&app)
+		err = app.IS.Init()
+		if err != nil {
+			logging.Fatal("Error initializing invoice service", "error", err)
+		}
 	default:
 		logging.Fatal("Unknown invoice service")
 	}
@@ -79,8 +124,6 @@ func main() {
 	if err != nil {
 		logging.Fatal("Error creating AWS API", "error", err)
 	}
-
-	app.EB = eb.NewEventBroadcaster()
 
 	app.SW = sw.NewServerWatcher(&app)
 	go app.SW.StartWatchingServer()
@@ -99,5 +142,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	logging.Info("Analyser started")
+	logging.Info("MC Manager started")
 }

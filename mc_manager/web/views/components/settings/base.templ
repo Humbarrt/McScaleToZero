@@ -1,60 +1,48 @@
 package settings
 
 import (
-    "mc_manager/web/views/utils"
-    "mc_manager/model"
-    "fmt"
+	"fmt"
+	"mc_manager/model"
+	"mc_manager/web/views/utils"
 )
 
-templ HelperLabel(label string, name string, url string) {
-    <label class="flex flex-row items-center col-span-1 gap-2 text-black max-w-max group" for={name}>
-        {label}
-        @utils.Help(url)
-    </label>
-}
-
 templ sectionLoader(name string, swapEvents []model.EB_EventType, height int) {
-    {{
-        swapEventsString := ""
-        for _, event := range swapEvents {
-            swapEventsString += fmt.Sprintf(",sse:%d", event)
-        }
-    }}
-    <div class="flex flex-col w-full p-4 pt-0 rounded-lg shadow-md sm:max-w-max panel sm:min-w-80"
-        hx-get={"/components/settings/" + name}
-        hx-trigger={"load" + swapEventsString}
-        hx-swap="innerHTML"
-        id={name+"Holder"}
-        hx-vals="js:{
+	<div
+		class="flex flex-col w-full p-4 pt-0 rounded-lg shadow-md sm:max-w-max panel sm:min-w-80"
+		hx-get={ "/components/settings/" + name }
+		hx-trigger={ "load" + utils.EventsFormatter(swapEvents) }
+		hx-swap="innerHTML"
+		id={ name + "Holder" }
+		hx-vals="js:{
             serverConfigSuccessIcon: document.getElementById('serverSuccessIcon')?.classList?.contains('hidden') == false || false,
             billingConfigSuccessIcon: document.getElementById('billingSuccessIcon')?.classList?.contains('hidden') == false || false,
         }"
-    >
-        <div class="flex items-center justify-center mt-4 w-96" style={"height: " + fmt.Sprintf("%dpx", height - 40)}>
-            @utils.StaticIndicator("")
-        </div>
-    </div>
+	>
+		<div class="flex items-center justify-center mt-4 w-96" style={ "height: " + fmt.Sprintf("%dpx", height-40) }>
+			@utils.StaticIndicator("")
+		</div>
+	</div>
 }
 
 templ Loader(isAdmin bool, invoiceService model.InvoiceService) {
-    <div class="w-full">
-        <div class="relative flex flex-row items-center gap-1 text-white group">
-            <h2 class="">Settings</h2>
-            if !isAdmin {
-                <div class="relative w-6 h-6 mt-1">
-                    <svg class="absolute w-6 h-6 text-black top-[1px]" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M15 2H9v2H7v4H4v14h16V8h-3V4h-2V2zm0 2v4H9V4h6zm-6 6h9v10H6V10h3zm4 3h-2v4h2v-4z" fill="currentColor"/></svg>
-                    <svg class="absolute w-6 h-6 text-white" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M15 2H9v2H7v4H4v14h16V8h-3V4h-2V2zm0 2v4H9V4h6zm-6 6h9v10H6V10h3zm4 3h-2v4h2v-4z" fill="currentColor"/></svg>
-                </div>
-                <span class="absolute left-0 px-2 py-1 transition-opacity bg-black rounded opacity-0 pointer-events-none -top-4 w-max group-hover:opacity-100">
-                    You do not have permission to edit settings
-                </span>
-            }
-        </div>
-        <div class="flex flex-col flex-wrap items-start w-full gap-4 sm:flex-row">
-            @serverConfigLoader()
-            @billingConfigLoader()
-            @serverInfoLoader()
-            @invoiceService.WebLoader()
-        </div>
-    </div>
+	<div class="w-full">
+		<div class="relative flex flex-row items-center gap-1 text-white group">
+			<h2 class="">Settings</h2>
+			if !isAdmin {
+				<div class="relative w-6 h-6 mt-1">
+					<svg class="absolute w-6 h-6 text-black top-[1px]" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15 2H9v2H7v4H4v14h16V8h-3V4h-2V2zm0 2v4H9V4h6zm-6 6h9v10H6V10h3zm4 3h-2v4h2v-4z" fill="currentColor"></path></svg>
+					<svg class="absolute w-6 h-6 text-white" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15 2H9v2H7v4H4v14h16V8h-3V4h-2V2zm0 2v4H9V4h6zm-6 6h9v10H6V10h3zm4 3h-2v4h2v-4z" fill="currentColor"></path></svg>
+				</div>
+				<span class="absolute left-0 px-2 py-1 transition-opacity bg-black rounded opacity-0 pointer-events-none -top-4 w-max group-hover:opacity-100">
+					You do not have permission to edit settings
+				</span>
+			}
+		</div>
+		<div class="flex flex-col flex-wrap items-start w-full gap-4 sm:flex-row">
+			@serverConfigLoader()
+			@billingConfigLoader()
+			@serverInfoLoader()
+			@invoiceService.WebLoader()
+		</div>
+	</div>
 }

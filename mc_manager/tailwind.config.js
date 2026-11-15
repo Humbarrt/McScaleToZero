@@ -45,7 +45,7 @@ export default {
 		"outline-dark-red",
 		"!text-shadow-none",
 		"text-shadow-none",
-		"disabled:text-shadow-none",
+    "disabled:text-shadow-none",
 	],
 	theme: {
 		screens: {

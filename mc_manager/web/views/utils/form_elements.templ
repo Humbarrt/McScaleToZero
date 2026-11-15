@@ -1,0 +1,71 @@
+package utils
+
+import (
+	"fmt"
+	"github.com/shopspring/decimal"
+)
+
+type FormSelectOption struct {
+	Value string
+	Label string
+}
+
+templ HelperLabel(label string, name string, wikiUrl string) {
+	<label class="flex flex-row items-center col-span-1 gap-2 text-black max-w-max group" for={ name }>
+		{ label }
+		if wikiUrl != "" {
+			@Help(wikiUrl)
+		}
+	</label>
+}
+
+templ FormInfoText(label string, value string, wikiUrl string) {
+	@HelperLabel(label, "", wikiUrl)
+	<p class="w-full col-span-2 break-all text-dark-gray sm:max-w-96">
+		{ value }
+	</p>
+}
+
+templ FormSelect(canEdit bool, label string, name string, options []FormSelectOption, selected string, wikiUrl string) {
+	@HelperLabel(label, name, wikiUrl)
+	<div class={ "w-full col-span-2 custom-select", templ.KV("disabled", !canEdit) }>
+		<select
+			class="w-full px-2 text-white slot text-shadow-xs sm:max-w-96 h-7 disabled:text-black disabled:text-shadow-none"
+			name={ name }
+			disabled?={ !canEdit }
+			required
+		>
+			for _, option := range options {
+				<option value={ option.Value } selected?={ option.Value == selected }>{ option.Label }</option>
+			}
+		</select>
+	</div>
+}
+
+templ FormDecimalInput(canEdit bool, label string, name string, value decimal.Decimal, min string, max string, wikiUrl string) {
+	@HelperLabel(label, name, wikiUrl)
+	<input
+		class="w-full col-span-2 px-2 text-white slot text-shadow-xs sm:max-w-96 disabled:text-black disabled:text-shadow-none"
+		value={ value.StringFixed(4) }
+		name={ name }
+		type="number"
+		step="0.0001"
+		min={ min }
+		max={ max }
+		disabled?={ !canEdit }
+		required
+	/>
+}
+
+templ FormTextInput(canEdit bool, label string, name string, value string, maxLength int, required bool, wikiUrl string) {
+	@HelperLabel(label, name, wikiUrl)
+	<input
+		class="w-full col-span-2 px-2 text-white slot text-shadow-xs sm:max-w-96 disabled:text-black disabled:text-shadow-none"
+		value={ value }
+		name={ name }
+		type="text"
+		disabled?={ !canEdit }
+		required={ required }
+		maxlength={ fmt.Sprintf("%d", maxLength) }
+	/>
+}

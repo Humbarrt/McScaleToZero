@@ -17,3 +17,4 @@ tmp
 *.db
 /mc_manager/data
 /mc_server/data
+/world
