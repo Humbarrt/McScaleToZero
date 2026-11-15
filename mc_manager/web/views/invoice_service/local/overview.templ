@@ -1,0 +1,268 @@
+package local
+
+import (
+	"fmt"
+	"mc_manager/model"
+	"mc_manager/web/views/utils"
+	"strings"
+)
+
+templ OverviewLoader(swapEvents []model.EB_EventType) {
+	@overviewHolder(swapEvents, true, "") {
+		<div class="flex items-center justify-center h-32 mt-4 w-96">
+			@utils.StaticIndicator("")
+		</div>
+	}
+}
+
+templ overviewHolder(swapEvents []model.EB_EventType, triggerOnLoad bool, selectedOverviewOption string) {
+	{{
+		triggers := ""
+		if triggerOnLoad {
+			triggers = "load"
+		}
+
+		events := utils.EventsFormatter(swapEvents)
+		if triggers == "" && events != "" {
+			triggers = strings.TrimPrefix(events, ",")
+		} else {
+			triggers += events
+		}
+	}}
+	<div
+		class="flex flex-col w-full p-4 pt-0 rounded-lg shadow-md sm:max-w-max panel sm:min-w-80 relative"
+		hx-get={ fmt.Sprintf("/is/local/overview?overviewOption=%s", selectedOverviewOption) }
+		hx-trigger={ triggers }
+		hx-swap="outerHTML"
+		id="localOverviewHolder"
+	>
+		{ children... }
+	</div>
+}
+
+templ overviewSelect(selected string, options []struct {
+	Value string
+	Label string
+}) {
+	<div class="min-w-32 custom-select sm:max-w-96 h-7">
+		<select
+			class="w-full px-2 text-white slot text-shadow-xs sm:max-w-96 h-7 disabled:text-black disabled:text-shadow-none"
+			name="overviewOption"
+			hx-get="/is/local/overview"
+			hx-target-*="#localOverviewErrorLabel"
+			hx-target="#localOverviewHolder"
+			hx-swap="outerHTML"
+			hx-trigger="change"
+			hx-indicator="#localInvoiceIndicator, #localInvoiceInverseIndicator"
+			hx-include="[name='overviewOption']"
+		>
+			for _, option := range options {
+				<option value={ option.Value } selected?={ option.Value == selected }>{ option.Label }</option>
+			}
+		</select>
+	</div>
+}
+
+templ overviewStats(cacheResponse *model.LocalInvoiceServiceCacheResponse, currencySymbol string) {
+	<div class="grid grid-cols-2 gap-2 px-1 sm:grid-cols-4 gap-2">
+		<div class="border-r-2 border-gray pr-2">
+			<h1 class="text-black">Total Spent</h1>
+			<p class="text-xl text-[#3d3c3d]">{ currencySymbol }{ utils.HumanizeMoney(cacheResponse.TotalSpent) }</p>
+		</div>
+		<div class="sm:border-r-2 border-gray pr-2">
+			<h1 class="text-black">Total Owed</h1>
+			<p class="text-xl text-[#3d3c3d]">{ currencySymbol }{ utils.HumanizeMoney(cacheResponse.OutstandingDebt) }</p>
+		</div>
+		<div class="border-r-2 border-gray pr-2">
+			<h1 class="text-black">Invoices</h1>
+			<p class="text-xl text-[#3d3c3d]">{ cacheResponse.InvoiceCount }</p>
+		</div>
+		<div class="pr-2">
+			<h1 class="text-black">Payments</h1>
+			<p class="text-xl text-[#3d3c3d]">{ cacheResponse.PaymentCount }</p>
+		</div>
+	</div>
+}
+
+templ overviewHeader(players []*model.Player, selectedOverviewOption string) {
+	<div class="flex flex-row items-center justify-between w-full mb-3">
+		<h3 class="pr-2">Ledger</h3>
+		{{
+			overviewOptions := []struct {
+				Value string
+				Label string
+			}{
+				{Value: "", Label: "All"},
+			}
+			for _, player := range players {
+				playerName := "Unknown"
+				if len(player.Aliases) > 0 {
+					playerName = player.Aliases[0]
+				}
+				overviewOptions = append(overviewOptions, struct {
+					Value string
+					Label string
+				}{Value: fmt.Sprintf("%d", player.Id), Label: playerName})
+			}
+		}}
+		@overviewSelect(selectedOverviewOption, overviewOptions)
+	</div>
+}
+
+templ overviewFooter(isAdmin bool, hasSaved bool, selectedOverviewOption string) {
+	<span class="" id="localPaymentHolder"></span>
+	<div class="mt-2 text-dark-red" id="localOverviewErrorLabel"></div>
+	<div class="flex flex-row items-center justify-between w-full mt-2">
+		<div>
+			<span class={ "text-black flex flex-row items-center ", templ.KV("hidden", !hasSaved) } id="localPaymentSuccessIcon">
+				Saved
+				<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class={ "w-5 h-5 text-green", templ.KV("hidden", !hasSaved) }><path d="M18 6h2v2h-2V6zm-2 4V8h2v2h-2zm-2 2v-2h2v2h-2zm-2 2h2v-2h-2v2zm-2 2h2v-2h-2v2zm-2 0v2h2v-2H8zm-2-2h2v2H6v-2zm0 0H4v-2h2v2z" fill="currentColor"></path> </svg>
+			</span>
+		</div>
+		<button
+			class="flex items-center justify-center raised-slot-button h-8 px-2"
+			disabled?={ !isAdmin }
+			hx-get={ fmt.Sprintf("/is/local/payment?preselectedPlayer=%s", selectedOverviewOption) }
+			hx-target-*="#localOverviewErrorLabel"
+			hx-indicator="#localInvoicePaymentIndicator, #localInvoicePaymentInverseIndicator"
+			hx-target="#localPaymentHolder"
+			hx-swap="outerHTML"
+			hx-trigger="click"
+		>
+			<span id="localInvoicePaymentInverseIndicator" class="htmx-inverse-indicator">Add Payment</span>
+			@utils.Indicator("localInvoicePaymentIndicator", "m-auto mx-8")
+		</button>
+	</div>
+}
+
+templ Overview(swapEvents []model.EB_EventType, isAdmin bool, hasSaved bool, cacheResponse *model.LocalInvoiceServiceCacheResponse, players []*model.Player, currencySymbol string) {
+	{{ selectedOverviewOption := "" }}
+	@overviewHolder(swapEvents, false, selectedOverviewOption) {
+		@overviewHeader(players, selectedOverviewOption)
+		@utils.Indicator("localInvoiceIndicator", "m-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2")
+		<span class="htmx-inverse-indicator-opacity" id="localInvoiceInverseIndicator">
+			@overviewStats(cacheResponse, currencySymbol)
+			<div class="mt-4"></div>
+			<div class="overflow-x-auto">
+				<table class="table w-full !p-0 min-w-min whitespace-nowrap" style="border: none;">
+					<thead>
+						<tr>
+							<th>Name</th>
+							<th>Spent ({ currencySymbol })</th>
+							<th>Paid ({ currencySymbol })</th>
+							<th>Owes ({ currencySymbol })</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, player := range cacheResponse.Players {
+							<tr>
+								<td>
+									if len(player.Player.Aliases) > 0 {
+										{ player.Player.Aliases[0] }
+									} else {
+										Unknown
+									}
+								</td>
+								<td>
+									{ utils.HumanizeMoney(player.Cache.TotalSpent) }
+								</td>
+								<td>
+									{ utils.HumanizeMoney(player.Cache.TotalPaid) }
+								</td>
+								<td>
+									{ utils.HumanizeMoney(player.Cache.OutstandingDebt) }
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+			@overviewFooter(isAdmin, hasSaved, selectedOverviewOption)
+		</span>
+	}
+}
+
+templ playerviewStats(cacheResponse *model.LocalInvoiceServicePlayerCache, currencySymbol string) {
+	<div class="grid grid-cols-2 gap-2 px-1 sm:grid-cols-4 gap-2">
+		<div class="border-r-2 border-gray pr-2">
+			<h1 class="text-black">Spent</h1>
+			<p class="text-xl text-[#3d3c3d]">{ currencySymbol }{ utils.HumanizeMoney(cacheResponse.TotalSpent) }</p>
+		</div>
+		<div class="sm:border-r-2 border-gray pr-2">
+			<h1 class="text-black">Paid</h1>
+			<p class="text-xl text-[#3d3c3d]">{ currencySymbol }{ utils.HumanizeMoney(cacheResponse.TotalPaid) }</p>
+		</div>
+		<div class="sm:border-r-2 border-gray pr-2">
+			<h1 class="text-black">Owes</h1>
+			<p class="text-xl text-[#3d3c3d]">{ currencySymbol }{ utils.HumanizeMoney(cacheResponse.OutstandingDebt) }</p>
+		</div>
+		<div class="pr-2">
+			<h1 class="text-black">Payments</h1>
+			<p class="text-xl text-[#3d3c3d]">{ cacheResponse.PaymentCount }</p>
+		</div>
+	</div>
+}
+
+templ PlayerView(swapEvents []model.EB_EventType, isAdmin bool, hasSaved bool, players []*model.Player, playerCache *model.LocalInvoiceServicePlayerCache, history []*model.LocalInvoiceServicePlayerHistoryResponse, currencySymbol string, selectedOverviewOption string) {
+	@overviewHolder(swapEvents, false, selectedOverviewOption) {
+		@overviewHeader(players, selectedOverviewOption)
+		@utils.Indicator("localInvoiceIndicator", "m-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2")
+		<span class="htmx-inverse-indicator-opacity" id="localInvoiceInverseIndicator">
+			@playerviewStats(playerCache, currencySymbol)
+			<div class="mt-4"></div>
+			<div class="overflow-auto max-h-[19rem] flex flex-col-reverse">
+				<table class="w-full min-w-min whitespace-nowrap history-table" style="border: none; padding: 0;">
+					<tbody>
+						for _, entry := range history {
+							if entry.Invoice != nil {
+								<tr class="raised-slot text-white mb-1">
+									<td>INVOICE</td>
+									<td class="max-w-20 sm:max-w-32 truncate">{ entry.Invoice.Description }</td>
+									<td>{ entry.Invoice.CreatedAt.Format("2006-01-02") }</td>
+									<td>{ currencySymbol }{ utils.HumanizeMoney(entry.Invoice.Amount) }</td>
+									if isAdmin {
+										<td></td>
+									}
+								</tr>
+							} else if entry.Payment != nil {
+								<tr class="raised-slot text-white mb-1">
+									<td>PAYMENT</td>
+									<td class="max-w-20 sm:max-w-72 truncate">{ entry.Payment.Description }</td>
+									if entry.Payment.EditedAt != nil {
+										<td class="relative group">
+											<span class="text-[#ff1313]">{ entry.Payment.CreatedAt.Format("2006-01-02") }</span>
+											//center tooltip
+											<span class="absolute z-50 px-2 py-1 transition-opacity bg-black rounded opacity-0 pointer-events-none -top-4 w-max group-hover:opacity-100 left-1/2 transform -translate-x-1/4 top-[-2rem]">
+												Edited { entry.Payment.EditedAt.Format("2006-01-02") }
+											</span>
+										</td>
+									} else {
+										<td>{ entry.Payment.CreatedAt.Format("2006-01-02") }</td>
+									}
+									<td>{ currencySymbol }{ utils.HumanizeMoney(entry.Payment.Amount) }</td>
+									if isAdmin {
+										<td class="text-sm text-[#3d3c3d]">
+											{{ currentPaymentId := fmt.Sprintf("%d", entry.Payment.Id) }}
+											<button
+												hx-get={ "/is/local/payment/" + currentPaymentId }
+												hx-target-*="#localOverviewErrorLabel"
+												hx-target="#localPaymentHolder"
+												hx-swap="outerHTML"
+												hx-trigger="click"
+												hx-indicator={ "#localInvoicePaymentEditIndicator" + currentPaymentId + ", #localInvoicePaymentEditInverseIndicator" + currentPaymentId }
+											>
+												<span id={ "localInvoicePaymentEditInverseIndicator" + currentPaymentId } class="htmx-inverse-indicator">Edit</span>
+												@utils.Indicator("localInvoicePaymentEditIndicator"+currentPaymentId, "m-auto scale-75")
+											</button>
+										</td>
+									}
+								</tr>
+							}
+						}
+					</tbody>
+				</table>
+			</div>
+			@overviewFooter(isAdmin, hasSaved, selectedOverviewOption)
+		</span>
+	}
+}
