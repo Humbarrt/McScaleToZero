@@ -80,13 +80,13 @@ func TestLocalInvoiceService(t *testing.T) {
 			Amount:   player2Amount,
 		},
 	}
-	err = queries.AddLocalInvoiceServiceInvoice(DB, amount, "Test Invoice", invoiceItems)
+	invoiceId, err := queries.AddLocalInvoiceServiceInvoice(DB, amount, "Test Invoice", invoiceItems)
 	assert.NoError(t, err)
 
 	invoices, err = queries.GetLocalInvoiceServiceInvoices(DB)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(invoices))
-	assert.Equal(t, int64(1), invoices[0].Id)
+	assert.Equal(t, invoiceId, invoices[0].Id)
 	assert.True(t, amount.Equal(invoices[0].Amount))
 	assert.Equal(t, "Test Invoice", invoices[0].Description)
 
