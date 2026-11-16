@@ -448,7 +448,12 @@ func postLocalPaymentHandler(app *model.App, l *LocalInvoiceService) gin.Handler
 
 		l.RefreshCache()
 		app.EB.Broadcast(model.EB_EVENT_INVOICE_CONFIG_UPDATE)
-		ctx.Redirect(http.StatusSeeOther, "/is/local/overview?localPaymentSuccessIcon=true")
+		viewOption, exists := ctx.GetQuery("overviewOption")
+		if exists {
+			ctx.Redirect(http.StatusSeeOther, fmt.Sprintf("/is/local/overview?overviewOption=%s&localPaymentSuccessIcon=true", viewOption))
+		} else {
+			ctx.Redirect(http.StatusSeeOther, "/is/local/overview?localPaymentSuccessIcon=true")
+		}
 	}
 }
 
